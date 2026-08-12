@@ -1,4 +1,5 @@
 # Nixpacks configuration for API app Railway deployment
 
 [variables]
+NIXPACKS_NO_PRISMA = "1"
 DATABASE_URL = "postgresql://komplekku:komplekku@localhost:5432/komplekku"

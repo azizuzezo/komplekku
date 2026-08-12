@@ -1,5 +1,6 @@
 # Nixpacks configuration for Railway deployment
-# Provides dummy DATABASE_URL during Docker image build phase to prevent Nixpacks secret error
+# Disable automatic Prisma build secret requirement
 
 [variables]
+NIXPACKS_NO_PRISMA = "1"
 DATABASE_URL = "postgresql://komplekku:komplekku@localhost:5432/komplekku"
