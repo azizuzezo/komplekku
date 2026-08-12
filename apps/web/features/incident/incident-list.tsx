@@ -197,7 +197,11 @@ function CreateIncidentForm({ onDone }: { onDone: () => void }) {
       )}
 
       <div className="incident-create-form__actions">
-        <button className="button button--primary" type="submit" disabled={createMutation.isPending}>
+        <button
+          className="button button--primary"
+          type="submit"
+          disabled={createMutation.isPending}
+        >
           {createMutation.isPending ? (
             <>
               <LoaderCircle className="loading-icon" size={17} aria-hidden="true" />
@@ -225,7 +229,9 @@ function IncidentRow({ incident }: { incident: IncidentSummary }) {
     <Link className="incident-row" href={`/admin/keamanan/kejadian/${incident.id}`}>
       <div className="incident-row__header">
         <h2>{incident.title}</h2>
-        <span className={`incident-status-badge incident-status-badge--${incident.status.toLowerCase()}`}>
+        <span
+          className={`incident-status-badge incident-status-badge--${incident.status.toLowerCase()}`}
+        >
           {statusLabels[incident.status]}
         </span>
       </div>

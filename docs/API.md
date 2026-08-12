@@ -34,6 +34,9 @@ GET  /api/v1/admin/residency-requests
 POST /api/v1/admin/residency-requests/:id/approve
 POST /api/v1/admin/residency-requests/:id/reject
 
+GET  /api/v1/houses
+POST /api/v1/houses
+
 GET   /api/v1/agenda
 GET   /api/v1/agenda/:id
 POST  /api/v1/admin/agenda

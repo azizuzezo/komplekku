@@ -32,9 +32,7 @@ export function startSession(): Promise<PatrolSessionMutationResponse> {
   });
 }
 
-export function scanCheckpoint(
-  input: ScanCheckpointInput,
-): Promise<PatrolSessionMutationResponse> {
+export function scanCheckpoint(input: ScanCheckpointInput): Promise<PatrolSessionMutationResponse> {
   return apiRequest("/patrol/session/scan", patrolSessionMutationResponseSchema, {
     method: "POST",
     body: input,

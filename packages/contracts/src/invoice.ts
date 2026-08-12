@@ -15,7 +15,9 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 export const generateInvoicesInputSchema = z
   .object({
     duesTypeId: z.string().uuid(),
-    period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Periode harus menggunakan format YYYY-MM."),
+    period: z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Periode harus menggunakan format YYYY-MM."),
     amount: z.number().int().positive(),
     dueDate: z
       .string()
@@ -60,9 +62,7 @@ export const invoiceListResponseSchema = dataEnvelopeSchema(
   z.object({ items: z.array(invoiceSchema) }),
 );
 
-export const invoiceDetailResponseSchema = dataEnvelopeSchema(
-  z.object({ invoice: invoiceSchema }),
-);
+export const invoiceDetailResponseSchema = dataEnvelopeSchema(z.object({ invoice: invoiceSchema }));
 
 export const invoiceMutationResponseSchema = dataEnvelopeSchema(
   z.object({ invoice: invoiceSchema }),

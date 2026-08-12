@@ -1,7 +1,4 @@
-import {
-  createVisitorInputSchema,
-  createWalkInVisitorInputSchema,
-} from "@komplekku/contracts";
+import { createVisitorInputSchema, createWalkInVisitorInputSchema } from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 
@@ -56,9 +53,10 @@ export async function registerVisitorRoutes(
     if (result.outcome !== "OK") {
       throw new AppError(409, "HOUSEHOLD_CONTEXT_REQUIRED", "Rumah tangga aktif diperlukan.");
     }
-    return reply
-      .status(201)
-      .send({ data: { visitor: publicVisitor(result.visitor, true) }, meta: responseMeta(request) });
+    return reply.status(201).send({
+      data: { visitor: publicVisitor(result.visitor, true) },
+      meta: responseMeta(request),
+    });
   });
 
   app.post("/api/v1/visitors/walk-in", { preHandler: checkinGuards }, async (request, reply) => {
@@ -75,9 +73,10 @@ export async function registerVisitorRoutes(
       }
       throw new AppError(404, "HOUSEHOLD_NOT_FOUND", "Rumah tangga tidak ditemukan.");
     }
-    return reply
-      .status(201)
-      .send({ data: { visitor: publicVisitor(result.visitor, true) }, meta: responseMeta(request) });
+    return reply.status(201).send({
+      data: { visitor: publicVisitor(result.visitor, true) },
+      meta: responseMeta(request),
+    });
   });
 
   app.get("/api/v1/visitors", { preHandler: readGuards }, async (request) => {
@@ -91,39 +90,31 @@ export async function registerVisitorRoutes(
     };
   });
 
-  app.get(
-    "/api/v1/visitors/lookup/:qrToken",
-    { preHandler: checkinGuards },
-    async (request) => {
-      const { qrToken } = qrTokenParamsSchema.parse(request.params);
-      const visitor = await repository.findVisitorByQrToken(getAuthContext(request), qrToken);
-      return {
-        data: { visitor: visitor ? publicVisitor(visitor, false) : null },
-        meta: responseMeta(request),
-      };
-    },
-  );
+  app.get("/api/v1/visitors/lookup/:qrToken", { preHandler: checkinGuards }, async (request) => {
+    const { qrToken } = qrTokenParamsSchema.parse(request.params);
+    const visitor = await repository.findVisitorByQrToken(getAuthContext(request), qrToken);
+    return {
+      data: { visitor: visitor ? publicVisitor(visitor, false) : null },
+      meta: responseMeta(request),
+    };
+  });
 
-  app.post(
-    "/api/v1/visitors/check-in/:qrToken",
-    { preHandler: checkinGuards },
-    async (request) => {
-      const { qrToken } = qrTokenParamsSchema.parse(request.params);
-      const result = await repository.checkInVisitor({
-        auth: getAuthContext(request),
-        qrToken,
-        now: new Date(),
-        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
-      });
-      if (result.outcome !== "OK") {
-        if (result.outcome === "NOT_FOUND") {
-          throw new AppError(404, "VISITOR_NOT_FOUND", "Tamu tidak ditemukan.");
-        }
-        throw new AppError(409, "VISITOR_INVALID_TRANSITION", "Tamu sudah diproses sebelumnya.");
+  app.post("/api/v1/visitors/check-in/:qrToken", { preHandler: checkinGuards }, async (request) => {
+    const { qrToken } = qrTokenParamsSchema.parse(request.params);
+    const result = await repository.checkInVisitor({
+      auth: getAuthContext(request),
+      qrToken,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+    });
+    if (result.outcome !== "OK") {
+      if (result.outcome === "NOT_FOUND") {
+        throw new AppError(404, "VISITOR_NOT_FOUND", "Tamu tidak ditemukan.");
       }
-      return { data: { visitor: publicVisitor(result.visitor, false) }, meta: responseMeta(request) };
-    },
-  );
+      throw new AppError(409, "VISITOR_INVALID_TRANSITION", "Tamu sudah diproses sebelumnya.");
+    }
+    return { data: { visitor: publicVisitor(result.visitor, false) }, meta: responseMeta(request) };
+  });
 
   app.post("/api/v1/visitors/:id/check-out", { preHandler: checkinGuards }, async (request) => {
     const { id } = idParamsSchema.parse(request.params);
@@ -137,7 +128,11 @@ export async function registerVisitorRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "VISITOR_NOT_FOUND", "Tamu tidak ditemukan.");
       }
-      throw new AppError(409, "VISITOR_INVALID_TRANSITION", "Tamu belum check-in atau sudah keluar.");
+      throw new AppError(
+        409,
+        "VISITOR_INVALID_TRANSITION",
+        "Tamu belum check-in atau sudah keluar.",
+      );
     }
     return { data: { visitor: publicVisitor(result.visitor, false) }, meta: responseMeta(request) };
   });

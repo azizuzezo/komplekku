@@ -750,7 +750,8 @@ async function main() {
     {
       id: "c1000000-0000-4000-8000-000000000002",
       name: "Surat Domisili Lingkungan",
-      description: "Keterangan domisili yang diterbitkan lingkungan, bukan dokumen pemerintah resmi.",
+      description:
+        "Keterangan domisili yang diterbitkan lingkungan, bukan dokumen pemerintah resmi.",
       displayOrder: 2,
     },
     {
@@ -859,8 +860,16 @@ async function main() {
   for (const transaction of demoCashTransactions) {
     await prisma.cashTransaction.upsert({
       where: { id: transaction.id },
-      update: { ...transaction, communityId: billabong.id, recordedByUserId: billabongTreasurer.user.id },
-      create: { ...transaction, communityId: billabong.id, recordedByUserId: billabongTreasurer.user.id },
+      update: {
+        ...transaction,
+        communityId: billabong.id,
+        recordedByUserId: billabongTreasurer.user.id,
+      },
+      create: {
+        ...transaction,
+        communityId: billabong.id,
+        recordedByUserId: billabongTreasurer.user.id,
+      },
     });
   }
 }

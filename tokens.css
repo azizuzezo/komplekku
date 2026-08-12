@@ -1,23 +1,22 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Ecosystem Index · design-system: design.md · designed-as-app
- * theme: custom · vibe: "mature neighborhood, civic warmth, quiet confidence" · paper: oklch(100% 0 0) · brand: oklch(42.5% 0.0593 170.96)
- * display: Plus Jakarta Sans · body: Plus Jakarta Sans · axes: light / rounded-sans / chromatic-terracotta
- * studied: no · context: owner-directed redesign · Hallmark v1.1.0
+ * theme: Color Palette -05 (#00ACC1, #4DD0E1, #80DEEA, #B2EBF2, #E0F7FA, #F3FBFC)
+ * display: Plus Jakarta Sans · body: Plus Jakarta Sans
  */
 
 :root {
   color-scheme: light;
 
-  /* PRD color anchors, converted from the canonical hex values to OKLCH. */
-  --color-primary: oklch(42.5% 0.0593 170.96);
-  --color-primary-dark: oklch(35.46% 0.0487 170.49);
-  --color-background: oklch(100% 0 0);
-  --color-surface: oklch(100% 0 0);
-  --color-surface-soft: oklch(96% 0.002 0);
-  --color-surface-sage: oklch(92.7% 0.018 153);
-  --color-text-primary: oklch(22.5% 0.021 163);
-  --color-text-secondary: oklch(46% 0.022 160);
-  --color-border: oklch(84.5% 0.018 150);
-  --color-accent: oklch(63.48% 0.1234 42.27);
+  /* Palette -05 hex anchors converted to OKLCH. */
+  --color-primary: oklch(66.5% 0.138 214.3); /* #00ACC1 */
+  --color-primary-dark: oklch(52.2% 0.125 214.3); /* #00838F */
+  --color-background: oklch(98.3% 0.009 210.8); /* #F3FBFC */
+  --color-surface: oklch(100% 0 0); /* #FFFFFF */
+  --color-surface-soft: oklch(96.2% 0.021 211.5); /* #E0F7FA */
+  --color-surface-sage: oklch(91.8% 0.045 212.1); /* #B2EBF2 */
+  --color-text-primary: oklch(24.5% 0.045 214.3); /* #0F2F34 */
+  --color-text-secondary: oklch(48% 0.042 214.3); /* #376E76 */
+  --color-border: oklch(85.8% 0.076 212.8); /* #80DEEA */
+  --color-accent: oklch(79.2% 0.108 213.5); /* #4DD0E1 */
   --color-warning: oklch(62.64% 0.1248 70.45);
   --color-danger: oklch(54.01% 0.1486 23.49);
   --color-success: oklch(52.32% 0.0954 155.85);
@@ -25,26 +24,26 @@
   --color-danger-ink: oklch(45% 0.13 23.49);
   --color-success-ink: oklch(42% 0.08 155.85);
 
-  /* Supporting semantic colors. Accent ink is intentionally darker than body ink. */
-  --color-focus: oklch(55% 0.14 171);
+  /* Supporting semantic colors. */
+  --color-focus: oklch(66.5% 0.138 214.3);
   --color-focus-guard: oklch(100% 0 0);
-  --color-accent-ink: oklch(22.5% 0.021 163);
+  --color-accent-ink: oklch(24.5% 0.045 214.3);
   --color-on-primary: oklch(100% 0 0);
   --color-on-danger: oklch(100% 0 0);
-  --color-info: oklch(42.5% 0.0593 170.96);
-  --color-disabled: oklch(72% 0.018 155);
-  --color-loading: oklch(91% 0.002 0);
+  --color-info: oklch(66.5% 0.138 214.3);
+  --color-disabled: oklch(79.2% 0.035 212.8);
+  --color-loading: oklch(96.2% 0.021 211.5);
 
-  /* Hallmark aliases keep future UI code on named tokens. */
+  /* Hallmark aliases */
   --color-paper: var(--color-background);
   --color-paper-2: var(--color-surface-soft);
-  --color-paper-3: oklch(91% 0.002 0);
+  --color-paper-3: oklch(96.2% 0.021 211.5);
   --color-ink: var(--color-text-primary);
-  --color-ink-2: oklch(35% 0.021 163);
+  --color-ink-2: oklch(35% 0.045 214.3);
   --color-rule: var(--color-border);
-  --color-rule-2: oklch(76% 0.02 153);
+  --color-rule-2: oklch(85.8% 0.076 212.8);
   --color-muted: var(--color-text-secondary);
-  --color-neutral: oklch(38% 0.021 162);
+  --color-neutral: oklch(48% 0.042 214.3);
   --color-brand: var(--color-primary);
   --color-brand-deep: var(--color-primary-dark);
   --color-brand-wash: var(--color-surface-sage);
@@ -61,7 +60,6 @@
     "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  /* Major-third-adjacent application scale; use no more than five sizes in one view. */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -73,7 +71,6 @@
   --text-display-s: clamp(2rem, 4vw + 0.5rem, 3.25rem);
   --text-display: clamp(2.5rem, 5vw + 0.75rem, 4.5rem);
 
-  /* 4 pt rhythm with one 2 px optical adjustment token. */
   --space-3xs: 0.125rem;
   --space-2xs: 0.25rem;
   --space-xs: 0.5rem;
@@ -116,7 +113,7 @@
   --opacity-muted: 0.72;
 
   --rule-thin: 1px;
-  --shadow-raised: 0 8px 24px oklch(22.5% 0.021 163 / 0.08);
+  --shadow-raised: 0 8px 24px oklch(24.5% 0.045 214.3 / 0.08);
 
   --z-base: 1;
   --z-raised: 10;
@@ -139,4 +136,34 @@
     --dur-sheet: 150ms;
     --dur-modal: 150ms;
   }
+}
+
+/* Tailwind v4 @theme — wires :root CSS vars to utility class generation.
+   bg-surface → background: #FFFFFF
+   text-text-primary → color: #0F2F34
+   border-border → border-color: #80DEEA
+   etc. */
+@theme {
+  --color-primary: oklch(66.5% 0.138 214.3);
+  --color-primary-dark: oklch(52.2% 0.125 214.3);
+  --color-background: oklch(98.3% 0.009 210.8);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-soft: oklch(96.2% 0.021 211.5);
+  --color-surface-sage: oklch(91.8% 0.045 212.1);
+  --color-text-primary: oklch(24.5% 0.045 214.3);
+  --color-text-secondary: oklch(48% 0.042 214.3);
+  --color-border: oklch(85.8% 0.076 212.8);
+  --color-accent: oklch(79.2% 0.108 213.5);
+  --color-warning: oklch(62.64% 0.1248 70.45);
+  --color-danger: oklch(54.01% 0.1486 23.49);
+  --color-success: oklch(52.32% 0.0954 155.85);
+  --color-warning-ink: oklch(43% 0.105 70.45);
+  --color-danger-ink: oklch(45% 0.13 23.49);
+  --color-success-ink: oklch(42% 0.08 155.85);
+  --color-focus: oklch(66.5% 0.138 214.3);
+  --color-on-primary: oklch(100% 0 0);
+  --color-on-danger: oklch(100% 0 0);
+  --color-info: oklch(66.5% 0.138 214.3);
+  --color-disabled: oklch(79.2% 0.035 212.8);
+  --color-loading: oklch(96.2% 0.021 211.5);
 }

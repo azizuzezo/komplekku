@@ -159,9 +159,7 @@ function VisitorInviteList({ enabled }: { enabled: boolean }) {
 
 export function VisitorInvitePanel() {
   const queryClient = useQueryClient();
-  const [lastInvite, setLastInvite] = useState<{ guestName: string; qrToken: string } | null>(
-    null,
-  );
+  const [lastInvite, setLastInvite] = useState<{ guestName: string; qrToken: string } | null>(null);
 
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const canCreate = meQuery.data?.data.permissions.includes("visitor.create") ?? false;

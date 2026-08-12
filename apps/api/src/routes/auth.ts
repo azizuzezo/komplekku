@@ -11,12 +11,14 @@ import { requestUserAgent, responseMeta } from "../lib/http";
 import {
   createSessionToken,
   digestsMatch,
+  generateRandomOtp,
   maskPhone,
   nextPathForAuthState,
   normalizeIndonesianPhone,
   otpDigest,
   sessionTokenDigest,
 } from "../lib/security";
+import { sendWhatsAppOtp } from "../lib/whatsapp-provider";
 
 const invalidOtp = () =>
   new AppError(
@@ -37,17 +39,30 @@ export async function registerAuthRoutes(
     async (request, reply) => {
       const input = otpRequestInputSchema.parse(request.body);
       const phoneE164 = normalizeIndonesianPhone(input.phone);
-      if (
-        config.AUTH_MODE !== "development" ||
-        config.APP_ENV !== "local" ||
-        !config.ALLOW_DEV_OTP ||
-        !config.DEV_OTP
-      ) {
-        throw new AppError(
-          503,
-          "OTP_PROVIDER_UNAVAILABLE",
-          "Pengiriman kode verifikasi belum tersedia.",
-        );
+      let otpCode: string;
+
+      if (config.AUTH_MODE === "development") {
+        if (
+          config.APP_ENV !== "local" ||
+          !config.ALLOW_DEV_OTP ||
+          !config.DEV_OTP
+        ) {
+          throw new AppError(
+            503,
+            "OTP_PROVIDER_UNAVAILABLE",
+            "Pengiriman kode verifikasi belum tersedia.",
+          );
+        }
+        otpCode = config.DEV_OTP;
+      } else {
+        // AUTH_MODE === "provider"
+        otpCode = generateRandomOtp();
+        await sendWhatsAppOtp({
+          botUrl: config.WA_BOT_URL,
+          apiKey: config.WA_BOT_API_KEY,
+          phoneE164,
+          otp: otpCode,
+        });
       }
 
       const now = new Date();
@@ -57,7 +72,7 @@ export async function registerAuthRoutes(
       await repository.replaceOtpChallenge({
         id: requestId,
         phoneE164,
-        codeDigest: otpDigest(config.SESSION_SECRET, requestId, phoneE164, config.DEV_OTP),
+        codeDigest: otpDigest(config.SESSION_SECRET, requestId, phoneE164, otpCode),
         maxAttempts: config.OTP_MAX_ATTEMPTS,
         expiresAt,
         now,

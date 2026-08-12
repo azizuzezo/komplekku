@@ -27,3 +27,4 @@ export * from "./security-dashboard";
 export * from "./security-shift";
 export * from "./vehicle";
 export * from "./visitor";
+export * from "./prayer";

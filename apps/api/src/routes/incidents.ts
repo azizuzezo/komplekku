@@ -70,7 +70,8 @@ export async function registerIncidentRoutes(
   app.get("/api/v1/incidents/:id", { preHandler: readGuards }, async (request) => {
     const { id } = idParamsSchema.parse(request.params);
     const incident = await repository.getIncident(getAuthContext(request), id);
-    if (!incident) throw new AppError(404, "INCIDENT_NOT_FOUND", "Laporan kejadian tidak ditemukan.");
+    if (!incident)
+      throw new AppError(404, "INCIDENT_NOT_FOUND", "Laporan kejadian tidak ditemukan.");
     return { data: { incident: publicIncidentDetail(incident) }, meta: responseMeta(request) };
   });
 
@@ -87,6 +88,9 @@ export async function registerIncidentRoutes(
     if (result.outcome === "NOT_FOUND") {
       throw new AppError(404, "INCIDENT_NOT_FOUND", "Laporan kejadian tidak ditemukan.");
     }
-    return { data: { incident: publicIncidentDetail(result.incident) }, meta: responseMeta(request) };
+    return {
+      data: { incident: publicIncidentDetail(result.incident) },
+      meta: responseMeta(request),
+    };
   });
 }

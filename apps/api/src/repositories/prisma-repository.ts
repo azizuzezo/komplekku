@@ -128,7 +128,9 @@ function cameraCanSee(accessLevel: "RESIDENT" | "SECURITY" | "ADMIN_ONLY", permi
   return false;
 }
 
-function visibleCameraAccessLevels(permissions: string[]): ("RESIDENT" | "SECURITY" | "ADMIN_ONLY")[] {
+function visibleCameraAccessLevels(
+  permissions: string[],
+): ("RESIDENT" | "SECURITY" | "ADMIN_ONLY")[] {
   if (permissions.includes("camera.manage")) return ["RESIDENT", "SECURITY", "ADMIN_ONLY"];
   const levels: ("RESIDENT" | "SECURITY" | "ADMIN_ONLY")[] = [];
   if (permissions.includes("camera.public.read")) levels.push("RESIDENT");
@@ -1957,7 +1959,11 @@ export class PrismaRepository implements AppRepository {
     const levels = visibleCameraAccessLevels(auth.permissions);
     if (levels.length === 0) return [];
     const cameras = await this.prisma.camera.findMany({
-      where: { communityId: auth.currentCommunityId, archivedAt: null, accessLevel: { in: levels } },
+      where: {
+        communityId: auth.currentCommunityId,
+        archivedAt: null,
+        accessLevel: { in: levels },
+      },
       orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
     });
     return cameras.map((camera) => ({
@@ -2117,7 +2123,9 @@ export class PrismaRepository implements AppRepository {
       where: { id: auth.currentHouseholdId, communityId: auth.currentCommunityId },
       include: { house: true },
     });
-    return household ? addressLabel(household.house.block, household.house.number) : "Rumah tidak diketahui";
+    return household
+      ? addressLabel(household.house.block, household.house.number)
+      : "Rumah tidak diketahui";
   }
 
   private mapEmergency(emergency: {
@@ -2234,7 +2242,11 @@ export class PrismaRepository implements AppRepository {
       ...input,
       allowedFrom: ["SENT"],
       action: "emergency.acknowledged",
-      data: { status: "ACKNOWLEDGED", acknowledgedAt: input.now, acknowledgedByUserId: input.auth.userId },
+      data: {
+        status: "ACKNOWLEDGED",
+        acknowledgedAt: input.now,
+        acknowledgedByUserId: input.auth.userId,
+      },
     });
   }
 
@@ -2322,7 +2334,9 @@ export class PrismaRepository implements AppRepository {
         guestName: input.visitor.guestName,
         guestPhone: input.visitor.guestPhone ?? null,
         visitDate: parseAgendaDate(input.visitor.visitDate),
-        expectedTime: input.visitor.expectedTime ? parseAgendaTime(input.visitor.expectedTime) : null,
+        expectedTime: input.visitor.expectedTime
+          ? parseAgendaTime(input.visitor.expectedTime)
+          : null,
         vehicleInfo: input.visitor.vehicleInfo ?? null,
         plate: input.visitor.plate ?? null,
         purpose: input.visitor.purpose ?? null,
@@ -2351,7 +2365,11 @@ export class PrismaRepository implements AppRepository {
   }): Promise<CreateVisitorResult> {
     if (!input.auth.currentCommunityId) return { outcome: "HOUSE_NOT_FOUND" };
     const house = await this.prisma.house.findFirst({
-      where: { communityId: input.auth.currentCommunityId, code: input.visitor.houseCode, deletedAt: null },
+      where: {
+        communityId: input.auth.currentCommunityId,
+        code: input.visitor.houseCode,
+        deletedAt: null,
+      },
       include: { household: true },
     });
     if (!house) return { outcome: "HOUSE_NOT_FOUND" };
@@ -2404,7 +2422,10 @@ export class PrismaRepository implements AppRepository {
     return visitors.map((visitor) => this.mapVisitor(visitor));
   }
 
-  async findVisitorByQrToken(auth: AuthSessionRecord, qrToken: string): Promise<VisitorRecord | null> {
+  async findVisitorByQrToken(
+    auth: AuthSessionRecord,
+    qrToken: string,
+  ): Promise<VisitorRecord | null> {
     if (!auth.currentCommunityId) return null;
     const visitor = await this.prisma.visitor.findFirst({
       where: { qrToken, communityId: auth.currentCommunityId },
@@ -2456,7 +2477,11 @@ export class PrismaRepository implements AppRepository {
     if (existing.status !== "CHECKED_IN") return { outcome: "INVALID_TRANSITION" };
     const visitor = await this.prisma.visitor.update({
       where: { id: existing.id },
-      data: { status: "CHECKED_OUT", checkedOutAt: input.now, checkedOutByUserId: input.auth.userId },
+      data: {
+        status: "CHECKED_OUT",
+        checkedOutAt: input.now,
+        checkedOutByUserId: input.auth.userId,
+      },
       include: { household: { include: { house: true } } },
     });
     await this.recordAudit({
@@ -2504,7 +2529,11 @@ export class PrismaRepository implements AppRepository {
   }): Promise<CreatePackageResult> {
     if (!input.auth.currentCommunityId) return { outcome: "HOUSE_NOT_FOUND" };
     const house = await this.prisma.house.findFirst({
-      where: { communityId: input.auth.currentCommunityId, code: input.package.houseCode, deletedAt: null },
+      where: {
+        communityId: input.auth.currentCommunityId,
+        code: input.package.houseCode,
+        deletedAt: null,
+      },
       include: { household: true },
     });
     if (!house?.household) return { outcome: "HOUSE_NOT_FOUND" };
@@ -2525,7 +2554,11 @@ export class PrismaRepository implements AppRepository {
       });
 
       const members = await transaction.householdMember.findMany({
-        where: { householdId: house.household!.id, communityId: input.auth.currentCommunityId!, endedAt: null },
+        where: {
+          householdId: house.household!.id,
+          communityId: input.auth.currentCommunityId!,
+          endedAt: null,
+        },
         include: { resident: true },
       });
       for (const member of members) {
@@ -2674,7 +2707,11 @@ export class PrismaRepository implements AppRepository {
   }): Promise<SecurityShiftRecord | null> {
     if (!input.auth.currentCommunityId) return null;
     const existing = await this.prisma.securityShift.findFirst({
-      where: { communityId: input.auth.currentCommunityId, officerUserId: input.auth.userId, status: "ACTIVE" },
+      where: {
+        communityId: input.auth.currentCommunityId,
+        officerUserId: input.auth.userId,
+        status: "ACTIVE",
+      },
     });
     if (!existing) return null;
     const shift = await this.prisma.securityShift.update({
@@ -2734,8 +2771,15 @@ export class PrismaRepository implements AppRepository {
   async getActivePatrolSession(auth: AuthSessionRecord): Promise<PatrolSessionRecord | null> {
     if (!auth.currentCommunityId) return null;
     const session = await this.prisma.patrolSession.findFirst({
-      where: { communityId: auth.currentCommunityId, officerUserId: auth.userId, status: "IN_PROGRESS" },
-      include: { officer: true, scans: { include: { checkpoint: true }, orderBy: { scannedAt: "asc" } } },
+      where: {
+        communityId: auth.currentCommunityId,
+        officerUserId: auth.userId,
+        status: "IN_PROGRESS",
+      },
+      include: {
+        officer: true,
+        scans: { include: { checkpoint: true }, orderBy: { scannedAt: "asc" } },
+      },
     });
     if (!session) return null;
     const totalCheckpoints = await this.prisma.patrolCheckpoint.count({
@@ -2755,7 +2799,11 @@ export class PrismaRepository implements AppRepository {
     const existing = await this.getActivePatrolSession(input.auth);
     if (existing) return existing;
     const session = await this.prisma.patrolSession.create({
-      data: { communityId: input.auth.currentCommunityId, officerUserId: input.auth.userId, startedAt: input.now },
+      data: {
+        communityId: input.auth.currentCommunityId,
+        officerUserId: input.auth.userId,
+        startedAt: input.now,
+      },
       include: { officer: true, scans: { include: { checkpoint: true } } },
     });
     await this.recordAudit({
@@ -2782,11 +2830,19 @@ export class PrismaRepository implements AppRepository {
   }): Promise<ScanCheckpointResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NO_ACTIVE_SESSION" };
     const session = await this.prisma.patrolSession.findFirst({
-      where: { communityId: input.auth.currentCommunityId, officerUserId: input.auth.userId, status: "IN_PROGRESS" },
+      where: {
+        communityId: input.auth.currentCommunityId,
+        officerUserId: input.auth.userId,
+        status: "IN_PROGRESS",
+      },
     });
     if (!session) return { outcome: "NO_ACTIVE_SESSION" };
     const checkpoint = await this.prisma.patrolCheckpoint.findFirst({
-      where: { qrToken: input.qrToken, communityId: input.auth.currentCommunityId, archivedAt: null },
+      where: {
+        qrToken: input.qrToken,
+        communityId: input.auth.currentCommunityId,
+        archivedAt: null,
+      },
     });
     if (!checkpoint) return { outcome: "CHECKPOINT_NOT_FOUND" };
     const alreadyScanned = await this.prisma.patrolScan.findFirst({
@@ -2825,13 +2881,20 @@ export class PrismaRepository implements AppRepository {
   }): Promise<PatrolSessionRecord | null> {
     if (!input.auth.currentCommunityId) return null;
     const existing = await this.prisma.patrolSession.findFirst({
-      where: { communityId: input.auth.currentCommunityId, officerUserId: input.auth.userId, status: "IN_PROGRESS" },
+      where: {
+        communityId: input.auth.currentCommunityId,
+        officerUserId: input.auth.userId,
+        status: "IN_PROGRESS",
+      },
     });
     if (!existing) return null;
     const session = await this.prisma.patrolSession.update({
       where: { id: existing.id },
       data: { status: "COMPLETED", endedAt: input.now },
-      include: { officer: true, scans: { include: { checkpoint: true }, orderBy: { scannedAt: "asc" } } },
+      include: {
+        officer: true,
+        scans: { include: { checkpoint: true }, orderBy: { scannedAt: "asc" } },
+      },
     });
     await this.recordAudit({
       communityId: input.auth.currentCommunityId,
@@ -2855,7 +2918,10 @@ export class PrismaRepository implements AppRepository {
     });
     const sessions = await this.prisma.patrolSession.findMany({
       where: { communityId: auth.currentCommunityId },
-      include: { officer: true, scans: { include: { checkpoint: true }, orderBy: { scannedAt: "asc" } } },
+      include: {
+        officer: true,
+        scans: { include: { checkpoint: true }, orderBy: { scannedAt: "asc" } },
+      },
       orderBy: { startedAt: "desc" },
       take: limit,
     });
@@ -2968,7 +3034,9 @@ export class PrismaRepository implements AppRepository {
       where: { id: existing.id },
       data: {
         ...(input.changes.status === undefined ? {} : { status: input.changes.status }),
-        ...(input.changes.actionTaken === undefined ? {} : { actionTaken: input.changes.actionTaken }),
+        ...(input.changes.actionTaken === undefined
+          ? {}
+          : { actionTaken: input.changes.actionTaken }),
       },
       include: { reporter: true },
     });
@@ -2998,16 +3066,23 @@ export class PrismaRepository implements AppRepository {
       };
     }
     const communityId = auth.currentCommunityId;
-    const [shift, activeVisitorCount, pendingPackageCount, camerasOnline, camerasTotal, openEmergencyCount, patrol] =
-      await Promise.all([
-        this.getActiveSecurityShift(auth),
-        this.prisma.visitor.count({ where: { communityId, status: "CHECKED_IN" } }),
-        this.prisma.package.count({ where: { communityId, status: { not: "COLLECTED" } } }),
-        this.prisma.camera.count({ where: { communityId, archivedAt: null, status: "ONLINE" } }),
-        this.prisma.camera.count({ where: { communityId, archivedAt: null } }),
-        this.prisma.emergency.count({ where: { communityId, status: { not: "RESOLVED" } } }),
-        this.getActivePatrolSession(auth),
-      ]);
+    const [
+      shift,
+      activeVisitorCount,
+      pendingPackageCount,
+      camerasOnline,
+      camerasTotal,
+      openEmergencyCount,
+      patrol,
+    ] = await Promise.all([
+      this.getActiveSecurityShift(auth),
+      this.prisma.visitor.count({ where: { communityId, status: "CHECKED_IN" } }),
+      this.prisma.package.count({ where: { communityId, status: { not: "COLLECTED" } } }),
+      this.prisma.camera.count({ where: { communityId, archivedAt: null, status: "ONLINE" } }),
+      this.prisma.camera.count({ where: { communityId, archivedAt: null } }),
+      this.prisma.emergency.count({ where: { communityId, status: { not: "RESOLVED" } } }),
+      this.getActivePatrolSession(auth),
+    ]);
     void now;
     return {
       activeShift: shift ? { id: shift.id, startedAt: shift.startedAt } : null,
@@ -3033,6 +3108,7 @@ export class PrismaRepository implements AppRepository {
     description: string;
     location: string | null;
     status: ReportStatus;
+    photos: string[];
     createdAt: Date;
     reporter: { displayName: string | null; phoneE164: string };
     household: { displayName: string; house: { code: string } };
@@ -3050,6 +3126,7 @@ export class PrismaRepository implements AppRepository {
       description: report.description,
       location: report.location,
       status: report.status,
+      photos: report.photos,
       reporterName: displayNameOf(report.reporter),
       houseCode: report.household.house.code,
       householdDisplayName: report.household.displayName,
@@ -3088,6 +3165,7 @@ export class PrismaRepository implements AppRepository {
         category: input.report.category,
         description: input.report.description,
         location: input.report.location ?? null,
+        photos: input.report.photoUrls ?? [],
       },
     });
     await this.prisma.reportUpdate.create({
@@ -3163,7 +3241,10 @@ export class PrismaRepository implements AppRepository {
       where: { id: input.reportId, communityId },
     });
     if (!existing) return { outcome: "NOT_FOUND" };
-    await this.prisma.report.update({ where: { id: existing.id }, data: { status: input.update.status } });
+    await this.prisma.report.update({
+      where: { id: existing.id },
+      data: { status: input.update.status },
+    });
     await this.prisma.reportUpdate.create({
       data: {
         communityId,
@@ -3308,7 +3389,9 @@ export class PrismaRepository implements AppRepository {
     guard: (status: LetterRequestStatus) => boolean,
     data: Prisma.LetterRequestUncheckedUpdateInput,
   ): Promise<LetterRequestTransitionResult> {
-    const existing = await this.prisma.letterRequest.findFirst({ where: { id: requestId, communityId } });
+    const existing = await this.prisma.letterRequest.findFirst({
+      where: { id: requestId, communityId },
+    });
     if (!existing) return { outcome: "NOT_FOUND" };
     if (!guard(existing.status)) return { outcome: "INVALID_TRANSITION" };
     const request = await this.prisma.letterRequest.update({
@@ -3759,7 +3842,9 @@ export class PrismaRepository implements AppRepository {
   }): Promise<WaiveInvoiceResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const communityId = input.auth.currentCommunityId;
-    const existing = await this.prisma.invoice.findFirst({ where: { id: input.invoiceId, communityId } });
+    const existing = await this.prisma.invoice.findFirst({
+      where: { id: input.invoiceId, communityId },
+    });
     if (!existing) return { outcome: "NOT_FOUND" };
     if (existing.status === "PAID" || existing.status === "WAIVED") {
       return { outcome: "INVALID_TRANSITION" };
@@ -3904,7 +3989,9 @@ export class PrismaRepository implements AppRepository {
   }): Promise<PaymentTransitionResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const communityId = input.auth.currentCommunityId;
-    const existing = await this.prisma.payment.findFirst({ where: { id: input.paymentId, communityId } });
+    const existing = await this.prisma.payment.findFirst({
+      where: { id: input.paymentId, communityId },
+    });
     if (!existing) return { outcome: "NOT_FOUND" };
     if (existing.status !== "PENDING") return { outcome: "INVALID_TRANSITION" };
     const receiptNumber = `KK${formatAgendaDate(input.now).replace(/-/g, "")}-${existing.id.slice(0, 8).toUpperCase()}`;
@@ -3943,7 +4030,9 @@ export class PrismaRepository implements AppRepository {
   }): Promise<PaymentTransitionResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const communityId = input.auth.currentCommunityId;
-    const existing = await this.prisma.payment.findFirst({ where: { id: input.paymentId, communityId } });
+    const existing = await this.prisma.payment.findFirst({
+      where: { id: input.paymentId, communityId },
+    });
     if (!existing) return { outcome: "NOT_FOUND" };
     if (existing.status !== "PENDING") return { outcome: "INVALID_TRANSITION" };
     const payment = await this.prisma.payment.update({
@@ -4129,7 +4218,10 @@ export class PrismaRepository implements AppRepository {
       ]);
     return {
       outstandingInvoiceCount: outstandingInvoices.length,
-      outstandingInvoiceAmount: outstandingInvoices.reduce((total, invoice) => total + invoice.amount, 0),
+      outstandingInvoiceAmount: outstandingInvoices.reduce(
+        (total, invoice) => total + invoice.amount,
+        0,
+      ),
       pendingVerificationCount,
       collectedThisMonth: paidThisMonth.reduce((total, invoice) => total + invoice.amount, 0),
       cashBalance: (incomeRows._sum.amount ?? 0) - (expenseRows._sum.amount ?? 0),
@@ -4202,6 +4294,33 @@ export class PrismaRepository implements AppRepository {
       metadata: { code: house.code },
     });
     return { outcome: "OK", house: this.mapHouse(house) };
+  }
+
+  async updateProfile(input: {
+    auth: AuthSessionRecord;
+    profile: UpdateProfileInput;
+  }): Promise<{ displayName: string | null; allowResidentContact: boolean }> {
+    const data: Prisma.UserUpdateInput = {};
+    if (input.profile.displayName !== undefined) {
+      data.displayName = input.profile.displayName;
+    }
+    if (input.profile.allowResidentContact !== undefined) {
+      data.allowResidentContact = input.profile.allowResidentContact;
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: input.auth.userId },
+      data,
+    });
+    if (input.profile.displayName !== undefined && input.auth.currentCommunityId) {
+      await this.prisma.resident.updateMany({
+        where: { userId: input.auth.userId, communityId: input.auth.currentCommunityId },
+        data: { fullName: input.profile.displayName },
+      });
+    }
+    return {
+      displayName: updated.displayName,
+      allowResidentContact: updated.allowResidentContact,
+    };
   }
 
   async recordAudit(input: AuditInput): Promise<void> {

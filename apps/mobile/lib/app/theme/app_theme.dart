@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 
 abstract final class KomplekkuColors {
-  static const primary = Color(0xFF28594A);
-  static const primaryDark = Color(0xFF183D31);
-  // Owner-directed white base (2026-08-11, see Engineering.md ENG-011): the
-  // background/surface roles are true white rather than the PRD's original
-  // warm-paper anchor, mirroring the same change on web.
-  static const background = Color(0xFFFFFFFF);
-  static const brandCanvas = Color(0xFFFFFFFF);
+  static const primary = Color(0xFF00ACC1);
+  static const primaryDark = Color(0xFF00838F);
+  static const background = Color(0xFFF3FBFC);
+  static const brandCanvas = Color(0xFFF3FBFC);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceSoft = Color(0xFFF5F5F3);
-  static const surfaceMuted = Color(0xFFE8E8E5);
-  static const textPrimary = Color(0xFF17241E);
-  static const textSecondary = Color(0xFF53615A);
-  static const border = Color(0xFFDDE3DF);
-  static const borderStrong = Color(0xFFC5D0C9);
-  static const terracotta = Color(0xFFA95F43);
+  static const surfaceSoft = Color(0xFFE0F7FA);
+  static const surfaceMuted = Color(0xFFB2EBF2);
+  static const textPrimary = Color(0xFF0F2F34);
+  static const textSecondary = Color(0xFF376E76);
+  static const border = Color(0xFF80DEEA);
+  static const borderStrong = Color(0xFF4DD0E1);
+  static const terracotta = Color(0xFF00ACC1);
   static const danger = Color(0xFFB54343);
-  static const success = Color(0xFF347A52);
+  static const success = Color(0xFF00838F);
 }
 
 ThemeData buildKomplekkuTheme() {

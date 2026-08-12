@@ -97,9 +97,7 @@ function PaymentReviewRow({ payment, canManage }: { payment: Payment; canManage:
           {statusLabels[payment.status]}
         </span>
       </div>
-      <p className="payment-row__meta payment-row__meta--amount">
-        {formatRupiah(payment.amount)}
-      </p>
+      <p className="payment-row__meta payment-row__meta--amount">{formatRupiah(payment.amount)}</p>
       <p className="payment-row__meta">
         {payment.submittedByName} · {payment.houseCode} · {payment.householdDisplayName}
       </p>

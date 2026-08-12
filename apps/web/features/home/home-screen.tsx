@@ -13,6 +13,8 @@ import { getMe } from "@/features/auth/auth-api";
 import { getRequestState } from "@/lib/api/client";
 
 import { getHome } from "./home-api";
+import { PrayerCard } from "@/features/prayer/prayer-card";
+import { KomplekMap } from "@/components/map/komplek-map";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -146,6 +148,8 @@ export function HomeScreen() {
         </div>
       </header>
 
+      <PrayerCard />
+
       <div className="home-desk__grid">
         <section className="home-noticeboard" aria-labelledby="latest-announcement-heading">
           <div className="section-heading section-heading--ruled">
@@ -173,6 +177,10 @@ export function HomeScreen() {
               description="Informasi terbaru dari pengurus akan muncul di sini."
             />
           )}
+
+          <div className="mt-6">
+            <KomplekMap />
+          </div>
         </section>
 
         <div className="home-desk__aside">

@@ -178,9 +178,7 @@ export function ReportTriageDetail({ id }: { id: string }) {
                 <p className="report-timeline__meta">{formatReportDateTime(update.createdAt)}</p>
               </div>
               {update.note && <p className="report-timeline__note">{update.note}</p>}
-              {update.actorName && (
-                <p className="report-timeline__meta">Oleh {update.actorName}</p>
-              )}
+              {update.actorName && <p className="report-timeline__meta">Oleh {update.actorName}</p>}
             </li>
           ))}
         </ol>
@@ -196,7 +194,11 @@ export function ReportTriageDetail({ id }: { id: string }) {
           >
             <div className="field">
               <label htmlFor="report-update-status">Status</label>
-              <select className="input" id="report-update-status" {...updateForm.register("status")}>
+              <select
+                className="input"
+                id="report-update-status"
+                {...updateForm.register("status")}
+              >
                 {statusOptions.map((status) => (
                   <option value={status} key={status}>
                     {reportStatusLabels[status]}

@@ -1,4 +1,7 @@
-import { cashTransactionListQuerySchema, createCashTransactionInputSchema } from "@komplekku/contracts";
+import {
+  cashTransactionListQuerySchema,
+  createCashTransactionInputSchema,
+} from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 
 import type { AppRepository, CashTransactionRecord } from "../domain/repository";
@@ -54,8 +57,9 @@ export async function registerCashRoutes(
       now: new Date(),
       audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
     });
-    return reply
-      .status(201)
-      .send({ data: { transaction: publicCashTransaction(transaction) }, meta: responseMeta(request) });
+    return reply.status(201).send({
+      data: { transaction: publicCashTransaction(transaction) },
+      meta: responseMeta(request),
+    });
   });
 }

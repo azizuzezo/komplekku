@@ -243,7 +243,9 @@ export function PackageManagePanel() {
             type="text"
             autoComplete="off"
             aria-invalid={Boolean(createForm.formState.errors.courier)}
-            aria-describedby={createForm.formState.errors.courier ? "package-courier-error" : undefined}
+            aria-describedby={
+              createForm.formState.errors.courier ? "package-courier-error" : undefined
+            }
             {...createForm.register("courier")}
           />
           {createForm.formState.errors.courier && (

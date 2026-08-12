@@ -161,15 +161,11 @@ function LetterRequestForm() {
       )}
 
       <p className="field-hint">
-        Surat yang diterbitkan melalui Komplekku adalah surat keterangan dari pengurus
-        lingkungan, bukan dokumen resmi pemerintah.
+        Surat yang diterbitkan melalui Komplekku adalah surat keterangan dari pengurus lingkungan,
+        bukan dokumen resmi pemerintah.
       </p>
 
-      <button
-        className="button button--primary"
-        type="submit"
-        disabled={createMutation.isPending}
-      >
+      <button className="button button--primary" type="submit" disabled={createMutation.isPending}>
         {createMutation.isPending ? (
           <>
             <LoaderCircle className="loading-icon" size={18} aria-hidden="true" />
@@ -193,9 +189,7 @@ function LetterRequestHistoryRow({ request }: { request: LetterRequest }) {
         </span>
       </div>
       <p className="letter-request-row__meta">{request.purpose}</p>
-      <p className="letter-request-row__meta">
-        Diajukan {formatLetterDateTime(request.createdAt)}
-      </p>
+      <p className="letter-request-row__meta">Diajukan {formatLetterDateTime(request.createdAt)}</p>
       {request.status === "REJECTED" && request.rejectionReason && (
         <p className="letter-request-row__note letter-request-row__note--danger">
           Alasan penolakan: {request.rejectionReason}

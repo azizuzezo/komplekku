@@ -22,6 +22,7 @@ export const createReportInputSchema = z
     category: reportCategorySchema,
     description: z.string().trim().min(3).max(2000),
     location: z.string().trim().min(1).max(200).optional(),
+    photoUrls: z.array(z.string().url()).max(5).optional(),
   })
   .strict();
 
@@ -57,6 +58,7 @@ export const reportSummarySchema = z.object({
   description: z.string().min(1),
   location: z.string().nullable(),
   status: reportStatusSchema,
+  photos: z.array(z.string()),
   reporterName: z.string().min(1),
   houseCode: z.string().min(1),
   householdDisplayName: z.string().min(1),

@@ -57,26 +57,22 @@ export async function registerEmergencyRoutes(
     };
   });
 
-  app.post(
-    "/api/v1/emergencies/:id/acknowledge",
-    { preHandler: manageGuards },
-    async (request) => {
-      const { id } = idParamsSchema.parse(request.params);
-      const result = await repository.acknowledgeEmergency({
-        auth: getAuthContext(request),
-        emergencyId: id,
-        now: new Date(),
-        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
-      });
-      if (result.outcome !== "OK") {
-        if (result.outcome === "NOT_FOUND") {
-          throw new AppError(404, "EMERGENCY_NOT_FOUND", "Sinyal emergency tidak ditemukan.");
-        }
-        throw new AppError(409, "EMERGENCY_INVALID_TRANSITION", "Status emergency sudah berubah.");
+  app.post("/api/v1/emergencies/:id/acknowledge", { preHandler: manageGuards }, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+    const result = await repository.acknowledgeEmergency({
+      auth: getAuthContext(request),
+      emergencyId: id,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+    });
+    if (result.outcome !== "OK") {
+      if (result.outcome === "NOT_FOUND") {
+        throw new AppError(404, "EMERGENCY_NOT_FOUND", "Sinyal emergency tidak ditemukan.");
       }
-      return { data: { emergency: publicEmergency(result.emergency) }, meta: responseMeta(request) };
-    },
-  );
+      throw new AppError(409, "EMERGENCY_INVALID_TRANSITION", "Status emergency sudah berubah.");
+    }
+    return { data: { emergency: publicEmergency(result.emergency) }, meta: responseMeta(request) };
+  });
 
   app.post("/api/v1/emergencies/:id/respond", { preHandler: manageGuards }, async (request) => {
     const { id } = idParamsSchema.parse(request.params);

@@ -31,7 +31,12 @@ import {
   listInvoices,
   waiveInvoice,
 } from "./invoice-api";
-import { formatInvoiceDate, formatRupiah, invoiceStatusLabels, invoiceStatusTone } from "./invoice-list";
+import {
+  formatInvoiceDate,
+  formatRupiah,
+  invoiceStatusLabels,
+  invoiceStatusTone,
+} from "./invoice-list";
 
 function readableError(error: unknown) {
   return error instanceof ApiError
@@ -417,7 +422,11 @@ function WaiveInvoiceAction({ invoice }: { invoice: Invoice }) {
         </p>
       )}
       <div className="invoice-row__actions">
-        <button className="button button--danger button--compact" type="submit" disabled={waiveMutation.isPending}>
+        <button
+          className="button button--danger button--compact"
+          type="submit"
+          disabled={waiveMutation.isPending}
+        >
           {waiveMutation.isPending ? (
             <>
               <LoaderCircle className="loading-icon" size={17} aria-hidden="true" />

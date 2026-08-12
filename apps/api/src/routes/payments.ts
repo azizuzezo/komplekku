@@ -87,7 +87,11 @@ export async function registerPaymentRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "PAYMENT_NOT_FOUND", "Pembayaran tidak ditemukan.");
       }
-      throw new AppError(409, "PAYMENT_INVALID_TRANSITION", "Pembayaran ini sudah diproses sebelumnya.");
+      throw new AppError(
+        409,
+        "PAYMENT_INVALID_TRANSITION",
+        "Pembayaran ini sudah diproses sebelumnya.",
+      );
     }
     return { data: { payment: publicPayment(result.payment) }, meta: responseMeta(request) };
   });
@@ -106,7 +110,11 @@ export async function registerPaymentRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "PAYMENT_NOT_FOUND", "Pembayaran tidak ditemukan.");
       }
-      throw new AppError(409, "PAYMENT_INVALID_TRANSITION", "Pembayaran ini sudah diproses sebelumnya.");
+      throw new AppError(
+        409,
+        "PAYMENT_INVALID_TRANSITION",
+        "Pembayaran ini sudah diproses sebelumnya.",
+      );
     }
     return { data: { payment: publicPayment(result.payment) }, meta: responseMeta(request) };
   });

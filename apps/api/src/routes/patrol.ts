@@ -41,7 +41,10 @@ export async function registerPatrolRoutes(
 
   app.get("/api/v1/patrol/session", { preHandler: executeGuards }, async (request) => {
     const session = await repository.getActivePatrolSession(getAuthContext(request));
-    return { data: { session: session ? publicSession(session) : null }, meta: responseMeta(request) };
+    return {
+      data: { session: session ? publicSession(session) : null },
+      meta: responseMeta(request),
+    };
   });
 
   app.post("/api/v1/patrol/session/start", { preHandler: executeGuards }, async (request) => {
@@ -64,7 +67,11 @@ export async function registerPatrolRoutes(
     });
     if (result.outcome !== "OK") {
       if (result.outcome === "NO_ACTIVE_SESSION") {
-        throw new AppError(409, "PATROL_NO_ACTIVE_SESSION", "Mulai patroli sebelum memindai checkpoint.");
+        throw new AppError(
+          409,
+          "PATROL_NO_ACTIVE_SESSION",
+          "Mulai patroli sebelum memindai checkpoint.",
+        );
       }
       if (result.outcome === "CHECKPOINT_NOT_FOUND") {
         throw new AppError(404, "CHECKPOINT_NOT_FOUND", "Checkpoint tidak ditemukan.");
@@ -80,7 +87,10 @@ export async function registerPatrolRoutes(
       now: new Date(),
       audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
     });
-    return { data: { session: session ? publicSession(session) : null }, meta: responseMeta(request) };
+    return {
+      data: { session: session ? publicSession(session) : null },
+      meta: responseMeta(request),
+    };
   });
 
   app.get("/api/v1/patrol/history", { preHandler: manageGuards }, async (request) => {

@@ -99,6 +99,122 @@ h6 {
   white-space: nowrap;
 }
 
+/* ════════════════════════════════════════════════════════════
+   Utility classes — Tailwind-style aliases for design tokens.
+   These are explicit CSS rules, not generated utilities, so
+   they work regardless of @theme / Tailwind v4 config issues.
+   ════════════════════════════════════════════════════════════ */
+
+/* Background surfaces */
+.bg-surface       { background-color: var(--color-surface) !important; }
+.bg-surface-soft  { background-color: var(--color-surface-soft) !important; }
+.bg-surface-sage  { background-color: var(--color-surface-sage) !important; }
+.bg-background    { background-color: var(--color-background) !important; }
+
+/* Brand backgrounds */
+.bg-primary       { background-color: var(--color-primary) !important; }
+.bg-primary-dark  { background-color: var(--color-primary-dark) !important; }
+.bg-accent        { background-color: var(--color-accent) !important; }
+
+/* Semantic backgrounds */
+.bg-success       { background-color: var(--color-success) !important; }
+.bg-warning       { background-color: var(--color-warning) !important; }
+.bg-danger        { background-color: var(--color-danger) !important; }
+
+/* Text colours */
+.text-primary        { color: var(--color-primary) !important; }
+.text-primary-dark   { color: var(--color-primary-dark) !important; }
+.text-text-primary   { color: var(--color-text-primary) !important; }
+.text-text-secondary { color: var(--color-text-secondary) !important; }
+.text-success        { color: var(--color-success-ink) !important; }
+.text-warning        { color: var(--color-warning-ink) !important; }
+.text-danger         { color: var(--color-danger-ink) !important; }
+.text-white          { color: #fff !important; }
+
+/* Border colours */
+.border-border   { border-color: var(--color-border) !important; }
+.border-primary  { border-color: var(--color-primary) !important; }
+.border-success  { border-color: var(--color-success) !important; }
+.border-danger   { border-color: var(--color-danger) !important; }
+
+/* ── Card utility ────────────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 4px oklch(24.5% 0.045 214.3 / 0.06);
+}
+
+/* ── Button base utility ─────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  border: none;
+  border-radius: var(--radius-button);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-hover) var(--ease-out),
+              opacity var(--dur-hover) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+.btn.bg-primary  { background: var(--color-primary);  color: var(--color-on-primary); }
+.btn.bg-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btn.bg-surface  { background: var(--color-surface);  color: var(--color-text-primary); }
+.btn.bg-surface-soft { background: var(--color-surface-soft); color: var(--color-text-secondary); }
+.btn.bg-surface-soft:hover:not(:disabled) { background: var(--color-surface-sage); }
+
+/* ── Status label utility ───────────────────────────────────── */
+.status-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
+.status-label--success {
+  background: oklch(92% 0.045 155.85);
+  color: var(--color-success-ink);
+  border: 1px solid oklch(80% 0.07 155.85);
+}
+
+.status-label--warning {
+  background: oklch(93% 0.05 70.45);
+  color: var(--color-warning-ink);
+  border: 1px solid oklch(82% 0.08 70.45);
+}
+
+.status-label--danger {
+  background: oklch(93% 0.05 23.49);
+  color: var(--color-danger-ink);
+  border: 1px solid oklch(82% 0.08 23.49);
+}
+
+.status-label--muted {
+  background: var(--color-surface-soft);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.status-label--info {
+  background: var(--color-surface-sage);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-accent);
+}
+
 .skip-link {
   position: fixed;
   z-index: var(--z-tooltip);
@@ -134,22 +250,34 @@ h6 {
   user-select: none;
 }
 
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  background: transparent;
+}
+
 .brand-lockup--lockup {
-  width: 11.5rem;
-  height: 3.5rem;
+  width: auto;
+  height: 2.75rem;
+  overflow: visible;
 }
 
 .brand-lockup--lockup .brand-lockup__image {
-  width: 118%;
+  width: auto;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand-lockup--mark {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  overflow: visible;
 }
 
 .brand-lockup--mark .brand-lockup__image {
-  width: 168%;
+  width: 100%;
+  height: 100%;
 }
 
 .brand-lockup--light {
@@ -204,6 +332,12 @@ h6 {
   width: 2.4rem;
   height: 2.4rem;
   background: transparent;
+}
+
+nextjs-portal,
+#next-js-dev-tools,
+div[data-nextjs-toast] {
+  display: none !important;
 }
 
 .mobile-header__context {
@@ -477,8 +611,11 @@ h6 {
   outline: var(--focus-width) solid transparent;
   outline-offset: var(--focus-input-offset);
   background: var(--color-surface);
+  color: var(--color-text-primary);
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--text-base);
+  appearance: none;
+  -webkit-appearance: none;
   transition:
     border-color var(--dur-hover) var(--ease-out),
     background-color var(--dur-hover) var(--ease-out);
@@ -502,6 +639,11 @@ h6 {
   background: var(--color-surface-soft);
   color: var(--color-text-secondary);
   opacity: var(--opacity-disabled);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
 }
 
 .textarea {
@@ -530,7 +672,7 @@ h6 {
   bottom: 0;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: var(--rule-thin) solid var(--color-border);
   background: var(--color-surface);
   padding: 0 var(--space-2xs) max(var(--space-3xs), env(safe-area-inset-bottom));
@@ -4617,4 +4759,172 @@ h6 {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* ── PhotoPicker ────────────────────────────────────────────── */
+.photo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.photo-picker__config-error {
+  font-size: var(--text-xs);
+  color: var(--color-danger-ink);
+  background: oklch(93% 0.05 23.49 / 0.4);
+  border: 1px solid oklch(82% 0.08 23.49);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.photo-picker__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.photo-picker__slot {
+  position: relative;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+  flex: none;
+}
+
+.photo-picker__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-picker__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.photo-picker__overlay--uploading {
+  background: oklch(24.5% 0.045 214.3 / 0.5);
+}
+
+.photo-picker__overlay--error {
+  background: oklch(45% 0.13 23.49 / 0.55);
+}
+
+.photo-picker__percent {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.photo-picker__retry {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 0.375rem;
+  padding: 0.1rem 0.4rem;
+  cursor: pointer;
+}
+
+.photo-picker__remove {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(24.5% 0.045 214.3 / 0.75);
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background var(--dur-micro);
+}
+
+.photo-picker__remove:hover:not(:disabled) {
+  background: oklch(45% 0.13 23.49 / 0.9);
+}
+
+.photo-picker__add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--color-border);
+  background: var(--color-surface-soft);
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: border-color var(--dur-hover), background var(--dur-hover);
+  flex: none;
+}
+
+.photo-picker__add:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-surface-sage);
+}
+
+.photo-picker__add-icon {
+  color: var(--color-primary);
+}
+
+.photo-picker__add-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.photo-picker__add-hint {
+  font-size: 0.6rem;
+  color: var(--color-text-secondary);
+  line-height: 1;
+}
+
+.photo-picker__caption {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* ── PhotoGrid (read-only thumbnail display) ────────────────── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+  gap: var(--space-xs);
+}
+
+.photo-grid__item {
+  display: block;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  aspect-ratio: 1;
+  transition: opacity var(--dur-hover);
+}
+
+.photo-grid__item:hover {
+  opacity: 0.85;
+}
+
+.photo-grid__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }

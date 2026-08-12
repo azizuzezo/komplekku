@@ -59,9 +59,10 @@ export async function registerLetterRoutes(
       }
       throw new AppError(409, "HOUSEHOLD_CONTEXT_REQUIRED", "Rumah tangga aktif diperlukan.");
     }
-    return reply
-      .status(201)
-      .send({ data: { request: publicLetterRequest(result.request) }, meta: responseMeta(request) });
+    return reply.status(201).send({
+      data: { request: publicLetterRequest(result.request) },
+      meta: responseMeta(request),
+    });
   });
 
   app.get("/api/v1/letters", { preHandler: readGuards }, async (request) => {
@@ -86,7 +87,11 @@ export async function registerLetterRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "LETTER_REQUEST_NOT_FOUND", "Permohonan surat tidak ditemukan.");
       }
-      throw new AppError(409, "LETTER_REQUEST_INVALID_TRANSITION", "Status permohonan sudah berubah.");
+      throw new AppError(
+        409,
+        "LETTER_REQUEST_INVALID_TRANSITION",
+        "Status permohonan sudah berubah.",
+      );
     }
     return { data: { request: publicLetterRequest(result.request) }, meta: responseMeta(request) };
   });
@@ -105,7 +110,11 @@ export async function registerLetterRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "LETTER_REQUEST_NOT_FOUND", "Permohonan surat tidak ditemukan.");
       }
-      throw new AppError(409, "LETTER_REQUEST_INVALID_TRANSITION", "Status permohonan sudah berubah.");
+      throw new AppError(
+        409,
+        "LETTER_REQUEST_INVALID_TRANSITION",
+        "Status permohonan sudah berubah.",
+      );
     }
     return { data: { request: publicLetterRequest(result.request) }, meta: responseMeta(request) };
   });
@@ -122,7 +131,11 @@ export async function registerLetterRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "LETTER_REQUEST_NOT_FOUND", "Permohonan surat tidak ditemukan.");
       }
-      throw new AppError(409, "LETTER_REQUEST_INVALID_TRANSITION", "Status permohonan sudah berubah.");
+      throw new AppError(
+        409,
+        "LETTER_REQUEST_INVALID_TRANSITION",
+        "Status permohonan sudah berubah.",
+      );
     }
     return { data: { request: publicLetterRequest(result.request) }, meta: responseMeta(request) };
   });

@@ -17,7 +17,11 @@ describe("layanan komunitas (Phase 3)", () => {
       method: "POST",
       url: "/api/v1/reports",
       headers: { cookie: resident.cookie },
-      payload: { category: "TRASH", description: "Sampah menumpuk di ujung gang.", location: "Gang F3" },
+      payload: {
+        category: "TRASH",
+        description: "Sampah menumpuk di ujung gang.",
+        location: "Gang F3",
+      },
     });
     expect(created.statusCode).toBe(201);
     expect(created.json().data.report.status).toBe("SUBMITTED");

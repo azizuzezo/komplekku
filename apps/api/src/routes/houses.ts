@@ -42,6 +42,8 @@ export async function registerHouseRoutes(
     if (result.outcome !== "OK") {
       throw new AppError(409, "HOUSE_CODE_CONFLICT", "Kode rumah ini sudah digunakan.");
     }
-    return reply.status(201).send({ data: { house: publicHouse(result.house) }, meta: responseMeta(request) });
+    return reply
+      .status(201)
+      .send({ data: { house: publicHouse(result.house) }, meta: responseMeta(request) });
   });
 }

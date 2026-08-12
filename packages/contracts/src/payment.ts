@@ -10,9 +10,7 @@ export const createPaymentInputSchema = z
   .object({
     invoiceId: z.string().uuid(),
     amount: z.number().int().positive(),
-    paidAt: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal harus menggunakan format YYYY-MM-DD."),
+    paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal harus menggunakan format YYYY-MM-DD."),
     note: z.string().trim().min(3).max(300),
   })
   .strict();

@@ -136,9 +136,7 @@ function VisitorLookupCard() {
             <p className="visitor-row__meta">
               {foundVisitor.houseCode} · {formatVisitDate(foundVisitor.visitDate)}
             </p>
-            <span
-              className={`visitor-status visitor-status--${foundVisitor.status.toLowerCase()}`}
-            >
+            <span className={`visitor-status visitor-status--${foundVisitor.status.toLowerCase()}`}>
               {statusLabels[foundVisitor.status]}
             </span>
           </div>

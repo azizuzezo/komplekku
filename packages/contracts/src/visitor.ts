@@ -2,12 +2,7 @@ import { z } from "zod";
 
 import { dataEnvelopeSchema } from "./envelope";
 
-export const visitorStatusSchema = z.enum([
-  "PENDING",
-  "CHECKED_IN",
-  "CHECKED_OUT",
-  "CANCELLED",
-]);
+export const visitorStatusSchema = z.enum(["PENDING", "CHECKED_IN", "CHECKED_OUT", "CANCELLED"]);
 
 export type VisitorStatus = z.infer<typeof visitorStatusSchema>;
 

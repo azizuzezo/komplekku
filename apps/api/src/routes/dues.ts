@@ -98,7 +98,11 @@ export async function registerDuesRoutes(
       if (result.outcome === "NOT_FOUND") {
         throw new AppError(404, "INVOICE_NOT_FOUND", "Tagihan tidak ditemukan.");
       }
-      throw new AppError(409, "INVOICE_INVALID_TRANSITION", "Tagihan ini sudah lunas atau sudah dibebaskan.");
+      throw new AppError(
+        409,
+        "INVOICE_INVALID_TRANSITION",
+        "Tagihan ini sudah lunas atau sudah dibebaskan.",
+      );
     }
     return { data: { invoice: publicInvoice(result.invoice) }, meta: responseMeta(request) };
   });

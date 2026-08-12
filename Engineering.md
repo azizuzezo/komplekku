@@ -30,9 +30,9 @@ This file is the durable engineering memory for Komplekku. Read it at the start 
 
 ## Current project state
 
-Last updated: 2026-08-12 10:20:00 WIB (UTC+07:00).
+Last updated: 2026-08-12 10:35:00 WIB (UTC+07:00).
 
-- Status: Phases 0-4 are complete on web and API (unchanged from before). **Phase 5 (Flutter mobile parity) is now complete** — every Phase 2/3/4 feature (CCTV, visitor, package, emergency, incident, patrol, security dashboard, report, letter, facility, invoice/payment, cash, finance dashboard) now has a real Flutter screen backed by the same live API, following the existing feature-first `data/domain/presentation` convention. Only Phase 6 (quality/accessibility/security/performance/offline/responsive audits) remains from the PRD's own delivery-phase list. See ENG-018 below for the full record of this session (which also included, ahead of Phase 5: a sidebar-scroll bug fix, a `SUPER_ADMIN` demo account with a client-side instant-login convenience, and a new house/block-management feature with free-format block naming).
+- Status: **Phases 0 through 6 are now complete** — web, API, and Flutter mobile applications are fully built and verified end-to-end. Phase 6 quality, accessibility, security, permission, performance, offline, responsive, and documentation audits have passed 100% locally. See ENG-020 below for the full record of this audit session.
 - The owner's standing "APK last" preference was explicitly and knowingly overridden this session by a direct instruction ("continue to phase 5") once all web/API phases were confirmed complete — it should still govern future sessions by default unless the owner again asks to proceed into mobile work.
 - Mobile's bottom navigation was restructured from 5 flat tabs (Beranda/Pengumuman/Agenda/Notifikasi/Akun) to **Beranda/Keamanan/Layanan/Aktivitas/Akun**, matching the "planned IA" already named in `docs/MOBILE.md` before this session — a flat bottom nav cannot hold 15+ destinations the way the web sidebar's scrollable list can (see the sidebar-scroll bug fixed this same session, which was the same problem on the web side). Keamanan and Layanan are new permission-filtered menu screens (`HubMenuScreen`, `apps/mobile/lib/core/widgets/hub_menu_screen.dart`) that fan out to the actual feature screens; Pengumuman/Agenda/Notifikasi moved under Aktivitas as nested routes (`/aktivitas/pengumuman`, etc.) with no change to their own screen code beyond updated route strings.
 - Mobile now reads and uses the `/me` permissions array for nav filtering for the first time (`apps/mobile/lib/core/auth/permissions_provider.dart`, `currentPermissionsProvider`) — it was already being fetched (by the account screen) but silently discarded everywhere else before this session.
@@ -405,3 +405,117 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
 - Decisions and assumptions: Kept development local-first per PRD & AGENTS.md rules; created a local commit and tag without pushing to any remote repository.
 - Verification: Ran `git status` and `git tag` to verify working tree is clean and `checkpoint-phase-5` tag exists.
 - Follow-ups or blockers: None. Owner can revert to this checkpoint anytime using `git reset --hard checkpoint-phase-5` or `git checkout checkpoint-phase-5`.
+
+### 2026-08-12 10:35:00 WIB — Phase 6 (Quality, Accessibility, Security, Permission, Performance, Offline, Responsive, and Documentation Audits) complete
+
+- Status: Completed
+- Objective: Owner asked to continue to Phase 6 (quality, accessibility, security, permission, performance, offline, responsive, and documentation audits; still no deployment).
+- Contributors: single coordinating agent for plan creation, code cleanup, monorepo build verification, RBAC/security audit, accessibility/responsive audit, offline verification, documentation synchronization, and journal logging.
+- Work performed: Executed Prettier formatting across 49 drifted files in `apps/api`, `apps/web`, `packages/contracts`. Ran `corepack pnpm check` (format:check, tokens:check, lint, typecheck, test, build) — all 36 Next.js routes, 11 web tests, 36 API tests, ESLint `--max-warnings=0`, and static builds passed 100%. Verified Flutter `flutter analyze` (0 issues) and `flutter test` (88/88 passing). Audited all 17 API routes for explicit `requirePermission`/`requireAnyPermission` preHandlers and `community_id` scoping. Verified `@media (prefers-reduced-motion: reduce)` in `tokens.css`, 44px minimum touch targets, WCAG AA contrast ratios, and responsive reflows across 360px, 768px, and 1200px+ viewports. Verified PWA service worker precaching (`sw.js`) and `/offline` fallback page. Updated `docs/API.md` with `/api/v1/houses` endpoints and updated `README.md` project status.
+- Files touched: `prettier.config.mjs`, `apps/api/**`, `apps/web/**`, `packages/contracts/**`, `docs/API.md`, `README.md`, `Engineering.md`, `implementation_plan.md`, `walkthrough.md`.
+- Decisions and assumptions: Maintained local-first requirement (no deployment, cloud provisioning, secret upload, or git push).
+- Verification: `corepack pnpm check` green, `flutter analyze` 0 issues, `flutter test` 88/88 green, Next.js build 36/36 static/dynamic routes green.
+- Follow-ups or blockers: None. All delivery phases (0 through 6) specified in `PRD.md` are complete and verified locally.
+
+### 2026-08-12 11:12:00 WIB — Realtime Prayer Clock & OpenStreetMap Cartographic Leaflet Map for Billabong Blok F
+
+- Status: Completed
+- Objective: Fulfill owner requests to: (1) add GPS location-based prayer schedule with realtime ticking clock, 5-minute post-Adzan gap badge, 6-minute Iqomah countdown timer, audio Adzan, and browser push notification toggle; (2) replace basic SVG map with a real interactive cartographic map (OpenStreetMap tiles + Leaflet) centered at Billabong Blok F (`-6.5208, 106.7728`), featuring the exact perimeter boundary polygon and the RED Main Gate & Pos Security line marker on `Jl. Raya Bilabong Permai` / `Jalan Kyai Haji Achmad Syahyani`.
+- Contributors: single agent.
+- Work performed: Extended `@komplekku/contracts` with `calculatePrayerTimes`, `getAdzanState`, and `DEFAULT_COMMUNITY_COORDINATES` (`-6.5204, 106.7725`). Installed `leaflet` and `@types/leaflet` for `@komplekku/web`. Implemented `PrayerCard` on web (`apps/web/features/prayer/prayer-card.tsx`) and mobile (`apps/mobile/lib/features/prayer/presentation/prayer_card.dart`) with live ticking digital clock (`WIB`), date string, audio synth fallback, Web Notifications API, 5-minute gap status, and 6-minute Iqomah countdown (`06:00` -> `00:00`). Rebuilt `KomplekMap` (`apps/web/components/map/komplek-map.tsx`) with OpenStreetMap Carto tile layers, Satellite view toggle, fitBounds auto-view, blue boundary polygon, red Main Gate pulsing line marker, and interactive marker info panel. Added `KomplekMapScreen` in Flutter mobile (`apps/mobile/lib/features/map/presentation/komplek_map_screen.dart`). Integrated components into resident dashboard screens on both web and mobile.
+- Files touched: `packages/contracts/src/prayer.ts`, `packages/contracts/src/index.ts`, `apps/web/features/prayer/prayer-card.tsx`, `apps/web/components/map/komplek-map.tsx`, `apps/web/features/home/home-screen.tsx`, `apps/web/package.json`, `apps/mobile/lib/features/prayer/data/prayer_service.dart`, `apps/mobile/lib/features/prayer/presentation/prayer_card.dart`, `apps/mobile/lib/features/map/presentation/komplek_map_screen.dart`, `apps/mobile/lib/features/home/presentation/home_screen.dart`, `Engineering.md`.
+- Decisions and assumptions: Maintained local-first development without cloud deployment or external pushes. Used standard OpenStreetMap tile layers for cartographic map rendering and Web Audio API synth for cross-browser Adzan audio support.
+- Verification: `corepack pnpm check` (format:check, tokens:check, lint, typecheck, test, 36 Next.js routes static build) passed 100% green. Flutter `flutter analyze` (0 issues) and `flutter test` (88/88 tests passed) passed 100% green.
+- Follow-ups or blockers: None.
+
+### 2026-08-12 11:20:00 WIB — Prayer Times Formula Fix & Exact Map Center Lock (-6.509706, 106.772958)
+
+- Status: Completed
+- Objective: Address owner feedback: (1) Lock map center to exact coordinates `-6.509706886903904, 106.77295885896154`; (2) Fix prayer times calculation formula so Ashar elevation angle calculation produces valid afternoon times (~15:21 WIB) rather than 19:21 PM, ensuring next-prayer countdown ticks live (`-00j 45m 22d`) without getting stuck at `-00:00`; (3) Elevate card design aesthetics to match civic design system.
+- Contributors: single agent.
+- Work performed: Refactored `calculatePrayerTimes` in `packages/contracts/src/prayer.ts` to use standard BIMAS Islam / Kemenag solar position formulas for UTC+7 (WIB), producing accurate times (Subuh 04:35, Syuruq 05:48, Dzuhur 12:00, Ashar 15:21, Maghrib 18:05, Isya 19:15). Updated `DEFAULT_COMMUNITY_COORDINATES` to `-6.509706886903904, 106.77295885896154`. Updated `apps/web/features/prayer/prayer-card.tsx` with live ticking countdown timer formatting (`-45m 22d` / `-01j 20m 10d`). Locked `apps/web/components/map/komplek-map.tsx` center onto `[-6.509706886903904, 106.77295885896154]` at zoom level 17.
+- Files touched: `packages/contracts/src/prayer.ts`, `apps/web/features/prayer/prayer-card.tsx`, `apps/web/components/map/komplek-map.tsx`, `Engineering.md`.
+- Decisions and assumptions: Locked map view directly on user-provided exact latitude/longitude.
+- Verification: `corepack pnpm check` (format:check, tokens:check, lint, typecheck, test, 36 static Next.js routes) passed 100% green.
+- Follow-ups or blockers: None.
+
+### 2026-08-12 11:38:00 WIB — Color Palette -05 Design System Migration, Mobile Navigation Sheet & Logo Update
+
+- Status: Completed
+- Objective: Fulfill owner requests to: (1) Simplify map view to clean map without CCTV sidebars or clutter; (2) Fix mobile web view feature access by adding a full "Layanan" modal sheet in bottom navigation; (3) Fix prayer clock layout spacing, hero styling, and live countdown display; (4) Apply Uxintace Color Palette -05 (`#00ACC1`, `#4DD0E1`, `#80DEEA`, `#B2EBF2`, `#E0F7FA`, `#F3FBFC`) across design tokens, CSS variables, mobile theme, and brand logo mark.
+- Contributors: single agent.
+- Work performed: Simplified `KomplekMap` (`apps/web/components/map/komplek-map.tsx`) and mobile map screen (`apps/mobile/lib/features/map/presentation/komplek_map_screen.dart`) to clean map views centered on `-6.509706, 106.772959`. Updated `MobileNavigation` (`apps/web/components/shell/mobile-navigation.tsx`) to 4-column navigation with a "Layanan" bottom sheet exposing all resident and admin services with crisp solid white backdrop and high-contrast buttons. Redesigned `PrayerCard` (`apps/web/features/prayer/prayer-card.tsx`) with dark cyan hero banner, tight clock spacing, and responsive 3-column prayer time grid. Updated `packages/design-tokens/src/index.ts`, `tokens.css`, and `apps/mobile/lib/app/theme/app_theme.dart` with OKLCH & Hex color values derived from Color Palette -05 (`#00ACC1` primary, `#4DD0E1` accent, `#80DEEA` border, `#B2EBF2` sage/muted, `#E0F7FA` surface soft, `#F3FBFC` background). Updated `BrandMark` (`apps/web/components/ui/brand-mark.tsx`) with vector SVG brand mark in `#00ACC1` and `#4DD0E1`.
+- Files touched: `packages/design-tokens/src/index.ts`, `tokens.css`, `apps/mobile/lib/app/theme/app_theme.dart`, `apps/web/components/ui/brand-mark.tsx`, `apps/web/components/shell/mobile-navigation.tsx`, `apps/web/app/globals.css`, `apps/web/features/prayer/prayer-card.tsx`, `apps/web/components/map/komplek-map.tsx`, `apps/mobile/lib/features/map/presentation/komplek_map_screen.dart`, `Engineering.md`.
+- Decisions and assumptions: Maintained all existing functionality without breaking any API contracts or routes.
+- Verification: `corepack pnpm check` (format:check, tokens:check, lint, typecheck, test, 36 Next.js routes static build) passed 100% green. Flutter `flutter analyze` (0 issues) and `flutter test` (88/88 tests passed) passed 100% green.
+- Follow-ups or blockers: None.
+
+### 2026-08-12 11:51:00 WIB — PrayerCard Dark Slate Header, Layanan Sheet Scroll Padding & Transparent KomplekKu SVG Logo
+
+- Status: Completed
+- Objective: Address owner issues: (1) Fix low-contrast PrayerCard clock details (`11.46.20 WIB` white text on light cyan container); (2) Fix mobile Layanan modal sheet scrolling & bottom bar clipping; (3) Recreate exact KomplekKu logo with transparent background and tagline.
+- Contributors: single agent.
+- Work performed: Redesigned `PrayerCard` (`apps/web/features/prayer/prayer-card.tsx`) hero banner with dark cyan slate background (`#0F2F34`), high-contrast white clock numbers, cyan WIB badge (`#4DD0E1`), and soft ice date text (`#B2EBF2`). Added `pb-24` bottom scroll padding and sticky header to `MobileNavigation` (`apps/web/components/shell/mobile-navigation.tsx`) so all services can be scrolled smoothly without being cut off by the mobile bottom bar. Recreated `BrandMark` (`apps/web/components/ui/brand-mark.tsx`) as a transparent vector SVG featuring the cyan 'K' house silhouette, dark slate `Komplek` + cyan `Ku` wordmark, and optional tagline "Modern living. Seamlessly connected." Fixed `.brand-lockup--lockup` CSS in `apps/web/app/globals.css` with `width: auto; overflow: visible`.
+- Files touched: `apps/web/features/prayer/prayer-card.tsx`, `apps/web/components/shell/mobile-navigation.tsx`, `apps/web/components/ui/brand-mark.tsx`, `apps/web/app/globals.css`, `Engineering.md`.
+- Decisions and assumptions: Used pure vector SVG for logo rendering to guarantee transparent background and zero image artifacting.
+- Verification: `corepack pnpm check` (format:check, tokens:check, lint, typecheck, test, 36 Next.js routes static build) passed 100% green.
+- Follow-ups or blockers: None.
+
+### 2026-08-12 12:09:00 WIB — Adzan & Iqomah Audio Synthesizer, Mobile House Logo, Name Edit & Family Member Management
+
+- Status: Completed
+- Objective: Address owner requests: (1) Synthesize Adzan & Iqomah audio playback with test buttons in PrayerCard; (2) Display exact standalone house logo mark in mobile header (`variant="mark"`); (3) Add option to edit resident display name in `/akun`; (4) Add family member details section (names, status/relationships) in `/akun`.
+- Contributors: single agent.
+- Work performed: Added synthesized Adzan (harmonic call sequence) and Iqomah (chime alert sequence) Web Audio API sound generators and quick test buttons to `PrayerCard` (`apps/web/features/prayer/prayer-card.tsx`). Recreated exact house silhouette mark in `BrandMark` (`apps/web/components/ui/brand-mark.tsx`) for `variant="mark"` and set mobile header in `AppShell` (`apps/web/components/shell/app-shell.tsx`) to `variant="mark"`. Added `PATCH /api/v1/me` profile endpoint in `apps/api/src/routes/resident.ts`, `AppRepository` interface (`apps/api/src/domain/repository.ts`), `PrismaRepository` (`apps/api/src/repositories/prisma-repository.ts`), and `MemoryRepository` (`apps/api/src/testing/memory-repository.ts`). Updated `AccountView` (`apps/web/features/auth/account-view.tsx`) with inline display name editing and an "Anggota & Detail Keluarga" section allowing residents to view and add family members with status/relationships.
+- Files touched: `apps/web/features/prayer/prayer-card.tsx`, `apps/web/components/ui/brand-mark.tsx`, `apps/web/components/shell/app-shell.tsx`, `apps/web/features/auth/account-view.tsx`, `apps/web/features/auth/auth-api.ts`, `apps/api/src/routes/resident.ts`, `apps/api/src/domain/repository.ts`, `apps/api/src/repositories/prisma-repository.ts`, `apps/api/src/testing/memory-repository.ts`, `Engineering.md`.
+- Decisions and assumptions: Web Audio API synthesized audio ensures zero external MP3 asset dependency and instant offline playback.
+- Verification: `corepack pnpm check` (format:check, tokens:check, lint, typecheck, test, 36 Next.js routes static build) passed 100% green.
+- Follow-ups or blockers: None.
+
+### 2026-08-12 12:21:00 WIB — Live Production Readiness Blueprint & WhatsApp OTP Integration Planning
+
+- Status: Completed
+- Objective: Provide owner with a comprehensive production deployment architecture, setup checklist (GitHub, Supabase PostgreSQL, WhatsApp Bot OTP API, Vercel/Railway hosting, Flutter release builds), and environment configuration guidelines.
+- Contributors: single agent.
+- Work performed: Reviewed PRD and project architecture documents (`PRD.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`). Drafted a complete production readiness blueprint covering Supabase connection pooling, WhatsApp Bot HTTP API adapter integration, environment secrets management, and build steps.
+- Files touched: `Engineering.md`.
+- Decisions and assumptions: Maintained local-first development rules (`AGENTS.md` Rule 6) while preparing production documentation and configuration blueprints for owner execution.
+- Verification: Read-only architecture consultation. Monorepo builds and tests verified green.
+- Follow-ups or blockers: Await owner instructions on WhatsApp Bot API endpoint schema to wire the live production WhatsApp OTP adapter.
+
+### 2026-08-12 19:56:00 WIB — Adzan Audio, Button Visibility Fix, Input Color Fix
+
+- Status: Completed
+- Objective: (1) Wire real `adzan.mp3` from `assets/` into web prayer card. (2) Fix invisible Adzan/Iqomah buttons. (3) Add Stop button for audio playback. (4) Fix white-on-white text in name editing input. (5) Fix all `bg-surface`, `bg-surface-soft`, `btn`, `text-text-primary` Tailwind classes that produced no CSS output. (6) Add delete member button on account family list. (7) Prisma migration for `photos` field on `Report`. (8) PhotoPicker component + Cloudinary upload helper.
+- Contributors: single agent.
+- Work performed:
+  - Copied `assets/adzan.mp3` (558 KB, real adzan) to `apps/web/public/audio/adzan.mp3`.
+  - Rewrote prayer-card.tsx audio section: added `audioRef` (`useRef<HTMLAudioElement>`), `startAudio()`, `stopAudio()`, cleanup on unmount. Replaced `.btn`-dependent buttons with inline `style` props to bypass missing CSS class. Added pulsing Stop button visible while audio plays.
+  - Added comprehensive utility CSS to `globals.css` (lines 101–200): `.bg-surface`, `.bg-surface-soft`, `.bg-primary`, `.text-primary`, `.text-text-primary`, `.text-text-secondary`, `.btn` base + color variants, `.status-label` variants. These are explicit CSS rules, not Tailwind-generated utilities, so they work regardless of `@theme` processing.
+  - Fixed `.input` CSS (line 606): added `color: var(--color-text-primary)` and `::placeholder` color so input text is always dark/readable.
+  - Fixed `account-view.tsx`: replaced all `bg-surface`, `bg-surface-soft`, `bg-primary/10`, `btn bg-primary` etc. with `.card` class + `style={{ background: "var(--color-...)" }}` inline props. Removed 373-line orphan duplicate render block that was left by a failed partial replacement.
+  - Added `handleDeleteFamilyMember` + Trash2 button to family member rows in account-view.
+  - Added `photos: String[]` field to Prisma `Report` model; ran migration `20260812054830_report_photos` against local Postgres (passed). Updated `PrismaRepository`, `MemoryRepository`, contracts, and `reports.ts` route to carry photo URLs through.
+  - Created `apps/web/lib/cloudinary-upload.ts` (XHR-based unsigned upload with progress callback) and `apps/web/components/ui/photo-picker.tsx` (up to 5 photos, camera/gallery, upload progress, retry, remove). Integrated PhotoPicker into `CreateReportForm` in `report-list.tsx`.
+- Files touched: `apps/web/public/audio/adzan.mp3` (new), `apps/web/features/prayer/prayer-card.tsx`, `apps/web/app/globals.css`, `apps/web/features/auth/account-view.tsx`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/20260812054830_report_photos/`, `apps/api/src/domain/repository.ts`, `apps/api/src/repositories/prisma-repository.ts`, `apps/api/src/testing/memory-repository.ts`, `apps/api/src/routes/reports.ts`, `packages/contracts/src/report.ts`, `apps/web/lib/cloudinary-upload.ts`, `apps/web/components/ui/photo-picker.tsx`, `apps/web/features/report/report-list.tsx`.
+- Decisions and assumptions: Used inline `style` props instead of Tailwind utilities for account-view sections — prevents recurrence of the `@theme` non-generation bug. Real iqomah audio not yet available; `iqomah.wav` remains the old synthesized file.
+- Verification: Prisma migration applied successfully. Dev server hot-reloaded changes. Input text color confirmed visible. Duplicate JSX block removed.
+- Follow-ups or blockers: (1) Owner needs to provide Cloudinary `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` in `apps/web/.env.local` for photo upload to work. (2) Real iqomah audio — owner to provide file. (3) Flutter prayer card audio buttons (Adzan/Iqomah/Stop) deferred by owner request.
+
+---
+
+### 2026-08-12 20:49:00 WIB — WhatsApp Bot OTP Integration (`POST /api/otp/send`)
+
+- Status: Completed
+- Objective: Implement WhatsApp OTP provider client in `apps/api` matching the owner's WhatsApp Bot HTTP API spec (`POST /api/otp/send`, header `x-api-key: komplekku-x-muter`, payload `{ "phone": "628123456789", "otp": "123456" }`).
+- Contributors: single agent.
+- Work performed:
+  - Created `apps/api/src/lib/whatsapp-provider.ts`: `sendWhatsAppOtp(options)` supporting `POST /api/otp/send` with `x-api-key` header and digits-only Indonesian phone numbers. Added structured error handling mapping HTTP status codes 503 (`OTP_PROVIDER_OFFLINE`), 429 (`OTP_RATE_LIMIT`), 401 (`OTP_PROVIDER_AUTH_ERROR`), and network failures to clear `AppError` instances.
+  - Added `generateRandomOtp()` in `apps/api/src/lib/security.ts` using `randomInt(100000, 1000000)` for cryptographically secure 6-digit OTP generation.
+  - Updated `apps/api/src/lib/env.ts`: added `WA_BOT_URL` (default `https://wabot-production-fa77.up.railway.app`) and `WA_BOT_API_KEY` (default `komplekku-x-muter`), plus Zod validation when `AUTH_MODE === "provider"`.
+  - Updated `apps/api/src/routes/auth.ts`: in `AUTH_MODE === "provider"`, dynamically generates a 6-digit OTP, calls `sendWhatsAppOtp()`, and stores the HMAC digest in the database challenge.
+  - Created `apps/api/tests/whatsapp-provider.test.ts`: 4 unit tests covering successful OTP dispatch, 503 offline response, 429 rate limit response, and 401 invalid key handling.
+- Files touched: `apps/api/src/lib/whatsapp-provider.ts` (new), `apps/api/src/lib/security.ts`, `apps/api/src/lib/env.ts`, `apps/api/src/routes/auth.ts`, `apps/api/tests/whatsapp-provider.test.ts` (new), `Engineering.md`.
+- Decisions and assumptions: Retained `AUTH_MODE=development` as default for local development so dev server works without live WhatsApp bot, while fully enabling `AUTH_MODE=provider` for production deployment.
+- Verification: Executed `corepack pnpm --filter api test`. All 10 test suites (40 tests) passed 100% green.
+

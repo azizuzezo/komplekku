@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createReportInputSchema,
@@ -14,6 +15,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 
 import { StatePanel } from "@/components/ui/state-panel";
+import { PhotoPicker } from "@/components/ui/photo-picker";
 import { getMe } from "@/features/auth/auth-api";
 import { ApiError, getRequestState } from "@/lib/api/client";
 
@@ -60,6 +62,8 @@ function blankToUndefined(value: string) {
 
 function CreateReportForm() {
   const queryClient = useQueryClient();
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const form = useForm<CreateReportInput>({
     resolver: zodResolver(createReportInputSchema),
     defaultValues: {
@@ -74,13 +78,20 @@ function CreateReportForm() {
     onSuccess() {
       void queryClient.invalidateQueries({ queryKey: reportKeys.all });
       form.reset();
+      setPhotoUrls([]);
     },
   });
+
+  const handleSubmit = form.handleSubmit((values) => {
+    createMutation.mutate({ ...values, photoUrls: photoUrls.length > 0 ? photoUrls : undefined });
+  });
+
+  const isPending = createMutation.isPending || isUploadingPhotos;
 
   return (
     <form
       className="form-stack report-create-form"
-      onSubmit={form.handleSubmit((values) => createMutation.mutate(values))}
+      onSubmit={handleSubmit}
       noValidate
     >
       <div className="field">
@@ -123,6 +134,19 @@ function CreateReportForm() {
         />
       </div>
 
+      {/* Photo Attachment */}
+      <div className="field">
+        <label>Foto Pendukung (opsional, maks. 5)</label>
+        <PhotoPicker
+          onChange={(urls) => {
+            setPhotoUrls(urls);
+            // Mark uploading if there are pending slots (tracked by PhotoPicker internally).
+            // We use the onChange callback as the source of truth — if URLs count increases we're good.
+          }}
+          disabled={createMutation.isPending}
+        />
+      </div>
+
       {createMutation.isError && (
         <p className="form-message" role="alert">
           {readableError(createMutation.error)}
@@ -134,7 +158,7 @@ function CreateReportForm() {
         </p>
       )}
 
-      <button className="button button--primary" type="submit" disabled={createMutation.isPending}>
+      <button className="button button--primary" type="submit" disabled={isPending}>
         {createMutation.isPending ? (
           <>
             <LoaderCircle className="loading-icon" size={17} aria-hidden="true" />

@@ -129,9 +129,7 @@ export function ReportDetail({ id }: { id: string }) {
                 <p className="report-timeline__meta">{formatReportDateTime(update.createdAt)}</p>
               </div>
               {update.note && <p className="report-timeline__note">{update.note}</p>}
-              {update.actorName && (
-                <p className="report-timeline__meta">Oleh {update.actorName}</p>
-              )}
+              {update.actorName && <p className="report-timeline__meta">Oleh {update.actorName}</p>}
             </li>
           ))}
         </ol>

@@ -6,6 +6,8 @@ import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/home/data/home_repository.dart';
 import 'package:komplekku/features/home/domain/home_snapshot.dart';
+import 'package:komplekku/features/prayer/presentation/prayer_card.dart';
+import 'package:komplekku/features/map/presentation/komplek_map_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -60,7 +62,22 @@ class HomeScreen extends ConsumerWidget {
                   '${data.communityName} · ${data.houseLabel}',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                const PrayerCard(),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.map_outlined, color: KomplekkuColors.primary),
+                  label: const Text('Peta Digital & Pos Security Utama (RED)'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: KomplekkuColors.border),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const KomplekMapScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

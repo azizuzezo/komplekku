@@ -17,7 +17,10 @@ export async function registerSecurityDashboardRoutes(
       return {
         data: {
           activeShift: dashboard.activeShift
-            ? { id: dashboard.activeShift.id, startedAt: dashboard.activeShift.startedAt.toISOString() }
+            ? {
+                id: dashboard.activeShift.id,
+                startedAt: dashboard.activeShift.startedAt.toISOString(),
+              }
             : null,
           activeVisitorCount: dashboard.activeVisitorCount,
           pendingPackageCount: dashboard.pendingPackageCount,

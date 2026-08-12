@@ -84,8 +84,7 @@ function EmergencyTriageRow({
     },
   });
 
-  const activeError =
-    acknowledgeMutation.error ?? respondMutation.error ?? resolveMutation.error;
+  const activeError = acknowledgeMutation.error ?? respondMutation.error ?? resolveMutation.error;
   const isPending =
     acknowledgeMutation.isPending || respondMutation.isPending || resolveMutation.isPending;
 
@@ -183,8 +182,7 @@ function EmergencyTriageRow({
 export function EmergencyTriageList() {
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const canReadEmergencies = meQuery.data?.data.permissions.includes("emergency.read") ?? false;
-  const canManageEmergencies =
-    meQuery.data?.data.permissions.includes("emergency.manage") ?? false;
+  const canManageEmergencies = meQuery.data?.data.permissions.includes("emergency.manage") ?? false;
 
   const listQuery = useQuery({
     queryKey: emergencyKeys.list(20),

@@ -28,7 +28,11 @@ describe("keuangan lingkungan (Phase 4)", () => {
       method: "POST",
       url: "/api/v1/dues-types",
       headers: { cookie: treasurer.cookie },
-      payload: { name: "Iuran Keamanan", description: "Iuran keamanan bulanan.", defaultAmount: 100000 },
+      payload: {
+        name: "Iuran Keamanan",
+        description: "Iuran keamanan bulanan.",
+        defaultAmount: 100000,
+      },
     });
     expect(createdType.statusCode).toBe(201);
     const duesTypeId = createdType.json().data.duesType.id as string;
@@ -57,9 +61,9 @@ describe("keuangan lingkungan (Phase 4)", () => {
       headers: { cookie: resident.cookie },
     });
     expect(residentInvoices.statusCode).toBe(200);
-    const ownInvoice = (residentInvoices.json().data.items as Array<{ id: string; period: string }>).find(
-      (item) => item.period === "2026-09",
-    );
+    const ownInvoice = (
+      residentInvoices.json().data.items as Array<{ id: string; period: string }>
+    ).find((item) => item.period === "2026-09");
     expect(ownInvoice).toBeTruthy();
     if (!ownInvoice) throw new Error("expected the generated invoice for the resident household");
 
@@ -142,9 +146,9 @@ describe("keuangan lingkungan (Phase 4)", () => {
       url: "/api/v1/invoices",
       headers: { cookie: treasurer.cookie },
     });
-    const seededInvoice = (invoices.json().data.items as Array<{ id: string; status: string }>).find(
-      (item) => item.status === "UNPAID",
-    );
+    const seededInvoice = (
+      invoices.json().data.items as Array<{ id: string; status: string }>
+    ).find((item) => item.status === "UNPAID");
     expect(seededInvoice).toBeTruthy();
     if (!seededInvoice) throw new Error("expected a seeded unpaid invoice");
 

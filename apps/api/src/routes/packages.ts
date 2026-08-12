@@ -51,7 +51,10 @@ export async function registerPackageRoutes(
 
   app.get("/api/v1/packages", { preHandler: readGuards }, async (request) => {
     const query = listQuerySchema.parse(request.query);
-    const items = await repository.listPackages({ auth: getAuthContext(request), limit: query.limit });
+    const items = await repository.listPackages({
+      auth: getAuthContext(request),
+      limit: query.limit,
+    });
     return { data: { items: items.map(publicPackage) }, meta: responseMeta(request) };
   });
 

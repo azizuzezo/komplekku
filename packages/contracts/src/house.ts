@@ -27,7 +27,9 @@ export const houseSchema = z.object({
 
 export type House = z.infer<typeof houseSchema>;
 
-export const houseListResponseSchema = dataEnvelopeSchema(z.object({ items: z.array(houseSchema) }));
+export const houseListResponseSchema = dataEnvelopeSchema(
+  z.object({ items: z.array(houseSchema) }),
+);
 
 export const houseMutationResponseSchema = dataEnvelopeSchema(z.object({ house: houseSchema }));
 

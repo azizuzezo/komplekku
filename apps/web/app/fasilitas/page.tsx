@@ -14,7 +14,10 @@ export default function FacilityPage() {
       <div className="page-content">
         <header className="page-heading page-heading--index">
           <h1>Fasilitas & pemesanan</h1>
-          <p>Pesan fasilitas bersama lingkungan, seperti balai warga, dan lihat jadwal yang sudah dipesan warga lain.</p>
+          <p>
+            Pesan fasilitas bersama lingkungan, seperti balai warga, dan lihat jadwal yang sudah
+            dipesan warga lain.
+          </p>
         </header>
         <FacilityBookingPanel />
       </div>

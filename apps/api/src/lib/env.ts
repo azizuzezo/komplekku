@@ -35,6 +35,11 @@ const envSchema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
+    WA_BOT_URL: z
+      .string()
+      .url()
+      .default("https://wabot-production-fa77.up.railway.app"),
+    WA_BOT_API_KEY: z.string().default("komplekku-x-muter"),
   })
   .superRefine((value, context) => {
     if (value.AUTH_MODE === "development") {
@@ -50,6 +55,23 @@ const envSchema = z
           code: "custom",
           path: ["ALLOW_DEV_OTP"],
           message: "OTP development memerlukan ALLOW_DEV_OTP=true dan DEV_OTP.",
+        });
+      }
+    }
+
+    if (value.AUTH_MODE === "provider") {
+      if (!value.WA_BOT_URL) {
+        context.addIssue({
+          code: "custom",
+          path: ["WA_BOT_URL"],
+          message: "AUTH_MODE=provider memerlukan WA_BOT_URL.",
+        });
+      }
+      if (!value.WA_BOT_API_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["WA_BOT_API_KEY"],
+          message: "AUTH_MODE=provider memerlukan WA_BOT_API_KEY.",
         });
       }
     }

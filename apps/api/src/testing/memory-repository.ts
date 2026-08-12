@@ -372,6 +372,7 @@ interface MemoryReport {
   category: ReportCategory;
   description: string;
   location: string | null;
+  photos: string[];
   status: ReportStatus;
   createdAt: Date;
 }
@@ -888,8 +889,12 @@ export class MemoryRepository implements AppRepository {
     });
     this.permissions.set(`${demoIds.user}:${demoIds.community}`, [...readPermissions]);
     this.permissions.set(`${demoIds.securityUser}:${demoIds.community}`, [...securityPermissions]);
-    this.permissions.set(`${demoIds.treasurerUser}:${demoIds.community}`, [...treasurerPermissions]);
-    this.permissions.set(`${demoIds.superAdminUser}:${demoIds.community}`, [...superAdminPermissions]);
+    this.permissions.set(`${demoIds.treasurerUser}:${demoIds.community}`, [
+      ...treasurerPermissions,
+    ]);
+    this.permissions.set(`${demoIds.superAdminUser}:${demoIds.community}`, [
+      ...superAdminPermissions,
+    ]);
     this.cameras = [
       {
         id: demoIds.cameraPublic,
@@ -945,7 +950,8 @@ export class MemoryRepository implements AppRepository {
         id: demoIds.letterTypeTwo,
         communityId: demoIds.community,
         name: "Surat Domisili Lingkungan",
-        description: "Keterangan domisili yang diterbitkan lingkungan, bukan dokumen pemerintah resmi.",
+        description:
+          "Keterangan domisili yang diterbitkan lingkungan, bukan dokumen pemerintah resmi.",
         isActive: true,
         displayOrder: 2,
       },
@@ -2358,7 +2364,8 @@ export class MemoryRepository implements AppRepository {
   ): EmergencyTransitionResult {
     if (!auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const emergency = this.emergencies.find(
-      (candidate) => candidate.id === emergencyId && candidate.communityId === auth.currentCommunityId,
+      (candidate) =>
+        candidate.id === emergencyId && candidate.communityId === auth.currentCommunityId,
     );
     if (!emergency) return { outcome: "NOT_FOUND" };
     if (!allowedFrom.includes(emergency.status)) return { outcome: "INVALID_TRANSITION" };
@@ -2372,10 +2379,15 @@ export class MemoryRepository implements AppRepository {
     now: Date;
     audit: { ipAddress: string | null; userAgent: string | null };
   }): Promise<EmergencyTransitionResult> {
-    const result = this.transitionEmergency(input.auth, input.emergencyId, ["SENT"], (emergency) => {
-      emergency.status = "ACKNOWLEDGED";
-      emergency.acknowledgedAt = input.now;
-    });
+    const result = this.transitionEmergency(
+      input.auth,
+      input.emergencyId,
+      ["SENT"],
+      (emergency) => {
+        emergency.status = "ACKNOWLEDGED";
+        emergency.acknowledgedAt = input.now;
+      },
+    );
     if (result.outcome === "OK") {
       this.audits.push({
         communityId: input.auth.currentCommunityId,
@@ -2526,7 +2538,9 @@ export class MemoryRepository implements AppRepository {
         candidate.code === input.visitor.houseCode,
     );
     if (!house) return { outcome: "HOUSE_NOT_FOUND" };
-    const household = [...this.households.values()].find((candidate) => candidate.houseId === house.id);
+    const household = [...this.households.values()].find(
+      (candidate) => candidate.houseId === house.id,
+    );
     if (!household) return { outcome: "HOUSEHOLD_NOT_FOUND" };
 
     const visitor: MemoryVisitor = {
@@ -2576,10 +2590,14 @@ export class MemoryRepository implements AppRepository {
       .map((visitor) => this.visitorRecord(visitor));
   }
 
-  async findVisitorByQrToken(auth: AuthSessionRecord, qrToken: string): Promise<VisitorRecord | null> {
+  async findVisitorByQrToken(
+    auth: AuthSessionRecord,
+    qrToken: string,
+  ): Promise<VisitorRecord | null> {
     if (!auth.currentCommunityId) return null;
     const visitor = this.visitors.find(
-      (candidate) => candidate.qrToken === qrToken && candidate.communityId === auth.currentCommunityId,
+      (candidate) =>
+        candidate.qrToken === qrToken && candidate.communityId === auth.currentCommunityId,
     );
     return visitor ? this.visitorRecord(visitor) : null;
   }
@@ -2593,7 +2611,8 @@ export class MemoryRepository implements AppRepository {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const visitor = this.visitors.find(
       (candidate) =>
-        candidate.qrToken === input.qrToken && candidate.communityId === input.auth.currentCommunityId,
+        candidate.qrToken === input.qrToken &&
+        candidate.communityId === input.auth.currentCommunityId,
     );
     if (!visitor) return { outcome: "NOT_FOUND" };
     if (visitor.status !== "PENDING") return { outcome: "INVALID_TRANSITION" };
@@ -2668,7 +2687,9 @@ export class MemoryRepository implements AppRepository {
         candidate.code === input.package.houseCode,
     );
     if (!house) return { outcome: "HOUSE_NOT_FOUND" };
-    const household = [...this.households.values()].find((candidate) => candidate.houseId === house.id);
+    const household = [...this.households.values()].find(
+      (candidate) => candidate.houseId === house.id,
+    );
     if (!household) return { outcome: "HOUSE_NOT_FOUND" };
 
     const pkg: MemoryPackage = {
@@ -2846,21 +2867,29 @@ export class MemoryRepository implements AppRepository {
     if (!auth.currentCommunityId) return [];
     return this.patrolCheckpoints
       .filter(
-        (checkpoint) => checkpoint.communityId === auth.currentCommunityId && checkpoint.archivedAt === null,
+        (checkpoint) =>
+          checkpoint.communityId === auth.currentCommunityId && checkpoint.archivedAt === null,
       )
       .sort((left, right) => left.displayOrder - right.displayOrder)
-      .map((checkpoint) => ({ id: checkpoint.id, name: checkpoint.name, displayOrder: checkpoint.displayOrder }));
+      .map((checkpoint) => ({
+        id: checkpoint.id,
+        name: checkpoint.name,
+        displayOrder: checkpoint.displayOrder,
+      }));
   }
 
   private patrolSessionRecord(session: MemoryPatrolSession): PatrolSessionRecord {
     const totalCheckpoints = this.patrolCheckpoints.filter(
-      (checkpoint) => checkpoint.communityId === session.communityId && checkpoint.archivedAt === null,
+      (checkpoint) =>
+        checkpoint.communityId === session.communityId && checkpoint.archivedAt === null,
     ).length;
     const scans = this.patrolScans
       .filter((scan) => scan.patrolSessionId === session.id)
       .sort((left, right) => left.scannedAt.getTime() - right.scannedAt.getTime())
       .map((scan) => {
-        const checkpoint = this.patrolCheckpoints.find((candidate) => candidate.id === scan.checkpointId);
+        const checkpoint = this.patrolCheckpoints.find(
+          (candidate) => candidate.id === scan.checkpointId,
+        );
         return {
           checkpointId: scan.checkpointId,
           checkpointName: checkpoint?.name ?? "",
@@ -3089,7 +3118,8 @@ export class MemoryRepository implements AppRepository {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const incident = this.incidents.find(
       (candidate) =>
-        candidate.id === input.incidentId && candidate.communityId === input.auth.currentCommunityId,
+        candidate.id === input.incidentId &&
+        candidate.communityId === input.auth.currentCommunityId,
     );
     if (!incident) return { outcome: "NOT_FOUND" };
     if (input.changes.status !== undefined) incident.status = input.changes.status;
@@ -3132,7 +3162,10 @@ export class MemoryRepository implements AppRepository {
         (pkg) => pkg.communityId === communityId && pkg.status !== "COLLECTED",
       ).length,
       camerasOnline: this.cameras.filter(
-        (camera) => camera.communityId === communityId && camera.archivedAt === null && camera.status === "ONLINE",
+        (camera) =>
+          camera.communityId === communityId &&
+          camera.archivedAt === null &&
+          camera.status === "ONLINE",
       ).length,
       camerasTotal: this.cameras.filter(
         (camera) => camera.communityId === communityId && camera.archivedAt === null,
@@ -3162,7 +3195,7 @@ export class MemoryRepository implements AppRepository {
         status: update.status,
         note: update.note,
         actorName: update.actorUserId
-          ? this.users.get(update.actorUserId)?.displayName ?? "Pengguna Komplekku"
+          ? (this.users.get(update.actorUserId)?.displayName ?? "Pengguna Komplekku")
           : null,
         createdAt: update.createdAt,
       }));
@@ -3172,6 +3205,7 @@ export class MemoryRepository implements AppRepository {
       description: report.description,
       location: report.location,
       status: report.status,
+      photos: report.photos,
       reporterName: this.users.get(report.reporterUserId)?.displayName ?? "Pengguna Komplekku",
       houseCode: house?.code ?? "",
       householdDisplayName: household?.displayName ?? "",
@@ -3197,6 +3231,7 @@ export class MemoryRepository implements AppRepository {
       category: input.report.category,
       description: input.report.description,
       location: input.report.location ?? null,
+      photos: input.report.photoUrls ?? [],
       status: "SUBMITTED",
       createdAt: input.now,
     };
@@ -3263,7 +3298,8 @@ export class MemoryRepository implements AppRepository {
   }): Promise<AddReportUpdateResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const report = this.reports.find(
-      (candidate) => candidate.id === input.reportId && candidate.communityId === input.auth.currentCommunityId,
+      (candidate) =>
+        candidate.id === input.reportId && candidate.communityId === input.auth.currentCommunityId,
     );
     if (!report) return { outcome: "NOT_FOUND" };
     report.status = input.update.status;
@@ -3306,7 +3342,7 @@ export class MemoryRepository implements AppRepository {
       houseCode: house?.code ?? "",
       householdDisplayName: household?.displayName ?? "",
       reviewedByName: request.reviewedByUserId
-        ? this.users.get(request.reviewedByUserId)?.displayName ?? "Pengguna Komplekku"
+        ? (this.users.get(request.reviewedByUserId)?.displayName ?? "Pengguna Komplekku")
         : null,
       reviewedAt: request.reviewedAt,
       rejectionReason: request.rejectionReason,
@@ -3387,7 +3423,10 @@ export class MemoryRepository implements AppRepository {
       .map((request) => this.letterRequestRecord(request));
   }
 
-  private findLetterRequest(requestId: string, communityId: string): MemoryLetterRequest | undefined {
+  private findLetterRequest(
+    requestId: string,
+    communityId: string,
+  ): MemoryLetterRequest | undefined {
     return this.letterRequests.find(
       (candidate) => candidate.id === requestId && candidate.communityId === communityId,
     );
@@ -3525,7 +3564,8 @@ export class MemoryRepository implements AppRepository {
       )
       .sort(
         (left, right) =>
-          left.bookingDate.localeCompare(right.bookingDate) || left.startTime.localeCompare(right.startTime),
+          left.bookingDate.localeCompare(right.bookingDate) ||
+          left.startTime.localeCompare(right.startTime),
       )
       .slice(0, input.limit)
       .map((booking) => this.facilityBookingRecord(booking));
@@ -3626,7 +3666,8 @@ export class MemoryRepository implements AppRepository {
     const household = this.households.get(invoice.householdId);
     const house = household ? this.houses.get(household.houseId) : undefined;
     const duesType = this.duesTypes.find((candidate) => candidate.id === invoice.duesTypeId);
-    const isOverdue = invoice.status === "UNPAID" && new Date(invoice.dueDate).getTime() < now.getTime();
+    const isOverdue =
+      invoice.status === "UNPAID" && new Date(invoice.dueDate).getTime() < now.getTime();
     const verifiedPayment = this.payments.find(
       (payment) => payment.invoiceId === invoice.id && payment.status === "VERIFIED",
     );
@@ -3782,7 +3823,8 @@ export class MemoryRepository implements AppRepository {
   }): Promise<WaiveInvoiceResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const invoice = this.invoices.find(
-      (candidate) => candidate.id === input.invoiceId && candidate.communityId === input.auth.currentCommunityId,
+      (candidate) =>
+        candidate.id === input.invoiceId && candidate.communityId === input.auth.currentCommunityId,
     );
     if (!invoice) return { outcome: "NOT_FOUND" };
     if (invoice.status === "PAID" || invoice.status === "WAIVED") {
@@ -3808,7 +3850,9 @@ export class MemoryRepository implements AppRepository {
     const invoice = this.invoices.find((candidate) => candidate.id === payment.invoiceId);
     const household = invoice ? this.households.get(invoice.householdId) : undefined;
     const house = household ? this.houses.get(household.houseId) : undefined;
-    const duesType = invoice ? this.duesTypes.find((candidate) => candidate.id === invoice.duesTypeId) : undefined;
+    const duesType = invoice
+      ? this.duesTypes.find((candidate) => candidate.id === invoice.duesTypeId)
+      : undefined;
     return {
       id: payment.id,
       invoiceId: payment.invoiceId,
@@ -3818,11 +3862,12 @@ export class MemoryRepository implements AppRepository {
       paidAt: payment.paidAt,
       note: payment.note,
       status: payment.status,
-      submittedByName: this.users.get(payment.submittedByUserId)?.displayName ?? "Pengguna Komplekku",
+      submittedByName:
+        this.users.get(payment.submittedByUserId)?.displayName ?? "Pengguna Komplekku",
       houseCode: house?.code ?? "",
       householdDisplayName: household?.displayName ?? "",
       verifiedByName: payment.verifiedByUserId
-        ? this.users.get(payment.verifiedByUserId)?.displayName ?? "Pengguna Komplekku"
+        ? (this.users.get(payment.verifiedByUserId)?.displayName ?? "Pengguna Komplekku")
         : null,
       verifiedAt: payment.verifiedAt,
       rejectionReason: payment.rejectionReason,
@@ -3904,7 +3949,8 @@ export class MemoryRepository implements AppRepository {
   }): Promise<PaymentTransitionResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const payment = this.payments.find(
-      (candidate) => candidate.id === input.paymentId && candidate.communityId === input.auth.currentCommunityId,
+      (candidate) =>
+        candidate.id === input.paymentId && candidate.communityId === input.auth.currentCommunityId,
     );
     if (!payment) return { outcome: "NOT_FOUND" };
     if (payment.status !== "PENDING") return { outcome: "INVALID_TRANSITION" };
@@ -3939,7 +3985,8 @@ export class MemoryRepository implements AppRepository {
   }): Promise<PaymentTransitionResult> {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const payment = this.payments.find(
-      (candidate) => candidate.id === input.paymentId && candidate.communityId === input.auth.currentCommunityId,
+      (candidate) =>
+        candidate.id === input.paymentId && candidate.communityId === input.auth.currentCommunityId,
     );
     if (!payment) return { outcome: "NOT_FOUND" };
     if (payment.status !== "PENDING") return { outcome: "INVALID_TRANSITION" };
@@ -3970,7 +4017,8 @@ export class MemoryRepository implements AppRepository {
       amount: transaction.amount,
       type: transaction.type,
       visibility: transaction.visibility,
-      recordedByName: this.users.get(transaction.recordedByUserId)?.displayName ?? "Pengguna Komplekku",
+      recordedByName:
+        this.users.get(transaction.recordedByUserId)?.displayName ?? "Pengguna Komplekku",
       createdAt: transaction.createdAt,
     };
   }
@@ -3990,11 +4038,17 @@ export class MemoryRepository implements AppRepository {
         (canSeeAll || transaction.visibility === "PUBLIC_TO_RESIDENTS"),
     );
     const periodStart = input.period ? `${input.period}-01` : null;
-    const prior = periodStart ? visible.filter((transaction) => transaction.date < periodStart) : [];
-    const withinPeriod = periodStart ? visible.filter((transaction) => transaction.date >= periodStart) : visible;
+    const prior = periodStart
+      ? visible.filter((transaction) => transaction.date < periodStart)
+      : [];
+    const withinPeriod = periodStart
+      ? visible.filter((transaction) => transaction.date >= periodStart)
+      : visible;
     const sumByType = (rows: MemoryCashTransaction[], type: string) =>
       rows.filter((row) => row.type === type).reduce((total, row) => total + row.amount, 0);
-    const openingBalance = periodStart ? sumByType(prior, "INCOME") - sumByType(prior, "EXPENSE") : 0;
+    const openingBalance = periodStart
+      ? sumByType(prior, "INCOME") - sumByType(prior, "EXPENSE")
+      : 0;
     const totalIncome = sumByType(withinPeriod, "INCOME");
     const totalExpense = sumByType(withinPeriod, "EXPENSE");
     const items = [...visible]
@@ -4061,7 +4115,9 @@ export class MemoryRepository implements AppRepository {
     const outstandingInvoices = this.invoices.filter(
       (invoice) =>
         invoice.communityId === communityId &&
-        ["UNPAID", "OVERDUE", "PENDING_VERIFICATION"].includes(this.invoiceRecord(invoice, now).status),
+        ["UNPAID", "OVERDUE", "PENDING_VERIFICATION"].includes(
+          this.invoiceRecord(invoice, now).status,
+        ),
     );
     const pendingVerificationCount = this.payments.filter(
       (payment) => payment.communityId === communityId && payment.status === "PENDING",
@@ -4075,7 +4131,9 @@ export class MemoryRepository implements AppRepository {
           invoice.paidAt.toISOString().slice(0, 7) === monthPrefix,
       )
       .reduce((total, invoice) => total + invoice.amount, 0);
-    const communityCash = this.cashTransactions.filter((transaction) => transaction.communityId === communityId);
+    const communityCash = this.cashTransactions.filter(
+      (transaction) => transaction.communityId === communityId,
+    );
     const income = communityCash
       .filter((transaction) => transaction.type === "INCOME")
       .reduce((total, transaction) => total + transaction.amount, 0);
@@ -4084,7 +4142,10 @@ export class MemoryRepository implements AppRepository {
       .reduce((total, transaction) => total + transaction.amount, 0);
     return {
       outstandingInvoiceCount: outstandingInvoices.length,
-      outstandingInvoiceAmount: outstandingInvoices.reduce((total, invoice) => total + invoice.amount, 0),
+      outstandingInvoiceAmount: outstandingInvoices.reduce(
+        (total, invoice) => total + invoice.amount,
+        0,
+      ),
       pendingVerificationCount,
       collectedThisMonth,
       cashBalance: income - expense,
@@ -4314,5 +4375,23 @@ export class MemoryRepository implements AppRepository {
             `${right.date}T${right.startTime}:${right.id}`,
           ),
       );
+  }
+
+  async updateProfile(input: {
+    auth: AuthSessionRecord;
+    profile: UpdateProfileInput;
+  }): Promise<{ displayName: string | null; allowResidentContact: boolean }> {
+    const user = this.users.get(input.auth.userId);
+    if (!user) throw new Error("User not found");
+    if (input.profile.displayName !== undefined) {
+      user.displayName = input.profile.displayName;
+    }
+    if (input.profile.allowResidentContact !== undefined) {
+      user.allowResidentContact = input.profile.allowResidentContact;
+    }
+    return {
+      displayName: user.displayName,
+      allowResidentContact: user.allowResidentContact,
+    };
   }
 }

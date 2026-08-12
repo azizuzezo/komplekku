@@ -24,6 +24,8 @@ function announcementSummary(announcement: {
   };
 }
 
+import { updateProfileInputSchema } from "@komplekku/contracts";
+
 export async function registerResidentRoutes(
   app: FastifyInstance,
   repository: AppRepository,
@@ -44,6 +46,16 @@ export async function registerResidentRoutes(
         currentContext: me.currentContext,
         permissions: me.permissions,
       },
+      meta: responseMeta(request),
+    };
+  });
+
+  app.patch("/api/v1/me", { preHandler: authenticate }, async (request) => {
+    const auth = getAuthContext(request);
+    const input = updateProfileInputSchema.parse(request.body);
+    const updated = await repository.updateProfile({ auth, profile: input });
+    return {
+      data: updated,
       meta: responseMeta(request),
     };
   });

@@ -218,7 +218,11 @@ export function IncidentDetail({ id }: { id: string }) {
           >
             <div className="field">
               <label htmlFor="incident-update-status">Status</label>
-              <select className="input" id="incident-update-status" {...updateForm.register("status")}>
+              <select
+                className="input"
+                id="incident-update-status"
+                {...updateForm.register("status")}
+              >
                 {statusOptions.map((status) => (
                   <option value={status} key={status}>
                     {statusLabels[status]}

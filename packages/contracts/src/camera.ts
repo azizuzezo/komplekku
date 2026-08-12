@@ -47,9 +47,7 @@ export const cameraListResponseSchema = dataEnvelopeSchema(
   z.object({ items: z.array(cameraSchema) }),
 );
 
-export const cameraMutationResponseSchema = dataEnvelopeSchema(
-  z.object({ camera: cameraSchema }),
-);
+export const cameraMutationResponseSchema = dataEnvelopeSchema(z.object({ camera: cameraSchema }));
 
 export const streamTicketResponseSchema = dataEnvelopeSchema(
   z.object({

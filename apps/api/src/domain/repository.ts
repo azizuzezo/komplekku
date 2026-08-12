@@ -195,8 +195,7 @@ export interface HouseRecord {
 }
 
 export type CreateHouseResult =
-  | { outcome: "OK"; house: HouseRecord }
-  | { outcome: "CODE_CONFLICT" };
+  { outcome: "OK"; house: HouseRecord } | { outcome: "CODE_CONFLICT" };
 
 export interface AnnouncementRecord {
   id: string;
@@ -300,8 +299,7 @@ export interface CameraRecord {
 }
 
 export type CameraMutationResult =
-  | { outcome: "OK"; camera: CameraRecord }
-  | { outcome: "NOT_FOUND" };
+  { outcome: "OK"; camera: CameraRecord } | { outcome: "NOT_FOUND" };
 
 export type StreamTicketResult =
   | {
@@ -329,8 +327,7 @@ export interface EmergencyRecord {
 }
 
 export type EmergencyTransitionResult =
-  | { outcome: "OK"; emergency: EmergencyRecord }
-  | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
+  { outcome: "OK"; emergency: EmergencyRecord } | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
 
 export interface VisitorRecord {
   id: string;
@@ -357,8 +354,7 @@ export type CreateVisitorResult =
   | { outcome: "HOUSEHOLD_NOT_FOUND" | "HOUSE_NOT_FOUND" };
 
 export type VisitorCheckResult =
-  | { outcome: "OK"; visitor: VisitorRecord }
-  | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
+  { outcome: "OK"; visitor: VisitorRecord } | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
 
 export interface PackageRecord {
   id: string;
@@ -374,12 +370,10 @@ export interface PackageRecord {
 }
 
 export type CreatePackageResult =
-  | { outcome: "OK"; package: PackageRecord }
-  | { outcome: "HOUSE_NOT_FOUND" };
+  { outcome: "OK"; package: PackageRecord } | { outcome: "HOUSE_NOT_FOUND" };
 
 export type CollectPackageResult =
-  | { outcome: "OK"; package: PackageRecord }
-  | { outcome: "NOT_FOUND" | "ALREADY_COLLECTED" };
+  { outcome: "OK"; package: PackageRecord } | { outcome: "NOT_FOUND" | "ALREADY_COLLECTED" };
 
 export interface SecurityShiftRecord {
   id: string;
@@ -432,8 +426,7 @@ export interface IncidentRecord {
 }
 
 export type UpdateIncidentResult =
-  | { outcome: "OK"; incident: IncidentRecord }
-  | { outcome: "NOT_FOUND" };
+  { outcome: "OK"; incident: IncidentRecord } | { outcome: "NOT_FOUND" };
 
 export interface SecurityDashboardRecord {
   activeShift: { id: string; startedAt: Date } | null;
@@ -464,6 +457,7 @@ export interface ReportRecord {
   description: string;
   location: string | null;
   status: ReportStatus;
+  photos: string[];
   reporterName: string;
   houseCode: string;
   householdDisplayName: string;
@@ -472,12 +466,10 @@ export interface ReportRecord {
 }
 
 export type CreateReportResult =
-  | { outcome: "OK"; report: ReportRecord }
-  | { outcome: "HOUSEHOLD_CONTEXT_REQUIRED" };
+  { outcome: "OK"; report: ReportRecord } | { outcome: "HOUSEHOLD_CONTEXT_REQUIRED" };
 
 export type AddReportUpdateResult =
-  | { outcome: "OK"; report: ReportRecord }
-  | { outcome: "NOT_FOUND" };
+  { outcome: "OK"; report: ReportRecord } | { outcome: "NOT_FOUND" };
 
 export interface LetterTypeRecord {
   id: string;
@@ -506,8 +498,7 @@ export type CreateLetterRequestResult =
   | { outcome: "LETTER_TYPE_NOT_FOUND" | "HOUSEHOLD_CONTEXT_REQUIRED" };
 
 export type LetterRequestTransitionResult =
-  | { outcome: "OK"; request: LetterRequestRecord }
-  | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
+  { outcome: "OK"; request: LetterRequestRecord } | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
 
 export interface FacilityRecord {
   id: string;
@@ -566,8 +557,7 @@ export interface InvoiceRecord {
 }
 
 export type WaiveInvoiceResult =
-  | { outcome: "OK"; invoice: InvoiceRecord }
-  | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
+  { outcome: "OK"; invoice: InvoiceRecord } | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
 
 export interface PaymentRecord {
   id: string;
@@ -593,8 +583,7 @@ export type CreatePaymentResult =
   | { outcome: "INVOICE_NOT_FOUND" | "INVALID_INVOICE_STATE" };
 
 export type PaymentTransitionResult =
-  | { outcome: "OK"; payment: PaymentRecord }
-  | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
+  { outcome: "OK"; payment: PaymentRecord } | { outcome: "NOT_FOUND" | "INVALID_TRANSITION" };
 
 export interface CashTransactionRecord {
   id: string;
@@ -1076,6 +1065,11 @@ export interface AppRepository {
     now: Date;
     audit: RequestAuditContext;
   }): Promise<CreateHouseResult>;
+
+  updateProfile(input: {
+    auth: AuthSessionRecord;
+    profile: UpdateProfileInput;
+  }): Promise<{ displayName: string | null; allowResidentContact: boolean }>;
 
   recordAudit(input: AuditInput): Promise<void>;
 }

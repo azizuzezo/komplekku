@@ -7,11 +7,7 @@ export const metadata: Metadata = {
   title: "Detail laporan",
 };
 
-export default async function LaporanDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function LaporanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (

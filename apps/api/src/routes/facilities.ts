@@ -1,4 +1,7 @@
-import { createFacilityBookingInputSchema, facilityBookingListQuerySchema } from "@komplekku/contracts";
+import {
+  createFacilityBookingInputSchema,
+  facilityBookingListQuerySchema,
+} from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 
@@ -84,20 +87,28 @@ export async function registerFacilityRoutes(
       .send({ data: { booking: publicBooking(result.booking) }, meta: responseMeta(request) });
   });
 
-  app.post("/api/v1/facility-bookings/:id/cancel", { preHandler: cancelGuards }, async (request) => {
-    const { id } = idParamsSchema.parse(request.params);
-    const result = await repository.cancelFacilityBooking({
-      auth: getAuthContext(request),
-      bookingId: id,
-      now: new Date(),
-      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
-    });
-    if (result.outcome !== "OK") {
-      if (result.outcome === "NOT_FOUND") {
-        throw new AppError(404, "BOOKING_NOT_FOUND", "Pemesanan tidak ditemukan.");
+  app.post(
+    "/api/v1/facility-bookings/:id/cancel",
+    { preHandler: cancelGuards },
+    async (request) => {
+      const { id } = idParamsSchema.parse(request.params);
+      const result = await repository.cancelFacilityBooking({
+        auth: getAuthContext(request),
+        bookingId: id,
+        now: new Date(),
+        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+      });
+      if (result.outcome !== "OK") {
+        if (result.outcome === "NOT_FOUND") {
+          throw new AppError(404, "BOOKING_NOT_FOUND", "Pemesanan tidak ditemukan.");
+        }
+        throw new AppError(
+          409,
+          "BOOKING_ALREADY_CANCELLED",
+          "Pemesanan sudah dibatalkan sebelumnya.",
+        );
       }
-      throw new AppError(409, "BOOKING_ALREADY_CANCELLED", "Pemesanan sudah dibatalkan sebelumnya.");
-    }
-    return { data: { booking: publicBooking(result.booking) }, meta: responseMeta(request) };
-  });
+      return { data: { booking: publicBooking(result.booking) }, meta: responseMeta(request) };
+    },
+  );
 }

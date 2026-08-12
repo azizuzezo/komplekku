@@ -20,6 +20,7 @@ function publicReportSummary(report: ReportRecord) {
     description: report.description,
     location: report.location,
     status: report.status,
+    photos: report.photos,
     reporterName: report.reporterName,
     houseCode: report.houseCode,
     householdDisplayName: report.householdDisplayName,

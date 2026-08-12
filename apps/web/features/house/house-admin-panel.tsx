@@ -98,9 +98,13 @@ export function HouseAdminPanel() {
     );
   }
 
-  const codeError = form.formState.errors.code ? "Masukkan kode rumah, misalnya F2D2-17." : undefined;
+  const codeError = form.formState.errors.code
+    ? "Masukkan kode rumah, misalnya F2D2-17."
+    : undefined;
   const blockError = form.formState.errors.block ? "Masukkan nama blok, misalnya F2D2." : undefined;
-  const numberError = form.formState.errors.number ? "Masukkan nomor rumah, misalnya 17." : undefined;
+  const numberError = form.formState.errors.number
+    ? "Masukkan nomor rumah, misalnya 17."
+    : undefined;
 
   return (
     <div className="house-admin-panel">
@@ -227,7 +231,8 @@ export function HouseAdminPanel() {
                 <div>
                   <p className="house-row__label">{house.addressLabel}</p>
                   <p className="house-row__meta">
-                    Kode {house.code} · {occupancyLabels[house.occupancyStatus] ?? house.occupancyStatus}
+                    Kode {house.code} ·{" "}
+                    {occupancyLabels[house.occupancyStatus] ?? house.occupancyStatus}
                     {house.hasHousehold ? " · Sudah ada rumah tangga" : ""}
                   </p>
                 </div>

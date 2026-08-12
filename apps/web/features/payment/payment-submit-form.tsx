@@ -57,7 +57,9 @@ export function PaymentSubmitForm({ invoiceId, defaultAmount }: PaymentSubmitFor
   if (meQuery.isPending) return null;
 
   if (!canSubmit) {
-    return <p className="field-hint">Akunmu tidak memiliki izin untuk mengirim bukti pembayaran.</p>;
+    return (
+      <p className="field-hint">Akunmu tidak memiliki izin untuk mengirim bukti pembayaran.</p>
+    );
   }
 
   if (submitMutation.isSuccess) {
@@ -140,8 +142,8 @@ export function PaymentSubmitForm({ invoiceId, defaultAmount }: PaymentSubmitFor
         ) : (
           <p className="field-hint" id="payment-note-hint">
             Contoh: Transfer BCA an. Budi, 5 Agustus pukul 10.00, ref 123456. Bendahara akan
-            mencocokkan detail ini dengan mutasi rekening, jadi tuliskan bank, nama pengirim,
-            waktu transfer, dan nomor referensi selengkap mungkin.
+            mencocokkan detail ini dengan mutasi rekening, jadi tuliskan bank, nama pengirim, waktu
+            transfer, dan nomor referensi selengkap mungkin.
           </p>
         )}
       </div>

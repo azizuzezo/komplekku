@@ -170,7 +170,9 @@ describe("operasi keamanan lingkungan (Phase 2)", () => {
       headers: { cookie: resident.cookie },
     });
     expect(
-      notifications.json().data.items.some((item: { entityId: string }) => item.entityId === packageId),
+      notifications
+        .json()
+        .data.items.some((item: { entityId: string }) => item.entityId === packageId),
     ).toBe(true);
 
     const collected = await app.inject({
@@ -202,7 +204,9 @@ describe("operasi keamanan lingkungan (Phase 2)", () => {
       url: "/api/v1/cameras",
       headers: { cookie: resident.cookie },
     });
-    const residentCameraIds = residentCameras.json().data.items.map((item: { id: string }) => item.id);
+    const residentCameraIds = residentCameras
+      .json()
+      .data.items.map((item: { id: string }) => item.id);
     expect(residentCameraIds).toContain(demoIds.cameraPublic);
     expect(residentCameraIds).not.toContain(demoIds.cameraSecurity);
 
@@ -211,7 +215,9 @@ describe("operasi keamanan lingkungan (Phase 2)", () => {
       url: "/api/v1/cameras",
       headers: { cookie: security.cookie },
     });
-    const securityCameraIds = securityCameras.json().data.items.map((item: { id: string }) => item.id);
+    const securityCameraIds = securityCameras
+      .json()
+      .data.items.map((item: { id: string }) => item.id);
     expect(securityCameraIds).toContain(demoIds.cameraPublic);
     expect(securityCameraIds).toContain(demoIds.cameraSecurity);
 

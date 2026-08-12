@@ -38,10 +38,7 @@ export function listVisitors(limit = 20): Promise<VisitorListResponse> {
 }
 
 export function lookupVisitorByQrToken(qrToken: string): Promise<VisitorLookupResponse> {
-  return apiRequest(
-    `/visitors/lookup/${encodeURIComponent(qrToken)}`,
-    visitorLookupResponseSchema,
-  );
+  return apiRequest(`/visitors/lookup/${encodeURIComponent(qrToken)}`, visitorLookupResponseSchema);
 }
 
 export function checkInVisitor(qrToken: string): Promise<VisitorMutationResponse> {

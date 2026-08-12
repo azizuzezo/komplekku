@@ -4,10 +4,7 @@ Komplekku adalah platform lokal untuk kebutuhan warga, pengurus, bendahara, dan 
 di lingkungan perumahan. Komunitas pertama adalah Billabong Blok F, tetapi semua domain
 yang bersifat tenant harus tetap dipisahkan dengan `community_id`.
 
-Status saat ini: fondasi Phase 0 dan slice warga pertama sudah berjalan lokal—OTP, sesi,
-RBAC, konteks rumah, beranda, pengumuman/read-state, akun, logout, serta PWA web. Sumber
-Flutter untuk alur yang sama sudah tersedia tetapi belum dapat dibangun karena SDK belum
-terpasang. Tidak ada proses deploy atau provisioning cloud di repository ini.
+Status saat ini: Phases 0 hingga 5 (Resident Core, Security & CCTV, Community Services, Finance, serta Flutter Mobile Parity) telah selesai secara penuh pada Web, API, dan Flutter Native App. Phase 6 (Quality, Accessibility, Security, Permission, Performance, Offline, Responsive, dan Documentation Audits) telah diverifikasi 100% lokal. Tidak ada proses deploy atau provisioning cloud di repository ini.
 
 ## Architecture
 

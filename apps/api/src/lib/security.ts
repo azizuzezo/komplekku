@@ -1,8 +1,13 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 
 import type { AuthState } from "@komplekku/contracts";
 
 import { AppError } from "./errors";
+
+export function generateRandomOtp(): string {
+  return randomInt(100000, 1000000).toString();
+}
+
 
 export function normalizeIndonesianPhone(value: string): string {
   const compact = value.trim().replace(/[\s().-]/g, "");

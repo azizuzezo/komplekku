@@ -15,8 +15,7 @@ export default function VisitorInvitePage() {
         <header className="page-heading page-heading--index">
           <h1>Undangan tamu</h1>
           <p>
-            Undang tamu dan bagikan kode QR yang ditunjukkan ke petugas keamanan saat mereka
-            tiba.
+            Undang tamu dan bagikan kode QR yang ditunjukkan ke petugas keamanan saat mereka tiba.
           </p>
         </header>
         <VisitorInvitePanel />

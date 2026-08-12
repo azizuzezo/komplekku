@@ -3,12 +3,15 @@ import {
   meResponseSchema,
   otpRequestResponseSchema,
   otpVerifyResponseSchema,
+  updateProfileResponseSchema,
   type LogoutResponse,
   type MeResponse,
   type OtpRequestInput,
   type OtpRequestResponse,
   type OtpVerifyInput,
   type OtpVerifyResponse,
+  type UpdateProfileInput,
+  type UpdateProfileResponse,
 } from "@komplekku/contracts";
 
 import { apiRequest } from "@/lib/api/client";
@@ -29,6 +32,13 @@ export function verifyOtp(input: OtpVerifyInput): Promise<OtpVerifyResponse> {
 
 export function getMe(): Promise<MeResponse> {
   return apiRequest("/me", meResponseSchema);
+}
+
+export function updateProfile(input: UpdateProfileInput): Promise<UpdateProfileResponse> {
+  return apiRequest("/me", updateProfileResponseSchema, {
+    method: "PATCH",
+    body: input,
+  });
 }
 
 export function logout(): Promise<LogoutResponse> {

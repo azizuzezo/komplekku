@@ -40,9 +40,7 @@ export function createDuesType(input: CreateDuesTypeInput): Promise<DuesTypeMuta
   });
 }
 
-export function generateInvoices(
-  input: GenerateInvoicesInput,
-): Promise<GenerateInvoicesResponse> {
+export function generateInvoices(input: GenerateInvoicesInput): Promise<GenerateInvoicesResponse> {
   return apiRequest("/invoices/generate", generateInvoicesResponseSchema, {
     method: "POST",
     body: input,

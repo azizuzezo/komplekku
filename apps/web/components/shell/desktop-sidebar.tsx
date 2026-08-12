@@ -60,7 +60,12 @@ const navigation: NavigationItem[] = [
   { href: "/tamu", label: "Tamu", icon: UserCheck, permission: "visitor.create" },
   { href: "/paket", label: "Paket", icon: Package, permission: "package.read" },
   { href: "/cctv", label: "CCTV", icon: Video, permission: "camera.public.read" },
-  { href: "/laporan", label: "Lapor Masalah", icon: MessageSquareWarning, permission: "report.create" },
+  {
+    href: "/laporan",
+    label: "Lapor Masalah",
+    icon: MessageSquareWarning,
+    permission: "report.create",
+  },
   { href: "/surat", label: "Surat", icon: FileText, permission: "letter.create" },
   { href: "/fasilitas", label: "Fasilitas", icon: Building2, permission: "facility.read" },
   { href: "/iuran", label: "Iuran", icon: Wallet, permission: "invoice.read" },

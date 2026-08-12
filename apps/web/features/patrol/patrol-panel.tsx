@@ -80,10 +80,7 @@ export function PatrolPanel() {
     },
   });
 
-  if (
-    meQuery.isPending ||
-    (canExecute && (checkpointsQuery.isPending || sessionQuery.isPending))
-  ) {
+  if (meQuery.isPending || (canExecute && (checkpointsQuery.isPending || sessionQuery.isPending))) {
     return <AdminQueueSkeleton />;
   }
 

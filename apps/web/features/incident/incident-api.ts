@@ -18,10 +18,7 @@ export const incidentKeys = {
   detail: (id: string) => ["incidents", "detail", id] as const,
 };
 
-export function listIncidents(
-  status?: IncidentStatus,
-  limit = 20,
-): Promise<IncidentListResponse> {
+export function listIncidents(status?: IncidentStatus, limit = 20): Promise<IncidentListResponse> {
   const query = new URLSearchParams({ limit: String(limit) });
   if (status) query.set("status", status);
   return apiRequest(`/incidents?${query.toString()}`, incidentListResponseSchema);
