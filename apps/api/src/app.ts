@@ -52,7 +52,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   const repository = options.repository ?? new PrismaRepository();
   const app = Fastify({
     logger: options.logger === false ? false : { level: config.LOG_LEVEL },
-    trustProxy: false,
+    trustProxy: config.APP_ENV !== "local",
   });
 
   await app.register(helmet, { global: true });

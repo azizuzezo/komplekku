@@ -153,7 +153,7 @@ export async function registerAuthRoutes(
       if (!isMobile) {
         reply.setCookie(config.SESSION_COOKIE_NAME, accessToken, {
           httpOnly: true,
-          sameSite: "lax",
+          sameSite: config.APP_ENV === "production" ? "none" : "lax",
           secure: config.APP_ENV === "production",
           path: "/",
           maxAge: config.SESSION_TTL_SECONDS,
@@ -203,7 +203,7 @@ export async function registerAuthRoutes(
     });
     reply.clearCookie(config.SESSION_COOKIE_NAME, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: config.APP_ENV === "production" ? "none" : "lax",
       secure: config.APP_ENV === "production",
       path: "/",
     });

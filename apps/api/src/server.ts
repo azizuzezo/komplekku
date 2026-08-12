@@ -1,3 +1,5 @@
+import { buildApp } from "./app";
+
 try {
   const { app, config } = await buildApp();
 
