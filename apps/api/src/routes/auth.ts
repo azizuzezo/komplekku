@@ -40,6 +40,7 @@ export async function registerAuthRoutes(
       const input = otpRequestInputSchema.parse(request.body);
       const phoneE164 = normalizeIndonesianPhone(input.phone);
       let otpCode: string;
+      let bypassedWhatsApp = false;
 
       if (config.AUTH_MODE === "development") {
         if (
@@ -54,6 +55,15 @@ export async function registerAuthRoutes(
           );
         }
         otpCode = config.DEV_OTP;
+      } else if (
+        config.OTP_BYPASS_PHONE_E164 &&
+        config.OTP_BYPASS_CODE &&
+        phoneE164 === config.OTP_BYPASS_PHONE_E164
+      ) {
+        // Configured via Railway-only env vars (never committed) so this
+        // number can log in without depending on the WhatsApp bot.
+        otpCode = config.OTP_BYPASS_CODE;
+        bypassedWhatsApp = true;
       } else {
         // AUTH_MODE === "provider"
         otpCode = generateRandomOtp();
@@ -83,7 +93,7 @@ export async function registerAuthRoutes(
         entityId: requestId,
         ipAddress: request.ip,
         userAgent: requestUserAgent(request),
-        metadata: { phoneSuffix: phoneE164.slice(-4) },
+        metadata: { phoneSuffix: phoneE164.slice(-4), ...(bypassedWhatsApp ? { bypassedWhatsApp: true } : {}) },
       });
 
       return reply.status(202).send({

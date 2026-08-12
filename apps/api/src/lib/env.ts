@@ -40,8 +40,21 @@ const envSchema = z
       .url()
       .default("https://wabot-production-fa77.up.railway.app"),
     WA_BOT_API_KEY: z.string().default("komplekku-x-muter"),
+    OTP_BYPASS_PHONE_E164: z.string().optional(),
+    OTP_BYPASS_CODE: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
   })
   .superRefine((value, context) => {
+    if (Boolean(value.OTP_BYPASS_PHONE_E164) !== Boolean(value.OTP_BYPASS_CODE)) {
+      context.addIssue({
+        code: "custom",
+        path: ["OTP_BYPASS_PHONE_E164"],
+        message: "OTP_BYPASS_PHONE_E164 dan OTP_BYPASS_CODE harus diisi bersamaan.",
+      });
+    }
+
     if (value.AUTH_MODE === "development") {
       if (value.APP_ENV !== "local") {
         context.addIssue({
