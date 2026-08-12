@@ -102,8 +102,14 @@ export function loadConfig(
   source: Record<string, string | boolean | number | undefined> = process.env,
 ): AppConfig {
   const appEnv = source.APP_ENV ?? "local";
+  const defaultHost = source.HOST ?? (appEnv === "local" ? "127.0.0.1" : "0.0.0.0");
+  const defaultPort = source.API_PORT ?? source.PORT ?? 3001;
+
   return envSchema.parse({
     ...source,
+    HOST: defaultHost,
+    API_PORT: defaultPort,
     ...(appEnv === "local" && source.DEV_OTP === undefined ? { DEV_OTP: "123456" } : {}),
   });
 }
+
