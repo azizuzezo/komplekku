@@ -44,25 +44,10 @@ function readableError(error: unknown) {
     : "Permintaan belum dapat diproses. Silakan coba lagi.";
 }
 
-// Local-development convenience only: this exact account skips the manual OTP
-// screen and auto-submits the fixed dev code, which the API only accepts when
-// ALLOW_DEV_OTP is enabled (never in a real deployment). Everyone else still
-// goes through the normal two-step flow.
-const INSTANT_LOGIN_PHONE = "+6282145610774";
-const LOCAL_DEV_OTP_CODE = "123456";
-
-function normalizePhoneForCompare(value: string): string {
-  const compact = value.trim().replace(/[\s().-]/g, "");
-  if (compact.startsWith("0")) return `+62${compact.slice(1)}`;
-  if (compact.startsWith("62")) return `+${compact}`;
-  return compact;
-}
-
 export function LoginForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [otpStep, setOtpStep] = useState<OtpStep | null>(null);
-  const [isInstantLogin, setIsInstantLogin] = useState(false);
 
   const phoneForm = useForm<OtpRequestInput>({
     resolver: zodResolver(otpRequestInputSchema),
@@ -79,11 +64,6 @@ export function LoginForm() {
     onSuccess(response, variables) {
       const nextStep = { requestId: response.data.requestId, phone: variables.phone };
       otpForm.reset({ requestId: nextStep.requestId, code: "" });
-      if (normalizePhoneForCompare(variables.phone) === INSTANT_LOGIN_PHONE) {
-        setIsInstantLogin(true);
-        verifyMutation.mutate({ requestId: nextStep.requestId, code: LOCAL_DEV_OTP_CODE });
-        return;
-      }
       setOtpStep(nextStep);
     },
   });
@@ -96,33 +76,7 @@ export function LoginForm() {
       router.replace(destination);
       router.refresh();
     },
-    onError(error, variables) {
-      // Instant login only works when the API's local dev-OTP bypass is
-      // enabled; if it isn't, fall back to the normal manual OTP step
-      // instead of leaving the account stuck.
-      if (isInstantLogin) {
-        setIsInstantLogin(false);
-        setOtpStep({ requestId: variables.requestId, phone: phoneForm.getValues("phone") });
-      }
-      void error;
-    },
   });
-
-  if (isInstantLogin && !otpStep) {
-    return (
-      <div className="form-stack">
-        <AuthProgress currentStep={2} />
-        <div className="auth-step-copy">
-          <p className="auth-step-copy__label">Akses akun warga</p>
-          <h1>Masuk otomatis…</h1>
-          <p>Menyiapkan sesi admin utama.</p>
-        </div>
-        <p className="field-hint">
-          <LoaderCircle className="loading-icon" size={16} aria-hidden="true" /> Memverifikasi…
-        </p>
-      </div>
-    );
-  }
 
   if (otpStep) {
     const codeError = otpForm.formState.errors.code ? "Masukkan 6 digit kode OTP." : undefined;
