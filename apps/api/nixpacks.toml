@@ -1,0 +1,4 @@
+# Nixpacks configuration for API app Railway deployment
+
+[variables]
+DATABASE_URL = "postgresql://komplekku:komplekku@localhost:5432/komplekku"

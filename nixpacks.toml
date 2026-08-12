@@ -1,0 +1,5 @@
+# Nixpacks configuration for Railway deployment
+# Provides dummy DATABASE_URL during Docker image build phase to prevent Nixpacks secret error
+
+[variables]
+DATABASE_URL = "postgresql://komplekku:komplekku@localhost:5432/komplekku"
