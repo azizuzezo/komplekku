@@ -1,0 +1,995 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ResidentStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+  MOVED_OUT
+}
+
+enum OccupancyStatus {
+  OWNER_OCCUPIED
+  RENTED
+  VACANT
+}
+
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  BICYCLE
+  OTHER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum HouseholdRelationship {
+  HEAD
+  SPOUSE
+  CHILD
+  PARENT
+  RELATIVE
+  TENANT
+  OTHER
+}
+
+enum AnnouncementPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum NotificationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum CameraAccessLevel {
+  RESIDENT
+  SECURITY
+  ADMIN_ONLY
+}
+
+enum CameraStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum EmergencyKind {
+  SECURITY
+  MEDICAL
+  FIRE
+  ENVIRONMENTAL
+  OTHER
+}
+
+enum EmergencyStatus {
+  SENT
+  ACKNOWLEDGED
+  RESPONDING
+  RESOLVED
+}
+
+enum VisitorStatus {
+  PENDING
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum PackageStatus {
+  RECEIVED
+  NOTIFIED
+  COLLECTED
+}
+
+enum SecurityShiftStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum PatrolSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum IncidentCategory {
+  SECURITY
+  SUSPICIOUS_ACTIVITY
+  DAMAGE
+  NOISE
+  TRAFFIC
+  LOST_ITEM
+  EMERGENCY
+  OTHER
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum ReportCategory {
+  STREET_LIGHT
+  TRASH
+  DRAINAGE
+  SECURITY
+  FACILITY
+  CLEANLINESS
+  NOISE
+  OTHER
+}
+
+enum ReportStatus {
+  SUBMITTED
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum LetterRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  READY
+}
+
+enum FacilityBookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PENDING_VERIFICATION
+  PAID
+  OVERDUE
+  WAIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CashTransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum CashVisibility {
+  PUBLIC_TO_RESIDENTS
+  ADMIN_ONLY
+}
+
+model Community {
+  id                    String             @id @default(uuid()) @db.Uuid
+  slug                  String             @unique @db.VarChar(80)
+  name                  String             @db.VarChar(160)
+  address               String?            @db.Text
+  timezone              String             @default("Asia/Jakarta") @db.VarChar(64)
+  contactPhone          String?            @map("contact_phone") @db.VarChar(24)
+  emergencyContactPhone String?            @map("emergency_contact_phone") @db.VarChar(24)
+  registrationOpen      Boolean            @default(true) @map("registration_open")
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  sessions              Session[]          @relation("CurrentCommunity")
+  userRoles             UserRole[]
+  houses                House[]
+  households            Household[]
+  householdMembers      HouseholdMember[]
+  residents             Resident[]
+  announcements         Announcement[]
+  announcementReads     AnnouncementRead[]
+  events                Event[]
+  notifications         Notification[]
+  vehicles              Vehicle[]
+  cameras               Camera[]
+  emergencies           Emergency[]
+  visitors              Visitor[]
+  packages              Package[]
+  securityShifts        SecurityShift[]
+  patrolCheckpoints     PatrolCheckpoint[]
+  patrolSessions        PatrolSession[]
+  patrolScans           PatrolScan[]
+  incidents             Incident[]
+  reports               Report[]
+  reportUpdates         ReportUpdate[]
+  letterTypes           LetterType[]
+  letterRequests        LetterRequest[]
+  facilities            Facility[]
+  facilityBookings      FacilityBooking[]
+  duesTypes             DuesType[]
+  invoices              Invoice[]
+  payments              Payment[]
+  cashTransactions      CashTransaction[]
+  auditLogs             AuditLog[]
+
+  @@map("communities")
+}
+
+model User {
+  id                       String             @id @default(uuid()) @db.Uuid
+  phoneE164                String             @unique @map("phone_e164") @db.VarChar(16)
+  displayName              String?            @map("display_name") @db.VarChar(160)
+  allowResidentContact     Boolean            @default(false) @map("allow_resident_contact")
+  status                   UserStatus         @default(ACTIVE)
+  phoneVerifiedAt          DateTime?          @map("phone_verified_at") @db.Timestamptz(3)
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions                 Session[]
+  userRoles                UserRole[]
+  residents                Resident[]         @relation("ResidentUser")
+  approvedResidents        Resident[]         @relation("ResidentApprover")
+  rejectedResidents        Resident[]         @relation("ResidentRejector")
+  announcementReads        AnnouncementRead[]
+  authoredNotices          Announcement[]     @relation("AnnouncementAuthor")
+  createdEvents            Event[]            @relation("EventCreator")
+  archivedEvents           Event[]            @relation("EventArchiver")
+  notifications            Notification[]     @relation("NotificationRecipient")
+  sentEmergencies          Emergency[]        @relation("EmergencySender")
+  acknowledgedEmergencies  Emergency[]        @relation("EmergencyAcknowledger")
+  resolvedEmergencies      Emergency[]        @relation("EmergencyResolver")
+  createdVisitors          Visitor[]          @relation("VisitorCreator")
+  checkedInVisitors        Visitor[]          @relation("VisitorCheckedInBy")
+  checkedOutVisitors       Visitor[]          @relation("VisitorCheckedOutBy")
+  receivedPackages         Package[]          @relation("PackageReceivedBy")
+  collectedPackages        Package[]          @relation("PackageCollectedBy")
+  securityShifts           SecurityShift[]
+  patrolSessions           PatrolSession[]
+  reportedIncidents        Incident[]         @relation("IncidentReporter")
+  reportedReports          Report[]           @relation("ReportReporter")
+  reportUpdatesActed       ReportUpdate[]     @relation("ReportUpdateActor")
+  letterRequests           LetterRequest[]    @relation("LetterRequester")
+  reviewedLetterRequests   LetterRequest[]    @relation("LetterReviewer")
+  facilityBookings         FacilityBooking[]  @relation("FacilityBookingCreator")
+  waivedInvoices           Invoice[]          @relation("InvoiceWaivedBy")
+  submittedPayments        Payment[]          @relation("PaymentSubmitter")
+  verifiedPayments         Payment[]          @relation("PaymentVerifier")
+  recordedCashTransactions CashTransaction[]  @relation("CashTransactionRecorder")
+  auditLogs                AuditLog[]         @relation("AuditActor")
+
+  @@map("users")
+}
+
+model OtpRequest {
+  id            String    @id @default(uuid()) @db.Uuid
+  phoneE164     String    @map("phone_e164") @db.VarChar(16)
+  codeDigest    String    @map("code_digest") @db.Char(64)
+  attemptCount  Int       @default(0) @map("attempt_count")
+  maxAttempts   Int       @default(5) @map("max_attempts")
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt    DateTime? @map("consumed_at") @db.Timestamptz(3)
+  invalidatedAt DateTime? @map("invalidated_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([phoneE164, createdAt])
+  @@index([expiresAt])
+  @@map("otp_requests")
+}
+
+model Session {
+  id                 String     @id @default(uuid()) @db.Uuid
+  userId             String     @map("user_id") @db.Uuid
+  tokenDigest        String     @unique @map("token_digest") @db.Char(64)
+  currentCommunityId String?    @map("current_community_id") @db.Uuid
+  currentHouseholdId String?    @map("current_household_id") @db.Uuid
+  expiresAt          DateTime   @map("expires_at") @db.Timestamptz(3)
+  lastSeenAt         DateTime   @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  revokedAt          DateTime?  @map("revoked_at") @db.Timestamptz(3)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentCommunity   Community? @relation("CurrentCommunity", fields: [currentCommunityId], references: [id], onDelete: Restrict)
+  currentHousehold   Household? @relation("CurrentHousehold", fields: [currentHouseholdId], references: [id], onDelete: Restrict)
+  auditLogs          AuditLog[]
+
+  @@index([userId, expiresAt])
+  @@index([currentCommunityId, currentHouseholdId])
+  @@map("sessions")
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Uuid
+  code            String           @unique @db.VarChar(64)
+  name            String           @db.VarChar(120)
+  description     String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.Uuid
+  key             String           @unique @db.VarChar(120)
+  description     String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  communityId String    @map("community_id") @db.Uuid
+  roleId      String    @map("role_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, communityId, roleId])
+  @@index([communityId, roleId])
+  @@map("user_roles")
+}
+
+model House {
+  id                 String          @id @default(uuid()) @db.Uuid
+  communityId        String          @map("community_id") @db.Uuid
+  code               String          @db.VarChar(24)
+  block              String          @db.VarChar(16)
+  number             String          @db.VarChar(16)
+  occupancyStatus    OccupancyStatus @default(OWNER_OCCUPIED) @map("occupancy_status")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime?       @map("deleted_at") @db.Timestamptz(3)
+  community          Community       @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household          Household?
+  requestedResidents Resident[]      @relation("RequestedHouse")
+
+  @@unique([communityId, code])
+  @@unique([id, communityId])
+  @@index([communityId, block, number])
+  @@map("houses")
+}
+
+model Household {
+  id               String            @id @default(uuid()) @db.Uuid
+  communityId      String            @map("community_id") @db.Uuid
+  houseId          String            @unique @map("house_id") @db.Uuid
+  displayName      String            @map("display_name") @db.VarChar(160)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  community        Community         @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  house            House             @relation(fields: [houseId, communityId], references: [id, communityId], onDelete: Restrict)
+  members          HouseholdMember[]
+  activeSessions   Session[]         @relation("CurrentHousehold")
+  vehicles         Vehicle[]
+  visitors         Visitor[]
+  packages         Package[]
+  reports          Report[]
+  letterRequests   LetterRequest[]
+  facilityBookings FacilityBooking[]
+  invoices         Invoice[]
+
+  @@unique([id, communityId])
+  @@unique([houseId, communityId])
+  @@index([communityId])
+  @@map("households")
+}
+
+model Resident {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  communityId           String                 @map("community_id") @db.Uuid
+  userId                String                 @map("user_id") @db.Uuid
+  fullName              String                 @map("full_name") @db.VarChar(160)
+  status                ResidentStatus         @default(PENDING)
+  requestedHouseId      String?                @map("requested_house_id") @db.Uuid
+  requestedRelationship HouseholdRelationship? @map("requested_relationship")
+  requestedAt           DateTime               @default(now()) @map("requested_at") @db.Timestamptz(3)
+  approvedAt            DateTime?              @map("approved_at") @db.Timestamptz(3)
+  approvedByUserId      String?                @map("approved_by_user_id") @db.Uuid
+  rejectedAt            DateTime?              @map("rejected_at") @db.Timestamptz(3)
+  rejectedByUserId      String?                @map("rejected_by_user_id") @db.Uuid
+  rejectionReason       String?                @map("rejection_reason") @db.Text
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community             Community              @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  user                  User                   @relation("ResidentUser", fields: [userId], references: [id], onDelete: Restrict)
+  requestedHouse        House?                 @relation("RequestedHouse", fields: [requestedHouseId, communityId], references: [id, communityId], onDelete: Restrict)
+  approvedBy            User?                  @relation("ResidentApprover", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+  rejectedBy            User?                  @relation("ResidentRejector", fields: [rejectedByUserId], references: [id], onDelete: Restrict)
+  householdMemberships  HouseholdMember[]
+  ownedVehicles         Vehicle[]              @relation("VehicleOwnerResident")
+
+  @@unique([userId, communityId])
+  @@unique([id, communityId])
+  @@index([communityId, status])
+  @@map("residents")
+}
+
+model HouseholdMember {
+  id           String                @id @default(uuid()) @db.Uuid
+  communityId  String                @map("community_id") @db.Uuid
+  householdId  String                @map("household_id") @db.Uuid
+  residentId   String                @map("resident_id") @db.Uuid
+  relationship HouseholdRelationship
+  isPrimary    Boolean               @default(false) @map("is_primary")
+  joinedAt     DateTime              @default(now()) @map("joined_at") @db.Timestamptz(3)
+  endedAt      DateTime?             @map("ended_at") @db.Timestamptz(3)
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community    Community             @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household    Household             @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  resident     Resident              @relation(fields: [residentId, communityId], references: [id, communityId], onDelete: Restrict)
+
+  @@unique([residentId, householdId])
+  @@index([communityId, householdId, endedAt])
+  @@map("household_members")
+}
+
+model Announcement {
+  id          String               @id @default(uuid()) @db.Uuid
+  communityId String               @map("community_id") @db.Uuid
+  authorId    String?              @map("author_id") @db.Uuid
+  title       String               @db.VarChar(240)
+  summary     String               @db.VarChar(500)
+  body        String               @db.Text
+  priority    AnnouncementPriority @default(NORMAL)
+  publishedAt DateTime             @map("published_at") @db.Timestamptz(3)
+  archivedAt  DateTime?            @map("archived_at") @db.Timestamptz(3)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?            @map("deleted_at") @db.Timestamptz(3)
+  community   Community            @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  author      User?                @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  reads       AnnouncementRead[]
+
+  @@unique([id, communityId])
+  @@index([communityId, publishedAt])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  id             String       @id @default(uuid()) @db.Uuid
+  communityId    String       @map("community_id") @db.Uuid
+  announcementId String       @map("announcement_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  readAt         DateTime     @default(now()) @map("read_at") @db.Timestamptz(3)
+  community      Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  announcement   Announcement @relation(fields: [announcementId, communityId], references: [id, communityId], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([communityId, userId, readAt])
+  @@map("announcement_reads")
+}
+
+model Event {
+  id               String    @id @default(uuid()) @db.Uuid
+  communityId      String    @map("community_id") @db.Uuid
+  createdByUserId  String    @map("created_by_user_id") @db.Uuid
+  archivedByUserId String?   @map("archived_by_user_id") @db.Uuid
+  title            String    @db.VarChar(160)
+  eventDate        DateTime  @map("event_date") @db.Date
+  startTime        DateTime  @map("start_time") @db.Time(0)
+  endTime          DateTime  @map("end_time") @db.Time(0)
+  location         String    @db.VarChar(200)
+  description      String    @db.Text
+  organizer        String    @db.VarChar(160)
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+  community        Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  createdBy        User      @relation("EventCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  archivedBy       User?     @relation("EventArchiver", fields: [archivedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, archivedAt, eventDate, startTime])
+  @@map("events")
+}
+
+model Notification {
+  id          String               @id @default(uuid()) @db.Uuid
+  communityId String               @map("community_id") @db.Uuid
+  userId      String               @map("user_id") @db.Uuid
+  title       String               @db.VarChar(240)
+  message     String               @db.VarChar(500)
+  entityType  String               @map("entity_type") @db.VarChar(120)
+  entityId    String?              @map("entity_id") @db.Uuid
+  priority    NotificationPriority @default(NORMAL)
+  readAt      DateTime?            @map("read_at") @db.Timestamptz(3)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community   Community            @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  user        User                 @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([id, communityId])
+  @@index([communityId, userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model Vehicle {
+  id              String        @id @default(uuid()) @db.Uuid
+  communityId     String        @map("community_id") @db.Uuid
+  householdId     String        @map("household_id") @db.Uuid
+  ownerResidentId String?       @map("owner_resident_id") @db.Uuid
+  type            VehicleType
+  plate           String?       @db.VarChar(20)
+  plateNormalized String?       @map("plate_normalized") @db.VarChar(20)
+  brand           String        @db.VarChar(80)
+  model           String?       @db.VarChar(80)
+  color           String        @db.VarChar(60)
+  ownerLabel      String        @map("owner_label") @db.VarChar(160)
+  status          VehicleStatus @default(ACTIVE)
+  archivedAt      DateTime?     @map("archived_at") @db.Timestamptz(3)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community       Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household       Household     @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  ownerResident   Resident?     @relation("VehicleOwnerResident", fields: [ownerResidentId, communityId], references: [id, communityId], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, householdId, archivedAt])
+  @@index([communityId, plateNormalized, archivedAt])
+  @@map("vehicles")
+}
+
+model Camera {
+  id           String            @id @default(uuid()) @db.Uuid
+  communityId  String            @map("community_id") @db.Uuid
+  name         String            @db.VarChar(160)
+  location     String?           @db.VarChar(200)
+  accessLevel  CameraAccessLevel @default(RESIDENT) @map("access_level")
+  status       CameraStatus      @default(ONLINE)
+  lastOnlineAt DateTime?         @map("last_online_at") @db.Timestamptz(3)
+  displayOrder Int               @default(0) @map("display_order")
+  archivedAt   DateTime?         @map("archived_at") @db.Timestamptz(3)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community    Community         @relation(fields: [communityId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, archivedAt, displayOrder])
+  @@map("cameras")
+}
+
+model Emergency {
+  id                   String          @id @default(uuid()) @db.Uuid
+  communityId          String          @map("community_id") @db.Uuid
+  senderUserId         String          @map("sender_user_id") @db.Uuid
+  kind                 EmergencyKind
+  status               EmergencyStatus @default(SENT)
+  houseLabel           String          @map("house_label") @db.VarChar(160)
+  note                 String?         @db.Text
+  sentAt               DateTime        @default(now()) @map("sent_at") @db.Timestamptz(3)
+  acknowledgedAt       DateTime?       @map("acknowledged_at") @db.Timestamptz(3)
+  acknowledgedByUserId String?         @map("acknowledged_by_user_id") @db.Uuid
+  respondingAt         DateTime?       @map("responding_at") @db.Timestamptz(3)
+  resolvedAt           DateTime?       @map("resolved_at") @db.Timestamptz(3)
+  resolvedByUserId     String?         @map("resolved_by_user_id") @db.Uuid
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community            Community       @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  sender               User            @relation("EmergencySender", fields: [senderUserId], references: [id], onDelete: Restrict)
+  acknowledgedBy       User?           @relation("EmergencyAcknowledger", fields: [acknowledgedByUserId], references: [id], onDelete: Restrict)
+  resolvedBy           User?           @relation("EmergencyResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, status, sentAt])
+  @@map("emergencies")
+}
+
+model Visitor {
+  id                 String        @id @default(uuid()) @db.Uuid
+  communityId        String        @map("community_id") @db.Uuid
+  householdId        String        @map("household_id") @db.Uuid
+  createdByUserId    String?       @map("created_by_user_id") @db.Uuid
+  guestName          String        @map("guest_name") @db.VarChar(160)
+  guestPhone         String?       @map("guest_phone") @db.VarChar(24)
+  visitDate          DateTime      @map("visit_date") @db.Date
+  expectedTime       DateTime?     @map("expected_time") @db.Time(0)
+  vehicleInfo        String?       @map("vehicle_info") @db.VarChar(160)
+  plate              String?       @db.VarChar(20)
+  purpose            String?       @db.VarChar(200)
+  notes              String?       @db.Text
+  qrToken            String        @unique @map("qr_token") @db.VarChar(64)
+  status             VisitorStatus @default(PENDING)
+  isWalkIn           Boolean       @default(false) @map("is_walk_in")
+  checkedInAt        DateTime?     @map("checked_in_at") @db.Timestamptz(3)
+  checkedInByUserId  String?       @map("checked_in_by_user_id") @db.Uuid
+  checkedOutAt       DateTime?     @map("checked_out_at") @db.Timestamptz(3)
+  checkedOutByUserId String?       @map("checked_out_by_user_id") @db.Uuid
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community          Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household          Household     @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  createdBy          User?         @relation("VisitorCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  checkedInBy        User?         @relation("VisitorCheckedInBy", fields: [checkedInByUserId], references: [id], onDelete: Restrict)
+  checkedOutBy       User?         @relation("VisitorCheckedOutBy", fields: [checkedOutByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, householdId, visitDate])
+  @@index([communityId, status, visitDate])
+  @@map("visitors")
+}
+
+model Package {
+  id                String        @id @default(uuid()) @db.Uuid
+  communityId       String        @map("community_id") @db.Uuid
+  householdId       String        @map("household_id") @db.Uuid
+  recipientName     String        @map("recipient_name") @db.VarChar(160)
+  courier           String        @db.VarChar(80)
+  trackingNumber    String?       @map("tracking_number") @db.VarChar(120)
+  status            PackageStatus @default(RECEIVED)
+  receivedAt        DateTime      @default(now()) @map("received_at") @db.Timestamptz(3)
+  receivedByUserId  String        @map("received_by_user_id") @db.Uuid
+  collectedAt       DateTime?     @map("collected_at") @db.Timestamptz(3)
+  collectedByName   String?       @map("collected_by_name") @db.VarChar(160)
+  collectedByUserId String?       @map("collected_by_user_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community         Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household         Household     @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  receivedBy        User          @relation("PackageReceivedBy", fields: [receivedByUserId], references: [id], onDelete: Restrict)
+  collectedBy       User?         @relation("PackageCollectedBy", fields: [collectedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, householdId, status])
+  @@index([communityId, status, receivedAt])
+  @@map("packages")
+}
+
+model SecurityShift {
+  id            String              @id @default(uuid()) @db.Uuid
+  communityId   String              @map("community_id") @db.Uuid
+  officerUserId String              @map("officer_user_id") @db.Uuid
+  status        SecurityShiftStatus @default(ACTIVE)
+  startedAt     DateTime            @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt       DateTime?           @map("ended_at") @db.Timestamptz(3)
+  notes         String?             @db.Text
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community     Community           @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  officer       User                @relation(fields: [officerUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, officerUserId, status])
+  @@map("security_shifts")
+}
+
+model PatrolCheckpoint {
+  id           String       @id @default(uuid()) @db.Uuid
+  communityId  String       @map("community_id") @db.Uuid
+  name         String       @db.VarChar(160)
+  qrToken      String       @unique @map("qr_token") @db.VarChar(64)
+  displayOrder Int          @default(0) @map("display_order")
+  archivedAt   DateTime?    @map("archived_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community    Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  scans        PatrolScan[]
+
+  @@unique([id, communityId])
+  @@index([communityId, archivedAt, displayOrder])
+  @@map("patrol_checkpoints")
+}
+
+model PatrolSession {
+  id            String              @id @default(uuid()) @db.Uuid
+  communityId   String              @map("community_id") @db.Uuid
+  officerUserId String              @map("officer_user_id") @db.Uuid
+  status        PatrolSessionStatus @default(IN_PROGRESS)
+  startedAt     DateTime            @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt       DateTime?           @map("ended_at") @db.Timestamptz(3)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community     Community           @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  officer       User                @relation(fields: [officerUserId], references: [id], onDelete: Restrict)
+  scans         PatrolScan[]
+
+  @@unique([id, communityId])
+  @@index([communityId, officerUserId, status])
+  @@map("patrol_sessions")
+}
+
+model PatrolScan {
+  id              String           @id @default(uuid()) @db.Uuid
+  communityId     String           @map("community_id") @db.Uuid
+  patrolSessionId String           @map("patrol_session_id") @db.Uuid
+  checkpointId    String           @map("checkpoint_id") @db.Uuid
+  note            String?          @db.Text
+  scannedAt       DateTime         @default(now()) @map("scanned_at") @db.Timestamptz(3)
+  community       Community        @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  session         PatrolSession    @relation(fields: [patrolSessionId, communityId], references: [id, communityId], onDelete: Cascade)
+  checkpoint      PatrolCheckpoint @relation(fields: [checkpointId, communityId], references: [id, communityId], onDelete: Restrict)
+
+  @@unique([patrolSessionId, checkpointId])
+  @@index([communityId, patrolSessionId])
+  @@map("patrol_scans")
+}
+
+model Incident {
+  id             String           @id @default(uuid()) @db.Uuid
+  communityId    String           @map("community_id") @db.Uuid
+  reporterUserId String           @map("reporter_user_id") @db.Uuid
+  category       IncidentCategory
+  title          String           @db.VarChar(200)
+  description    String           @db.Text
+  location       String?          @db.VarChar(200)
+  occurredAt     DateTime         @map("occurred_at") @db.Timestamptz(3)
+  peopleInvolved String?          @map("people_involved") @db.Text
+  actionTaken    String?          @map("action_taken") @db.Text
+  status         IncidentStatus   @default(OPEN)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community      Community        @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  reporter       User             @relation("IncidentReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, status, occurredAt])
+  @@map("incidents")
+}
+
+model Report {
+  id             String         @id @default(uuid()) @db.Uuid
+  communityId    String         @map("community_id") @db.Uuid
+  householdId    String         @map("household_id") @db.Uuid
+  reporterUserId String         @map("reporter_user_id") @db.Uuid
+  category       ReportCategory
+  description    String         @db.Text
+  location       String?        @db.VarChar(200)
+  status         ReportStatus   @default(SUBMITTED)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community      Community      @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household      Household      @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  reporter       User           @relation("ReportReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
+  updates        ReportUpdate[]
+
+  @@unique([id, communityId])
+  @@index([communityId, status, createdAt])
+  @@index([communityId, householdId])
+  @@map("reports")
+}
+
+model ReportUpdate {
+  id          String       @id @default(uuid()) @db.Uuid
+  communityId String       @map("community_id") @db.Uuid
+  reportId    String       @map("report_id") @db.Uuid
+  status      ReportStatus
+  note        String?      @db.Text
+  actorUserId String?      @map("actor_user_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  community   Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  report      Report       @relation(fields: [reportId, communityId], references: [id, communityId], onDelete: Cascade)
+  actor       User?        @relation("ReportUpdateActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([communityId, reportId, createdAt])
+  @@map("report_updates")
+}
+
+model LetterType {
+  id           String          @id @default(uuid()) @db.Uuid
+  communityId  String          @map("community_id") @db.Uuid
+  name         String          @db.VarChar(160)
+  description  String?         @db.Text
+  isActive     Boolean         @default(true) @map("is_active")
+  displayOrder Int             @default(0) @map("display_order")
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community    Community       @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  requests     LetterRequest[]
+
+  @@unique([id, communityId])
+  @@index([communityId, isActive, displayOrder])
+  @@map("letter_types")
+}
+
+model LetterRequest {
+  id               String              @id @default(uuid()) @db.Uuid
+  communityId      String              @map("community_id") @db.Uuid
+  householdId      String              @map("household_id") @db.Uuid
+  requesterUserId  String              @map("requester_user_id") @db.Uuid
+  letterTypeId     String              @map("letter_type_id") @db.Uuid
+  purpose          String              @db.Text
+  status           LetterRequestStatus @default(SUBMITTED)
+  reviewedByUserId String?             @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt       DateTime?           @map("reviewed_at") @db.Timestamptz(3)
+  rejectionReason  String?             @map("rejection_reason") @db.Text
+  readyAt          DateTime?           @map("ready_at") @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community        Community           @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household        Household           @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  requester        User                @relation("LetterRequester", fields: [requesterUserId], references: [id], onDelete: Restrict)
+  letterType       LetterType          @relation(fields: [letterTypeId, communityId], references: [id, communityId], onDelete: Restrict)
+  reviewedBy       User?               @relation("LetterReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, status, createdAt])
+  @@index([communityId, householdId])
+  @@map("letter_requests")
+}
+
+model Facility {
+  id          String            @id @default(uuid()) @db.Uuid
+  communityId String            @map("community_id") @db.Uuid
+  name        String            @db.VarChar(160)
+  openTime    String            @map("open_time") @db.VarChar(5)
+  closeTime   String            @map("close_time") @db.VarChar(5)
+  capacity    Int?
+  rules       String?           @db.Text
+  isActive    Boolean           @default(true) @map("is_active")
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community   Community         @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  bookings    FacilityBooking[]
+
+  @@unique([id, communityId])
+  @@index([communityId, isActive])
+  @@map("facilities")
+}
+
+model FacilityBooking {
+  id             String                @id @default(uuid()) @db.Uuid
+  communityId    String                @map("community_id") @db.Uuid
+  facilityId     String                @map("facility_id") @db.Uuid
+  householdId    String                @map("household_id") @db.Uuid
+  bookedByUserId String                @map("booked_by_user_id") @db.Uuid
+  purpose        String?               @db.VarChar(200)
+  bookingDate    DateTime              @map("booking_date") @db.Date
+  startTime      String                @map("start_time") @db.VarChar(5)
+  endTime        String                @map("end_time") @db.VarChar(5)
+  status         FacilityBookingStatus @default(CONFIRMED)
+  cancelledAt    DateTime?             @map("cancelled_at") @db.Timestamptz(3)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community      Community             @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  facility       Facility              @relation(fields: [facilityId, communityId], references: [id, communityId], onDelete: Restrict)
+  household      Household             @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  bookedBy       User                  @relation("FacilityBookingCreator", fields: [bookedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, facilityId, bookingDate, status])
+  @@index([communityId, householdId])
+  @@map("facility_bookings")
+}
+
+model DuesType {
+  id            String    @id @default(uuid()) @db.Uuid
+  communityId   String    @map("community_id") @db.Uuid
+  name          String    @db.VarChar(160)
+  description   String?   @db.Text
+  defaultAmount Int       @map("default_amount")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community     Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  invoices      Invoice[]
+
+  @@unique([id, communityId])
+  @@index([communityId, isActive])
+  @@map("dues_types")
+}
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  communityId    String        @map("community_id") @db.Uuid
+  householdId    String        @map("household_id") @db.Uuid
+  duesTypeId     String        @map("dues_type_id") @db.Uuid
+  period         String        @db.VarChar(7)
+  amount         Int
+  dueDate        DateTime      @map("due_date") @db.Date
+  status         InvoiceStatus @default(UNPAID)
+  waivedAt       DateTime?     @map("waived_at") @db.Timestamptz(3)
+  waivedByUserId String?       @map("waived_by_user_id") @db.Uuid
+  waivedReason   String?       @map("waived_reason") @db.Text
+  paidAt         DateTime?     @map("paid_at") @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community      Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  household      Household     @relation(fields: [householdId, communityId], references: [id, communityId], onDelete: Restrict)
+  duesType       DuesType      @relation(fields: [duesTypeId, communityId], references: [id, communityId], onDelete: Restrict)
+  waivedBy       User?         @relation("InvoiceWaivedBy", fields: [waivedByUserId], references: [id], onDelete: Restrict)
+  payments       Payment[]
+
+  @@unique([id, communityId])
+  @@unique([householdId, duesTypeId, period])
+  @@index([communityId, status, dueDate])
+  @@index([communityId, householdId])
+  @@map("invoices")
+}
+
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  communityId       String        @map("community_id") @db.Uuid
+  invoiceId         String        @map("invoice_id") @db.Uuid
+  submittedByUserId String        @map("submitted_by_user_id") @db.Uuid
+  amount            Int
+  paidAt            DateTime      @map("paid_at") @db.Date
+  note              String        @db.VarChar(300)
+  status            PaymentStatus @default(PENDING)
+  verifiedByUserId  String?       @map("verified_by_user_id") @db.Uuid
+  verifiedAt        DateTime?     @map("verified_at") @db.Timestamptz(3)
+  rejectionReason   String?       @map("rejection_reason") @db.Text
+  receiptNumber     String?       @unique @map("receipt_number") @db.VarChar(40)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community         Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  invoice           Invoice       @relation(fields: [invoiceId, communityId], references: [id, communityId], onDelete: Restrict)
+  submittedBy       User          @relation("PaymentSubmitter", fields: [submittedByUserId], references: [id], onDelete: Restrict)
+  verifiedBy        User?         @relation("PaymentVerifier", fields: [verifiedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, status])
+  @@index([communityId, invoiceId])
+  @@map("payments")
+}
+
+model CashTransaction {
+  id               String              @id @default(uuid()) @db.Uuid
+  communityId      String              @map("community_id") @db.Uuid
+  date             DateTime            @db.Date
+  category         String              @db.VarChar(120)
+  description      String              @db.Text
+  amount           Int
+  type             CashTransactionType
+  visibility       CashVisibility      @default(PUBLIC_TO_RESIDENTS)
+  recordedByUserId String              @map("recorded_by_user_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  community        Community           @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  recordedBy       User                @relation("CashTransactionRecorder", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, date])
+  @@index([communityId, visibility, date])
+  @@map("cash_transactions")
+}
+
+model AuditLog {
+  id          String     @id @default(uuid()) @db.Uuid
+  communityId String?    @map("community_id") @db.Uuid
+  actorUserId String?    @map("actor_user_id") @db.Uuid
+  sessionId   String?    @map("session_id") @db.Uuid
+  action      String     @db.VarChar(120)
+  entityType  String     @map("entity_type") @db.VarChar(120)
+  entityId    String?    @map("entity_id") @db.Uuid
+  ipAddress   String?    @map("ip_address") @db.VarChar(64)
+  userAgent   String?    @map("user_agent") @db.VarChar(500)
+  metadata    Json?
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  actor       User?      @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  session     Session?   @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@index([communityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}

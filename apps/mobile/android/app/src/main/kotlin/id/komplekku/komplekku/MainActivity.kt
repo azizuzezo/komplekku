@@ -1,0 +1,5 @@
+package id.komplekku.komplekku
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

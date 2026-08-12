@@ -1,0 +1,41 @@
+{
+  "name": "@komplekku/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- tsx watch src/server.ts",
+    "start": "dotenv -e ../../.env -- tsx src/server.ts",
+    "build": "tsc --noEmit",
+    "lint": "eslint src tests prisma.config.ts prisma/seed.ts --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "dotenv -e ../../.env -- vitest run tests/tenant-isolation.database.test.ts",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:seed": "dotenv -e ../../.env -- prisma db seed",
+    "db:status": "dotenv -e ../../.env -- prisma migrate status",
+    "openapi": "dotenv -e ../../.env -- tsx src/openapi.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@fastify/swagger": "^9.0.0",
+    "@fastify/swagger-ui": "6.1.1",
+    "@komplekku/contracts": "workspace:*",
+    "@prisma/client": "6.19.3",
+    "fastify": "5.11.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "dotenv-cli": "11.0.0",
+    "prisma": "6.19.3",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.0"
+  }
+}

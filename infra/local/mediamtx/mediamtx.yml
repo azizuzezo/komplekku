@@ -1,0 +1,30 @@
+# Local gateway only. Camera paths and credentials must never be committed here.
+logLevel: info
+logDestinations: [stdout]
+
+api: true
+apiAddress: :9997
+apiEncryption: false
+
+metrics: false
+pprof: false
+playback: false
+
+rtsp: true
+rtspAddress: :8554
+
+hls: true
+hlsAddress: :8888
+hlsEncryption: false
+hlsAlwaysRemux: false
+hlsAllowOrigins: ["http://localhost:3000"]
+
+webrtc: true
+webrtcAddress: :8889
+webrtcEncryption: false
+webrtcLocalUDPAddress: :8189
+webrtcAllowOrigins: ["http://localhost:3000"]
+webrtcAdditionalHosts: ["localhost", "127.0.0.1"]
+
+# Phase 0 starts in CCTV mock mode. Add explicit paths only during camera integration.
+paths: {}

@@ -1,0 +1,47 @@
+{
+  "name": "komplekku",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local-first residential and community operations platform.",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=11.21.0 <12"
+  },
+  "scripts": {
+    "dev": "corepack pnpm --parallel --filter @komplekku/api --filter @komplekku/web dev",
+    "dev:api": "corepack pnpm --filter @komplekku/api dev",
+    "dev:web": "corepack pnpm --filter @komplekku/web dev",
+    "build": "corepack pnpm -r --if-present build",
+    "lint": "corepack pnpm -r --if-present lint",
+    "typecheck": "corepack pnpm -r --if-present typecheck",
+    "test": "corepack pnpm -r --if-present test",
+    "test:integration": "corepack pnpm --filter @komplekku/api test:integration",
+    "check": "corepack pnpm format:check && corepack pnpm tokens:check && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && corepack pnpm build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tokens:build": "corepack pnpm --filter @komplekku/design-tokens build",
+    "tokens:check": "corepack pnpm --filter @komplekku/design-tokens typecheck",
+    "infra:config": "docker compose config",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down",
+    "infra:status": "docker compose ps",
+    "infra:logs": "docker compose logs -f",
+    "db:generate": "corepack pnpm --filter @komplekku/api db:generate",
+    "db:migrate": "corepack pnpm --filter @komplekku/api db:migrate",
+    "db:seed": "corepack pnpm --filter @komplekku/api db:seed",
+    "db:status": "corepack pnpm --filter @komplekku/api db:status",
+    "api:openapi": "corepack pnpm --filter @komplekku/api openapi",
+    "mobile:pub-get": "cd apps/mobile && flutter --suppress-analytics pub get",
+    "mobile:analyze": "cd apps/mobile && flutter --suppress-analytics analyze",
+    "mobile:test": "cd apps/mobile && flutter --suppress-analytics test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.1",
+    "globals": "17.9.0",
+    "prettier": "3.9.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.67.0"
+  }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "date": "2026-08-11",
+    "scope": "app",
+    "macrostructure": "Ecosystem Index / Split Studio / Long Document",
+    "theme": "custom",
+    "theme_axes": "light / rounded-sans / chromatic-terracotta",
+    "vibe": "mature neighborhood, civic warmth, quiet confidence",
+    "genre": "modern-minimal",
+    "nav": "residential side column / compact rail / bottom dock",
+    "footer": "none",
+    "enrichment": "owner-supplied logo",
+    "brief": "Komplekku full-app brand correction and Phase 1 resident experience",
+    "slopGate": "pending-build",
+    "renderedQa": "pending"
+  },
+  {
+    "date": "2026-08-11",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "light / rounded-sans / chromatic-terracotta",
+    "vibe": "residential, civic, safe, warm, practical",
+    "genre": "modern-minimal",
+    "nav": "N13",
+    "footer": "Ft2",
+    "enrichment": "none",
+    "brief": "Komplekku product foundation and resident application design system",
+    "preEmitCritique": "P5 H4 E4 S5 R5 V4",
+    "slopGate": "static-pass",
+    "renderedQa": "pending-no-browser-runtime"
+  }
+]

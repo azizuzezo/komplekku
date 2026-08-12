@@ -1,0 +1,31 @@
+{
+  "hallmarkVersion": "1.1.0",
+  "scannedAt": "2026-08-11T12:14:35+07:00",
+  "sources": {
+    "canonicalProductSpecification": "PRD.md",
+    "existingDesignSystem": "design.md",
+    "existingTokenFile": "tokens.css",
+    "tailwindConfiguration": null
+  },
+  "findings": {
+    "fontStack": "Plus Jakarta Sans is required by the PRD, locked by design.md, and bundled locally as a variable font for both web and Flutter.",
+    "palette": "design.md locks a bone-paper, forest-green identity system with terracotta reserved as a signal and tinted semantic neutrals.",
+    "motion": "Motion-cut foundation: no animation library; purposeful CSS and native motion only.",
+    "spacing": "A 4 pt scale with a 2 px optical adjustment token.",
+    "framework": "pnpm monorepo planned for Next.js, Fastify, shared TypeScript packages, and native Flutter."
+  },
+  "preserve": [
+    "PRD palette",
+    "Plus Jakarta Sans",
+    "residential, civic, safe, warm, practical direction",
+    "restrained radii and purposeful motion"
+  ],
+  "selection": {
+    "genre": "modern-minimal",
+    "macrostructure": "Ecosystem Index / Split Studio / Long Document",
+    "theme": "custom",
+    "nav": "permission-aware residential side column / compact rail / bottom dock",
+    "footer": "none for product routes",
+    "enrichment": "owner-supplied logo"
+  }
+}

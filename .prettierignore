@@ -1,0 +1,13 @@
+.agents/
+.dart_tool/
+.git/
+.next/
+Engineering.md
+PRD.md
+build/
+coverage/
+dist/
+node_modules/
+pnpm-lock.yaml
+apps/mobile/android/
+apps/mobile/ios/

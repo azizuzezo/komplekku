@@ -1,0 +1,110 @@
+name: komplekku
+
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-komplekku}
+      POSTGRES_USER: ${POSTGRES_USER:-komplekku}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-komplekku_local_only}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/local/postgres/init/001-create-test-database.sql:/docker-entrypoint-initdb.d/001-create-test-database.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  redis:
+    image: redis:7.4.10-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-komplekku}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-komplekku_local_only}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-komplekku}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-komplekku_local_only}
+      MINIO_BUCKETS: ${MINIO_BUCKETS:-avatars,announcements,reports,incidents,packages,payments,letters,community}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        for bucket in $$(echo "$${MINIO_BUCKETS}" | tr ',' ' '); do
+          mc mb --ignore-existing "local/$${bucket}"
+          mc anonymous set none "local/$${bucket}"
+        done
+
+  mailpit:
+    image: axllent/mailpit:v1.30.7
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 500
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:${MAIL_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAIL_UI_PORT:-8025}:8025"
+    volumes:
+      - mailpit_data:/data
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.20.0
+    restart: unless-stopped
+    environment:
+      MTX_CONF: /mediamtx.yml
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:${MEDIAMTX_RTSP_PORT:-8554}:8554"
+      - "127.0.0.1:${MEDIAMTX_HLS_PORT:-8888}:8888"
+      - "127.0.0.1:${MEDIAMTX_WEBRTC_PORT:-8889}:8889"
+      - "127.0.0.1:${MEDIAMTX_ICE_PORT:-8189}:8189/udp"
+      - "127.0.0.1:${MEDIAMTX_API_PORT:-9997}:9997"
+    volumes:
+      - ./infra/local/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  mailpit_data:
