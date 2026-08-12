@@ -33,6 +33,7 @@ import type {
 } from "@komplekku/contracts";
 
 import type {
+  AddHouseholdMemberResult,
   AddReportUpdateResult,
   AgendaMutationResult,
   AgendaRecord,
@@ -81,6 +82,7 @@ import type {
   PatrolSessionRecord,
   PaymentRecord,
   PaymentTransitionResult,
+  RemoveHouseholdMemberResult,
   ReportRecord,
   ResidencyRequestRecord,
   ReviewResidencyRequestResult,
@@ -726,6 +728,167 @@ export class PrismaRepository implements AppRepository {
         allowResidentContact: member.resident.user.allowResidentContact,
       })),
     };
+  }
+
+  async addHouseholdMember(input: {
+    auth: AuthSessionRecord;
+    fullName: string;
+    phoneE164: string;
+    relationship: HouseholdRelationship;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<AddHouseholdMemberResult> {
+    const communityId = input.auth.currentCommunityId;
+    const householdId = input.auth.currentHouseholdId;
+    if (!communityId || !householdId) return { outcome: "NOT_FOUND" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const household = await transaction.household.findFirst({
+        where: { id: householdId, communityId, deletedAt: null },
+      });
+      if (!household) return { outcome: "NOT_FOUND" as const };
+
+      const existingResident = await transaction.resident.findFirst({
+        where: { communityId, user: { phoneE164: input.phoneE164 } },
+        include: { householdMemberships: { where: { endedAt: null } } },
+      });
+
+      if (existingResident) {
+        const alreadyInThisHousehold = existingResident.householdMemberships.some(
+          (membership) => membership.householdId === householdId,
+        );
+        if (alreadyInThisHousehold) return { outcome: "ALREADY_MEMBER" as const };
+        if (existingResident.status === "ACTIVE") {
+          return { outcome: "ALREADY_RESIDENT_ELSEWHERE" as const };
+        }
+      }
+
+      const user = await transaction.user.upsert({
+        where: { phoneE164: input.phoneE164 },
+        update: {},
+        create: { phoneE164: input.phoneE164 },
+      });
+
+      const resident = existingResident
+        ? await transaction.resident.update({
+            where: { id: existingResident.id },
+            data: {
+              fullName: input.fullName,
+              status: "ACTIVE",
+              requestedRelationship: input.relationship,
+              approvedAt: input.now,
+              approvedByUserId: input.auth.userId,
+              rejectedAt: null,
+              rejectedByUserId: null,
+              rejectionReason: null,
+            },
+          })
+        : await transaction.resident.create({
+            data: {
+              communityId,
+              userId: user.id,
+              fullName: input.fullName,
+              status: "ACTIVE",
+              requestedRelationship: input.relationship,
+              approvedAt: input.now,
+              approvedByUserId: input.auth.userId,
+            },
+          });
+
+      const member = await transaction.householdMember.create({
+        data: {
+          communityId,
+          householdId,
+          residentId: resident.id,
+          relationship: input.relationship,
+          isPrimary: false,
+        },
+      });
+
+      const householdMemberRole = await transaction.role.findUnique({
+        where: { code: "HOUSEHOLD_MEMBER" },
+      });
+      if (householdMemberRole) {
+        await transaction.userRole.upsert({
+          where: {
+            userId_communityId_roleId: {
+              userId: user.id,
+              communityId,
+              roleId: householdMemberRole.id,
+            },
+          },
+          update: {},
+          create: { userId: user.id, communityId, roleId: householdMemberRole.id },
+        });
+      }
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "household.member.added",
+          entityType: "HouseholdMember",
+          entityId: member.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return {
+        outcome: "OK" as const,
+        member: {
+          residentId: resident.id,
+          userId: user.id,
+          displayName: user.displayName ?? resident.fullName,
+          relationship: member.relationship,
+          linkedAccount: true,
+          phoneE164: user.phoneE164,
+          allowResidentContact: user.allowResidentContact,
+        },
+      };
+    });
+  }
+
+  async removeHouseholdMember(input: {
+    auth: AuthSessionRecord;
+    residentId: string;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<RemoveHouseholdMemberResult> {
+    const communityId = input.auth.currentCommunityId;
+    const householdId = input.auth.currentHouseholdId;
+    if (!communityId || !householdId) return { outcome: "NOT_FOUND" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const member = await transaction.householdMember.findFirst({
+        where: { communityId, householdId, residentId: input.residentId, endedAt: null },
+      });
+      if (!member) return { outcome: "NOT_FOUND" as const };
+      if (member.isPrimary) return { outcome: "CANNOT_REMOVE_PRIMARY" as const };
+
+      await transaction.householdMember.update({
+        where: { id: member.id },
+        data: { endedAt: input.now },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "household.member.removed",
+          entityType: "HouseholdMember",
+          entityId: member.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return { outcome: "REMOVED" as const, residentId: input.residentId };
+    });
   }
 
   async listRegistrationCommunities() {

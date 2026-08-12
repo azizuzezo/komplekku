@@ -137,6 +137,14 @@ export interface CurrentHouseholdRecord {
   members: CurrentHouseholdMemberRecord[];
 }
 
+export type AddHouseholdMemberResult =
+  | { outcome: "OK"; member: CurrentHouseholdMemberRecord }
+  | { outcome: "NOT_FOUND" | "ALREADY_MEMBER" | "ALREADY_RESIDENT_ELSEWHERE" };
+
+export type RemoveHouseholdMemberResult =
+  | { outcome: "REMOVED"; residentId: string }
+  | { outcome: "NOT_FOUND" | "CANNOT_REMOVE_PRIMARY" };
+
 export interface VehicleRecord {
   id: string;
   type: VehicleType;
@@ -668,6 +676,20 @@ export interface AppRepository {
     includeAdminDetails: boolean;
   }): Promise<CursorPageResult<DirectoryRecord>>;
   getCurrentHousehold(auth: AuthSessionRecord): Promise<CurrentHouseholdRecord | null>;
+  addHouseholdMember(input: {
+    auth: AuthSessionRecord;
+    fullName: string;
+    phoneE164: string;
+    relationship: HouseholdRelationship;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<AddHouseholdMemberResult>;
+  removeHouseholdMember(input: {
+    auth: AuthSessionRecord;
+    residentId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<RemoveHouseholdMemberResult>;
   listRegistrationCommunities(): Promise<CommunitySummary[]>;
   createResidencyRequest(input: {
     auth: AuthSessionRecord;

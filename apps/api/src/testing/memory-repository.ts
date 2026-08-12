@@ -48,6 +48,7 @@ import type {
 } from "@komplekku/contracts";
 
 import type {
+  AddHouseholdMemberResult,
   AddReportUpdateResult,
   AgendaMutationResult,
   AgendaRecord,
@@ -96,6 +97,7 @@ import type {
   PatrolSessionRecord,
   PaymentRecord,
   PaymentTransitionResult,
+  RemoveHouseholdMemberResult,
   ReportRecord,
   ResidencyRequestRecord,
   ReviewResidencyRequestResult,
@@ -486,6 +488,7 @@ const readPermissions = [
   "community.read",
   "home.read",
   "household.read",
+  "household.manage",
   "notification.read",
   "directory.read",
   "vehicle.manage",
@@ -509,6 +512,7 @@ const superAdminPermissions = [
   "home.read",
   "community.read",
   "household.read",
+  "household.manage",
   "announcement.read",
   "announcement.manage",
   "agenda.read",
@@ -1450,6 +1454,118 @@ export class MemoryRepository implements AppRepository {
       },
       members,
     };
+  }
+
+  async addHouseholdMember(input: {
+    auth: AuthSessionRecord;
+    fullName: string;
+    phoneE164: string;
+    relationship: HouseholdRelationship;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<AddHouseholdMemberResult> {
+    const communityId = input.auth.currentCommunityId;
+    const householdId = input.auth.currentHouseholdId;
+    if (!communityId || !householdId) return { outcome: "NOT_FOUND" };
+    const household = this.households.get(householdId);
+    if (!household || household.communityId !== communityId) return { outcome: "NOT_FOUND" };
+
+    let user = [...this.users.values()].find((candidate) => candidate.phoneE164 === input.phoneE164);
+    if (user) {
+      const existingResident = this.residents.get(`${user.id}:${communityId}`);
+      if (existingResident?.status === "ACTIVE") {
+        if (existingResident.householdId === householdId) return { outcome: "ALREADY_MEMBER" };
+        return { outcome: "ALREADY_RESIDENT_ELSEWHERE" };
+      }
+    }
+
+    if (!user) {
+      user = {
+        id: randomUUID(),
+        phoneE164: input.phoneE164,
+        displayName: input.fullName,
+        allowResidentContact: false,
+        active: true,
+      };
+      this.users.set(user.id, user);
+    } else {
+      user.displayName = input.fullName;
+    }
+
+    const resident: MemoryResident = {
+      id: randomUUID(),
+      userId: user.id,
+      communityId,
+      fullName: input.fullName,
+      status: "ACTIVE",
+      requestedHouseId: household.houseId,
+      relationship: input.relationship,
+      requestedAt: input.now,
+      householdId,
+    };
+    this.residents.set(`${user.id}:${communityId}`, resident);
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "household.member.added",
+      entityType: "HouseholdMember",
+      entityId: resident.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+      metadata: { relationship: input.relationship },
+    });
+
+    return {
+      outcome: "OK",
+      member: {
+        residentId: resident.id,
+        userId: user.id,
+        displayName: user.displayName ?? resident.fullName,
+        relationship: input.relationship,
+        linkedAccount: true,
+        phoneE164: user.phoneE164,
+        allowResidentContact: user.allowResidentContact,
+      },
+    };
+  }
+
+  async removeHouseholdMember(input: {
+    auth: AuthSessionRecord;
+    residentId: string;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<RemoveHouseholdMemberResult> {
+    const communityId = input.auth.currentCommunityId;
+    const householdId = input.auth.currentHouseholdId;
+    if (!communityId || !householdId) return { outcome: "NOT_FOUND" };
+
+    const resident = [...this.residents.values()].find(
+      (candidate) =>
+        candidate.id === input.residentId &&
+        candidate.communityId === communityId &&
+        candidate.householdId === householdId &&
+        candidate.status === "ACTIVE",
+    );
+    if (!resident) return { outcome: "NOT_FOUND" };
+    if (resident.userId === input.auth.userId) return { outcome: "CANNOT_REMOVE_PRIMARY" };
+
+    resident.status = "MOVED_OUT";
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "household.member.removed",
+      entityType: "HouseholdMember",
+      entityId: resident.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+      metadata: {},
+    });
+
+    return { outcome: "REMOVED", residentId: resident.id };
   }
 
   async getCurrentCommunity(auth: AuthSessionRecord): Promise<CurrentCommunityRecord | null> {

@@ -21,6 +21,7 @@ import { registerEmergencyRoutes } from "./routes/emergencies";
 import { registerFacilityRoutes } from "./routes/facilities";
 import { registerFinanceDashboardRoutes } from "./routes/finance-dashboard";
 import { registerHealthRoutes } from "./routes/health";
+import { registerHouseholdRoutes } from "./routes/household";
 import { registerHouseRoutes } from "./routes/houses";
 import { registerIncidentRoutes } from "./routes/incidents";
 import { registerLetterRoutes } from "./routes/letters";
@@ -92,6 +93,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   await registerHealthRoutes(app, repository);
   await registerAuthRoutes(app, repository, config, authenticate);
   await registerResidentRoutes(app, repository, authenticate);
+  await registerHouseholdRoutes(app, repository, authenticate);
   await registerAnnouncementRoutes(app, repository, authenticate);
   await registerAgendaRoutes(app, repository, authenticate);
   await registerNotificationRoutes(app, repository, authenticate);

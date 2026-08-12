@@ -23,6 +23,11 @@ import { StatePanel } from "@/components/ui/state-panel";
 import { ApiError, getRequestState } from "@/lib/api/client";
 
 import { getMe, logout, updateProfile } from "./auth-api";
+import {
+  addHouseholdMember,
+  getCurrentHousehold,
+  removeHouseholdMember,
+} from "@/features/household/household-api";
 
 const residentStatusLabels: Record<string, string> = {
   ACTIVE: "Aktif",
@@ -33,40 +38,58 @@ const residentStatusLabels: Record<string, string> = {
 };
 
 const relationshipLabels: Record<string, string> = {
-  HEAD_OF_HOUSEHOLD: "Kepala Keluarga",
+  HEAD: "Kepala Keluarga",
   SPOUSE: "Suami / Istri",
   CHILD: "Anak",
   PARENT: "Orang Tua",
-  OTHER_FAMILY: "Keluarga Lain",
-  STAFF: "Staf / Asisten Rumah Tangga",
-};
-
-type FamilyMember = {
-  id: string;
-  name: string;
-  relationship: string;
-  linked: boolean;
+  RELATIVE: "Kerabat",
+  TENANT: "Penyewa",
+  OTHER: "Lainnya",
 };
 
 export function AccountView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
+  const householdQuery = useQuery({
+    queryKey: ["household"],
+    queryFn: getCurrentHousehold,
+    enabled: Boolean(meQuery.data?.data.currentContext),
+  });
 
   // Name Editing State
   const [isEditingName, setIsEditingName] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
 
-  // Family Members Management State (Local state combined with household data)
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
-    { id: "1", name: "Hj. Siti Rahma", relationship: "SPOUSE", linked: true },
-    { id: "2", name: "Ahmad Rizky", relationship: "CHILD", linked: false },
-    { id: "3", name: "Nabila Putri", relationship: "CHILD", linked: false },
-  ]);
+  // Family Members Management State
   const [isAddingFamily, setIsAddingFamily] = useState(false);
   const [familyInputName, setFamilyInputName] = useState("");
+  const [familyInputPhone, setFamilyInputPhone] = useState("");
   const [familyInputRelation, setFamilyInputRelation] = useState("SPOUSE");
+  const [addMemberError, setAddMemberError] = useState<string | null>(null);
+
+  const addMemberMutation = useMutation({
+    mutationFn: addHouseholdMember,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: ["household"] });
+      setIsAddingFamily(false);
+      setFamilyInputName("");
+      setFamilyInputPhone("");
+      setFamilyInputRelation("SPOUSE");
+      setAddMemberError(null);
+    },
+    onError(err) {
+      setAddMemberError(err instanceof ApiError ? err.message : "Gagal menambah anggota. Coba lagi.");
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: removeHouseholdMember,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: ["household"] });
+    },
+  });
 
   const logoutMutation = useMutation({
     mutationFn: logout,
@@ -104,21 +127,16 @@ export function AccountView() {
 
   const handleAddFamilyMember = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!familyInputName.trim()) return;
-    const newMember: FamilyMember = {
-      id: String(Date.now()),
-      name: familyInputName.trim(),
-      relationship: familyInputRelation,
-      linked: false,
-    };
-    setFamilyMembers((prev) => [...prev, newMember]);
-    setFamilyInputName("");
-    setFamilyInputRelation("SPOUSE");
-    setIsAddingFamily(false);
+    if (!familyInputName.trim() || !familyInputPhone.trim()) return;
+    addMemberMutation.mutate({
+      fullName: familyInputName.trim(),
+      phone: familyInputPhone.trim(),
+      relationship: familyInputRelation as Parameters<typeof addHouseholdMember>[0]["relationship"],
+    });
   };
 
-  const handleDeleteFamilyMember = (id: string) => {
-    setFamilyMembers((prev) => prev.filter((m) => m.id !== id));
+  const handleDeleteFamilyMember = (residentId: string) => {
+    removeMemberMutation.mutate(residentId);
   };
 
   if (meQuery.isPending) return <AccountSkeleton />;
@@ -393,82 +411,99 @@ export function AccountView() {
               </h4>
               <form onSubmit={handleAddFamilyMember} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <input type="text" required value={familyInputName} onChange={(e) => setFamilyInputName(e.target.value)} placeholder="Nama lengkap" className="input" />
+                <input type="tel" required value={familyInputPhone} onChange={(e) => setFamilyInputPhone(e.target.value)} placeholder="Nomor HP (08xxxxxxxxxx)" className="input" />
                 <select value={familyInputRelation} onChange={(e) => setFamilyInputRelation(e.target.value)} className="input">
-                  <option value="HEAD_OF_HOUSEHOLD">Kepala Keluarga</option>
                   <option value="SPOUSE">Suami / Istri</option>
                   <option value="CHILD">Anak</option>
                   <option value="PARENT">Orang Tua</option>
-                  <option value="OTHER_FAMILY">Keluarga Lain</option>
-                  <option value="STAFF">Staf / Asisten</option>
+                  <option value="RELATIVE">Kerabat</option>
+                  <option value="TENANT">Penyewa</option>
+                  <option value="OTHER">Lainnya</option>
                 </select>
+                <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
+                  Anggota baru akan mendapatkan akun sendiri dan bisa masuk memakai nomor HP ini.
+                </p>
+                {addMemberError && (
+                  <p role="alert" style={{ fontSize: "0.72rem", color: "oklch(45% 0.13 23.49)", margin: 0 }}>
+                    {addMemberError}
+                  </p>
+                )}
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                  <button type="button" onClick={() => setIsAddingFamily(false)} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.4rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #80DEEA", background: "#fff", color: "#376E76", cursor: "pointer" }}>
+                  <button type="button" onClick={() => { setIsAddingFamily(false); setAddMemberError(null); }} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.4rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #80DEEA", background: "#fff", color: "#376E76", cursor: "pointer" }}>
                     Batal
                   </button>
-                  <button type="submit" style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.4rem 0.875rem", borderRadius: "0.5rem", border: "none", background: "#00ACC1", color: "#fff", cursor: "pointer" }}>
-                    Simpan
+                  <button type="submit" disabled={addMemberMutation.isPending} style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.4rem 0.875rem", borderRadius: "0.5rem", border: "none", background: "#00ACC1", color: "#fff", cursor: "pointer" }}>
+                    {addMemberMutation.isPending ? "Menyimpan..." : "Simpan"}
                   </button>
                 </div>
               </form>
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "#E0F7FA", borderRadius: "0.75rem" }}>
-              <div style={{ width: "2.25rem", height: "2.25rem", borderRadius: "9999px", background: "#00ACC1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.75rem", flexShrink: 0 }}>
-                {displayName.substring(0, 2).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 800, fontSize: "0.875rem", color: "#0F2F34" }}>{displayName}</span>
-                  <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "9999px", background: "#0F2F34", color: "#4DD0E1" }}>Saya</span>
-                </div>
-                <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
-                  {relationshipLabels["HEAD_OF_HOUSEHOLD"]} · {account.phoneMasked}
-                </p>
-              </div>
-            </div>
+          {householdQuery.isPending && (
+            <p style={{ fontSize: "0.75rem", color: "#376E76" }}>Memuat anggota rumah tangga...</p>
+          )}
 
-            {familyMembers.map((member) => (
-              <div
-                key={member.id}
-                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "#fff", border: "1px solid #B2EBF2", borderRadius: "0.75rem" }}
+          {householdQuery.isError && (
+            <p role="alert" style={{ fontSize: "0.75rem", color: "oklch(45% 0.13 23.49)" }}>
+              Belum dapat memuat anggota rumah tangga.{" "}
+              <button
+                type="button"
+                onClick={() => void householdQuery.refetch()}
+                style={{ color: "#00ACC1", fontWeight: 700, background: "none", border: "none", cursor: "pointer", padding: 0 }}
               >
-                <div style={{ width: "2.25rem", height: "2.25rem", borderRadius: "9999px", background: "#E0F7FA", color: "#376E76", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem", border: "1px solid #80DEEA", flexShrink: 0 }}>
-                  {member.name.substring(0, 2).toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "#0F2F34", display: "block" }}>{member.name}</span>
-                  <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
-                    {relationshipLabels[member.relationship] ?? member.relationship}
-                  </p>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                  <span
+                Coba lagi
+              </button>
+            </p>
+          )}
+
+          {householdQuery.data && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {householdQuery.data.data.household.members.map((member) => {
+                const isSelf = member.userId === account.id;
+                return (
+                  <div
+                    key={member.residentId}
                     style={{
-                      fontSize: "0.65rem", fontWeight: 600, padding: "0.2rem 0.5rem", borderRadius: "9999px",
-                      background: member.linked ? "oklch(92% 0.045 155.85)" : "#E0F7FA",
-                      color: member.linked ? "oklch(42% 0.08 155.85)" : "#376E76",
-                      border: member.linked ? "1px solid oklch(80% 0.07 155.85)" : "1px solid #80DEEA",
+                      display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: "0.75rem",
+                      background: isSelf ? "#E0F7FA" : "#fff",
+                      border: isSelf ? "none" : "1px solid #B2EBF2",
                     }}
                   >
-                    {member.linked ? "Terhubung" : "Penghuni"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteFamilyMember(member.id)}
-                    aria-label={`Hapus ${member.name}`}
-                    title={`Hapus ${member.name}`}
-                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem", border: "none", background: "transparent", color: "#376E76", cursor: "pointer" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "oklch(93% 0.05 23.49)"; (e.currentTarget as HTMLButtonElement).style.color = "oklch(45% 0.13 23.49)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#376E76"; }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                    <div style={{ width: "2.25rem", height: "2.25rem", borderRadius: "9999px", background: isSelf ? "#00ACC1" : "#E0F7FA", color: isSelf ? "#fff" : "#376E76", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.75rem", border: isSelf ? undefined : "1px solid #80DEEA", flexShrink: 0 }}>
+                      {member.displayName.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                        <span style={{ fontWeight: isSelf ? 800 : 700, fontSize: "0.875rem", color: "#0F2F34" }}>{member.displayName}</span>
+                        {isSelf && (
+                          <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "9999px", background: "#0F2F34", color: "#4DD0E1" }}>Saya</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
+                        {relationshipLabels[member.relationship] ?? member.relationship}
+                        {member.phoneMasked ? ` · ${member.phoneMasked}` : ""}
+                      </p>
+                    </div>
+                    {!isSelf && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFamilyMember(member.residentId)}
+                        disabled={removeMemberMutation.isPending}
+                        aria-label={`Hapus ${member.displayName}`}
+                        title={`Hapus ${member.displayName}`}
+                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem", border: "none", background: "transparent", color: "#376E76", cursor: "pointer", flexShrink: 0 }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "oklch(93% 0.05 23.49)"; (e.currentTarget as HTMLButtonElement).style.color = "oklch(45% 0.13 23.49)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#376E76"; }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
