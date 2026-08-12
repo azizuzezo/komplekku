@@ -1,16 +1,13 @@
 FROM node:24-alpine
 WORKDIR /app
 
-# Enable corepack for pnpm support
 RUN corepack enable
 
-# Copy workspace configuration and dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
-COPY apps/api ./apps/api
+COPY apps ./apps
 
-# Install dependencies across workspace
-RUN corepack pnpm install
+RUN corepack pnpm install --no-frozen-lockfile
 
 WORKDIR /app/apps/api
 EXPOSE 3001
