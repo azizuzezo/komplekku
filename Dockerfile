@@ -9,8 +9,8 @@ COPY apps ./apps
 
 RUN corepack pnpm install --no-frozen-lockfile
 
-ENV DATABASE_URL="postgresql://komplekku:komplekku@localhost:5432/komplekku"
-RUN corepack pnpm --filter @komplekku/api db:generate
+RUN DATABASE_URL="postgresql://komplekku:komplekku@localhost:5432/komplekku" \
+    corepack pnpm --filter @komplekku/api db:generate
 
 WORKDIR /app/apps/api
 EXPOSE 3001
