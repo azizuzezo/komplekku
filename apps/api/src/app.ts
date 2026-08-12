@@ -11,6 +11,7 @@ import { createAuthenticate } from "./lib/authentication";
 import { loadConfig, type AppConfig } from "./lib/env";
 import { registerErrorHandler } from "./lib/errors";
 import { PrismaRepository } from "./repositories/prisma-repository";
+import { registerAdminRoleRoutes } from "./routes/admin-roles";
 import { registerAgendaRoutes } from "./routes/agenda";
 import { registerAnnouncementRoutes } from "./routes/announcements";
 import { registerAuthRoutes } from "./routes/auth";
@@ -94,6 +95,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   await registerAuthRoutes(app, repository, config, authenticate);
   await registerResidentRoutes(app, repository, authenticate);
   await registerHouseholdRoutes(app, repository, authenticate);
+  await registerAdminRoleRoutes(app, repository, authenticate);
   await registerAnnouncementRoutes(app, repository, authenticate);
   await registerAgendaRoutes(app, repository, authenticate);
   await registerNotificationRoutes(app, repository, authenticate);

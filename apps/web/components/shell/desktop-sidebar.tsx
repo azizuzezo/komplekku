@@ -18,6 +18,7 @@ import {
   Package,
   ShieldCheck,
   Siren,
+  UserCog,
   UserRound,
   UserCheck,
   Video,
@@ -110,6 +111,12 @@ const navigation: NavigationItem[] = [
     href: "/admin/rumah",
     label: "Kelola Rumah",
     icon: HousePlus,
+    permission: "resident.manage",
+  },
+  {
+    href: "/admin/pengguna",
+    label: "Kelola Pengguna",
+    icon: UserCog,
     permission: "resident.manage",
   },
 ];

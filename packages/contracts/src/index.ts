@@ -1,3 +1,4 @@
+export * from "./admin-role";
 export * from "./agenda";
 export * from "./announcement";
 export * from "./auth";

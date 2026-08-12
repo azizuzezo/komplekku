@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { roleDefinitions, rolePermissionKeys } from "../../prisma/rbac-seed-data";
+
 import type {
   AddReportUpdateInput,
   AgendaView,
@@ -64,6 +66,7 @@ import type {
   CashLedgerRecord,
   CashTransactionRecord,
   CollectPackageResult,
+  CommunityMemberRecord,
   CreateFacilityBookingResult,
   CreateHouseResult,
   CreateLetterRequestResult,
@@ -101,10 +104,12 @@ import type {
   ReportRecord,
   ResidencyRequestRecord,
   ReviewResidencyRequestResult,
+  RoleSummary,
   ScanCheckpointResult,
   SecurityDashboardRecord,
   SecurityShiftRecord,
   SessionCreationResult,
+  SetMemberRoleResult,
   StreamTicketResult,
   UpdateIncidentResult,
   UpdateProfileResult,
@@ -482,6 +487,13 @@ interface MemoryCashTransaction {
   createdAt: Date;
 }
 
+const roleIdByCode = new Map<string, string>(
+  roleDefinitions.map(([code]) => [code, randomUUID()]),
+);
+const roleNameByCode = new Map<string, string>(
+  roleDefinitions.map(([code, name]) => [code, name]),
+);
+
 const readPermissions = [
   "agenda.read",
   "announcement.read",
@@ -651,6 +663,7 @@ export class MemoryRepository implements AppRepository {
   private readonly houses = new Map<string, MemoryHouse>();
   private readonly households = new Map<string, MemoryHousehold>();
   private readonly permissions = new Map<string, string[]>();
+  private readonly memberRoles = new Map<string, string>();
   private readonly reads = new Map<string, Date>();
   private readonly announcements: AnnouncementRecord[];
   private readonly agendaEvents: MemoryAgendaEvent[];
@@ -892,13 +905,17 @@ export class MemoryRepository implements AppRepository {
       householdId: demoIds.superAdminHousehold,
     });
     this.permissions.set(`${demoIds.user}:${demoIds.community}`, [...readPermissions]);
+    this.memberRoles.set(`${demoIds.user}:${demoIds.community}`, "RESIDENT");
     this.permissions.set(`${demoIds.securityUser}:${demoIds.community}`, [...securityPermissions]);
+    this.memberRoles.set(`${demoIds.securityUser}:${demoIds.community}`, "SECURITY");
     this.permissions.set(`${demoIds.treasurerUser}:${demoIds.community}`, [
       ...treasurerPermissions,
     ]);
+    this.memberRoles.set(`${demoIds.treasurerUser}:${demoIds.community}`, "TREASURER");
     this.permissions.set(`${demoIds.superAdminUser}:${demoIds.community}`, [
       ...superAdminPermissions,
     ]);
+    this.memberRoles.set(`${demoIds.superAdminUser}:${demoIds.community}`, "SUPER_ADMIN");
     this.cameras = [
       {
         id: demoIds.cameraPublic,
@@ -1588,6 +1605,88 @@ export class MemoryRepository implements AppRepository {
       .filter((community) => community.registrationOpen)
       .sort((left, right) => left.name.localeCompare(right.name))
       .map(({ id, name, slug, timezone }) => ({ id, name, slug, timezone }));
+  }
+
+  async listRoles(): Promise<RoleSummary[]> {
+    return roleDefinitions.map(([code, name]) => ({
+      id: roleIdByCode.get(code) ?? code,
+      code,
+      name,
+    }));
+  }
+
+  async listCommunityMembers(auth: AuthSessionRecord): Promise<CommunityMemberRecord[]> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return [];
+    return [...this.residents.values()]
+      .filter((resident) => resident.communityId === communityId && resident.status === "ACTIVE")
+      .map((resident) => {
+        const user = this.users.get(resident.userId);
+        const household = resident.householdId
+          ? this.households.get(resident.householdId)
+          : undefined;
+        const house = household ? this.houses.get(household.houseId) : undefined;
+        const roleCode = this.memberRoles.get(`${resident.userId}:${communityId}`);
+        const roleName = roleCode ? roleNameByCode.get(roleCode) : undefined;
+        return {
+          residentId: resident.id,
+          userId: resident.userId,
+          displayName: user?.displayName ?? resident.fullName,
+          phoneE164: user?.phoneE164 ?? "",
+          houseCode: house?.code ?? null,
+          roles:
+            roleCode && roleName
+              ? [{ id: roleIdByCode.get(roleCode) ?? roleCode, code: roleCode, name: roleName }]
+              : [],
+        };
+      });
+  }
+
+  async setMemberRole(input: {
+    auth: AuthSessionRecord;
+    residentId: string;
+    roleCode: string;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<SetMemberRoleResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const resident = [...this.residents.values()].find(
+      (candidate) =>
+        candidate.id === input.residentId &&
+        candidate.communityId === communityId &&
+        candidate.status === "ACTIVE",
+    );
+    if (!resident) return { outcome: "NOT_FOUND" };
+    if (resident.userId === input.auth.userId) return { outcome: "CANNOT_CHANGE_SELF" };
+
+    const roleName = roleNameByCode.get(input.roleCode);
+    if (!roleName) return { outcome: "ROLE_NOT_FOUND" };
+
+    this.memberRoles.set(`${resident.userId}:${communityId}`, input.roleCode);
+    this.permissions.set(`${resident.userId}:${communityId}`, [
+      ...(rolePermissionKeys[input.roleCode] ?? []),
+    ]);
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "member.role.changed",
+      entityType: "UserRole",
+      entityId: resident.userId,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+      metadata: { roleCode: input.roleCode },
+    });
+
+    const roleId = roleIdByCode.get(input.roleCode) ?? input.roleCode;
+    return {
+      outcome: "OK",
+      residentId: resident.id,
+      roles: [{ id: roleId, code: input.roleCode, name: roleName }],
+    };
   }
 
   async createResidencyRequest(input: {

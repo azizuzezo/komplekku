@@ -638,6 +638,25 @@ export interface RequestAuditContext {
   userAgent: string | null;
 }
 
+export interface RoleSummary {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface CommunityMemberRecord {
+  residentId: string;
+  userId: string;
+  displayName: string;
+  phoneE164: string;
+  houseCode: string | null;
+  roles: RoleSummary[];
+}
+
+export type SetMemberRoleResult =
+  | { outcome: "OK"; residentId: string; roles: RoleSummary[] }
+  | { outcome: "NOT_FOUND" | "ROLE_NOT_FOUND" | "CANNOT_CHANGE_SELF" };
+
 export interface AppRepository {
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -691,6 +710,15 @@ export interface AppRepository {
     audit: RequestAuditContext;
   }): Promise<RemoveHouseholdMemberResult>;
   listRegistrationCommunities(): Promise<CommunitySummary[]>;
+  listRoles(): Promise<RoleSummary[]>;
+  listCommunityMembers(auth: AuthSessionRecord): Promise<CommunityMemberRecord[]>;
+  setMemberRole(input: {
+    auth: AuthSessionRecord;
+    residentId: string;
+    roleCode: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<SetMemberRoleResult>;
   createResidencyRequest(input: {
     auth: AuthSessionRecord;
     communityId: string;

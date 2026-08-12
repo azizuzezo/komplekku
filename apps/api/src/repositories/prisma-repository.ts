@@ -49,6 +49,7 @@ import type {
   CashLedgerRecord,
   CashTransactionRecord,
   CollectPackageResult,
+  CommunityMemberRecord,
   CreateFacilityBookingResult,
   CreateHouseResult,
   CreateLetterRequestResult,
@@ -86,10 +87,12 @@ import type {
   ReportRecord,
   ResidencyRequestRecord,
   ReviewResidencyRequestResult,
+  RoleSummary,
   ScanCheckpointResult,
   SecurityDashboardRecord,
   SecurityShiftRecord,
   SessionCreationResult,
+  SetMemberRoleResult,
   StreamTicketResult,
   UpdateIncidentResult,
   UpdateProfileResult,
@@ -896,6 +899,99 @@ export class PrismaRepository implements AppRepository {
       where: { registrationOpen: true, deletedAt: null },
       orderBy: { name: "asc" },
       select: { id: true, name: true, slug: true, timezone: true },
+    });
+  }
+
+  async listRoles(): Promise<RoleSummary[]> {
+    const roles = await this.prisma.role.findMany({ orderBy: { name: "asc" } });
+    return roles.map((role) => ({ id: role.id, code: role.code, name: role.name }));
+  }
+
+  async listCommunityMembers(auth: AuthSessionRecord): Promise<CommunityMemberRecord[]> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return [];
+
+    const residents = await this.prisma.resident.findMany({
+      where: { communityId, status: "ACTIVE" },
+      include: {
+        user: true,
+        householdMemberships: {
+          where: { endedAt: null },
+          include: { household: { include: { house: true } } },
+          take: 1,
+        },
+      },
+      orderBy: { fullName: "asc" },
+    });
+
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { communityId, userId: { in: residents.map((resident) => resident.userId) } },
+      include: { role: true },
+    });
+    const rolesByUser = new Map<string, RoleSummary[]>();
+    for (const userRole of userRoles) {
+      const existing = rolesByUser.get(userRole.userId) ?? [];
+      existing.push({ id: userRole.role.id, code: userRole.role.code, name: userRole.role.name });
+      rolesByUser.set(userRole.userId, existing);
+    }
+
+    return residents.map((resident) => ({
+      residentId: resident.id,
+      userId: resident.userId,
+      displayName: resident.user.displayName ?? resident.fullName,
+      phoneE164: resident.user.phoneE164,
+      houseCode: resident.householdMemberships[0]?.household.house.code ?? null,
+      roles: rolesByUser.get(resident.userId) ?? [],
+    }));
+  }
+
+  async setMemberRole(input: {
+    auth: AuthSessionRecord;
+    residentId: string;
+    roleCode: string;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<SetMemberRoleResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const resident = await transaction.resident.findFirst({
+        where: { id: input.residentId, communityId, status: "ACTIVE" },
+      });
+      if (!resident) return { outcome: "NOT_FOUND" as const };
+      if (resident.userId === input.auth.userId) {
+        return { outcome: "CANNOT_CHANGE_SELF" as const };
+      }
+
+      const role = await transaction.role.findUnique({ where: { code: input.roleCode } });
+      if (!role) return { outcome: "ROLE_NOT_FOUND" as const };
+
+      await transaction.userRole.deleteMany({ where: { userId: resident.userId, communityId } });
+      await transaction.userRole.create({
+        data: { userId: resident.userId, communityId, roleId: role.id },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "member.role.changed",
+          entityType: "UserRole",
+          entityId: resident.userId,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          metadata: { roleCode: input.roleCode },
+          createdAt: input.now,
+        },
+      });
+
+      return {
+        outcome: "OK" as const,
+        residentId: resident.id,
+        roles: [{ id: role.id, code: role.code, name: role.name }],
+      };
     });
   }
 
