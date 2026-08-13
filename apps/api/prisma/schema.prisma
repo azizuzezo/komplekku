@@ -223,6 +223,7 @@ model Community {
   invoices              Invoice[]
   payments              Payment[]
   cashTransactions      CashTransaction[]
+  pushTokens            PushToken[]
   auditLogs             AuditLog[]
 
   @@map("communities")
@@ -267,6 +268,7 @@ model User {
   submittedPayments        Payment[]          @relation("PaymentSubmitter")
   verifiedPayments         Payment[]          @relation("PaymentVerifier")
   recordedCashTransactions CashTransaction[]  @relation("CashTransactionRecorder")
+  pushTokens               PushToken[]
   auditLogs                AuditLog[]         @relation("AuditActor")
 
   @@map("users")
@@ -994,3 +996,19 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@map("audit_logs")
 }
+
+model PushToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  communityId String    @map("community_id") @db.Uuid
+  token       String    @unique @db.VarChar(500)
+  platform    String    @default("ANDROID") @db.VarChar(32)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, userId])
+  @@map("push_tokens")
+}
+

@@ -45,3 +45,12 @@ export type MarkAnnouncementReadResponse = z.infer<typeof markAnnouncementReadRe
 export type AnnouncementSummary = z.infer<typeof announcementSummarySchema>;
 export type AnnouncementDetail = z.infer<typeof announcementDetailSchema>;
 export type AnnouncementPriority = z.infer<typeof announcementPrioritySchema>;
+
+export const createAnnouncementSchema = z.object({
+  title: z.string().min(3, "Judul minimal 3 karakter").max(240),
+  summary: z.string().min(5, "Ringkasan minimal 5 karakter").max(500),
+  body: z.string().min(10, "Isi pengumuman minimal 10 karakter"),
+  priority: announcementPrioritySchema.default("NORMAL"),
+});
+
+export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>;

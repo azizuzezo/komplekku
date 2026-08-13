@@ -106,36 +106,80 @@ h6 {
    ════════════════════════════════════════════════════════════ */
 
 /* Background surfaces */
-.bg-surface       { background-color: var(--color-surface) !important; }
-.bg-surface-soft  { background-color: var(--color-surface-soft) !important; }
-.bg-surface-sage  { background-color: var(--color-surface-sage) !important; }
-.bg-background    { background-color: var(--color-background) !important; }
+.bg-surface {
+  background-color: var(--color-surface) !important;
+}
+.bg-surface-soft {
+  background-color: var(--color-surface-soft) !important;
+}
+.bg-surface-sage {
+  background-color: var(--color-surface-sage) !important;
+}
+.bg-background {
+  background-color: var(--color-background) !important;
+}
 
 /* Brand backgrounds */
-.bg-primary       { background-color: var(--color-primary) !important; }
-.bg-primary-dark  { background-color: var(--color-primary-dark) !important; }
-.bg-accent        { background-color: var(--color-accent) !important; }
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+.bg-primary-dark {
+  background-color: var(--color-primary-dark) !important;
+}
+.bg-accent {
+  background-color: var(--color-accent) !important;
+}
 
 /* Semantic backgrounds */
-.bg-success       { background-color: var(--color-success) !important; }
-.bg-warning       { background-color: var(--color-warning) !important; }
-.bg-danger        { background-color: var(--color-danger) !important; }
+.bg-success {
+  background-color: var(--color-success) !important;
+}
+.bg-warning {
+  background-color: var(--color-warning) !important;
+}
+.bg-danger {
+  background-color: var(--color-danger) !important;
+}
 
 /* Text colours */
-.text-primary        { color: var(--color-primary) !important; }
-.text-primary-dark   { color: var(--color-primary-dark) !important; }
-.text-text-primary   { color: var(--color-text-primary) !important; }
-.text-text-secondary { color: var(--color-text-secondary) !important; }
-.text-success        { color: var(--color-success-ink) !important; }
-.text-warning        { color: var(--color-warning-ink) !important; }
-.text-danger         { color: var(--color-danger-ink) !important; }
-.text-white          { color: #fff !important; }
+.text-primary {
+  color: var(--color-primary) !important;
+}
+.text-primary-dark {
+  color: var(--color-primary-dark) !important;
+}
+.text-text-primary {
+  color: var(--color-text-primary) !important;
+}
+.text-text-secondary {
+  color: var(--color-text-secondary) !important;
+}
+.text-success {
+  color: var(--color-success-ink) !important;
+}
+.text-warning {
+  color: var(--color-warning-ink) !important;
+}
+.text-danger {
+  color: var(--color-danger-ink) !important;
+}
+.text-white {
+  color: #fff !important;
+}
 
 /* Border colours */
-.border-border   { border-color: var(--color-border) !important; }
-.border-primary  { border-color: var(--color-primary) !important; }
-.border-success  { border-color: var(--color-success) !important; }
-.border-danger   { border-color: var(--color-danger) !important; }
+.border-border {
+  border-color: var(--color-border) !important;
+}
+.border-primary {
+  border-color: var(--color-primary) !important;
+}
+.border-success {
+  border-color: var(--color-success) !important;
+}
+.border-danger {
+  border-color: var(--color-danger) !important;
+}
 
 /* ── Card utility ────────────────────────────────────────────── */
 .card {
@@ -158,8 +202,9 @@ h6 {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: background-color var(--dur-hover) var(--ease-out),
-              opacity var(--dur-hover) var(--ease-out);
+  transition:
+    background-color var(--dur-hover) var(--ease-out),
+    opacity var(--dur-hover) var(--ease-out);
   white-space: nowrap;
 }
 
@@ -168,11 +213,24 @@ h6 {
   cursor: not-allowed;
 }
 
-.btn.bg-primary  { background: var(--color-primary);  color: var(--color-on-primary); }
-.btn.bg-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
-.btn.bg-surface  { background: var(--color-surface);  color: var(--color-text-primary); }
-.btn.bg-surface-soft { background: var(--color-surface-soft); color: var(--color-text-secondary); }
-.btn.bg-surface-soft:hover:not(:disabled) { background: var(--color-surface-sage); }
+.btn.bg-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.btn.bg-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+.btn.bg-surface {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+.btn.bg-surface-soft {
+  background: var(--color-surface-soft);
+  color: var(--color-text-secondary);
+}
+.btn.bg-surface-soft:hover:not(:disabled) {
+  background: var(--color-surface-sage);
+}
 
 /* ── Status label utility ───────────────────────────────────── */
 .status-label {
@@ -4919,7 +4977,9 @@ div[data-nextjs-toast] {
   background: var(--color-surface-soft);
   color: var(--color-primary);
   cursor: pointer;
-  transition: border-color var(--dur-hover), background var(--dur-hover);
+  transition:
+    border-color var(--dur-hover),
+    background var(--dur-hover);
   flex: none;
 }
 

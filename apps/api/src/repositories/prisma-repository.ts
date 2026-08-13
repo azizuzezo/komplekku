@@ -5,6 +5,7 @@ import type {
   AddReportUpdateInput,
   AgendaView,
   CreateAgendaEventInput,
+  CreateAnnouncementInput,
   CreateCameraInput,
   CreateCashTransactionInput,
   CreateDuesTypeInput,
@@ -1530,6 +1531,80 @@ export class PrismaRepository implements AppRepository {
     return read.readAt;
   }
 
+  async createAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcement: CreateAnnouncementInput;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<AnnouncementRecord> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) throw new Error("No community selected.");
+
+    return this.prisma.$transaction(async (transaction) => {
+      const created = await transaction.announcement.create({
+        data: {
+          communityId,
+          authorId: input.auth.userId,
+          title: input.announcement.title,
+          summary: input.announcement.summary,
+          body: input.announcement.body,
+          priority: input.announcement.priority,
+          publishedAt: input.now,
+        },
+      });
+
+      const activeResidents = await transaction.resident.findMany({
+        where: { communityId, status: "ACTIVE" },
+        select: { userId: true },
+      });
+      const uniqueUserIds = Array.from(new Set(activeResidents.map((r) => r.userId)));
+
+      if (uniqueUserIds.length > 0) {
+        await transaction.notification.createMany({
+          data: uniqueUserIds.map((userId) => ({
+            communityId,
+            userId,
+            title: `Pengumuman: ${created.title}`,
+            message: created.summary,
+            entityType: "ANNOUNCEMENT",
+            entityId: created.id,
+            priority:
+              created.priority === "URGENT"
+                ? "URGENT"
+                : created.priority === "IMPORTANT"
+                  ? "IMPORTANT"
+                  : "NORMAL",
+            createdAt: input.now,
+          })),
+        });
+      }
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "announcement.created",
+          entityType: "Announcement",
+          entityId: created.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return {
+        id: created.id,
+        title: created.title,
+        summary: created.summary,
+        body: created.body,
+        priority: created.priority,
+        publishedAt: created.publishedAt,
+        isRead: false,
+      };
+    });
+  }
+
   async listAgenda(input: {
     auth: AuthSessionRecord;
     now: Date;
@@ -1901,6 +1976,36 @@ export class PrismaRepository implements AppRepository {
       }
       return { readAt: input.now, updatedCount: updated.count };
     });
+  }
+
+  async registerPushToken(input: {
+    auth: AuthSessionRecord;
+    token: string;
+    platform: string;
+    now: Date;
+  }): Promise<{ id: string; token: string }> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) throw new Error("No community selected.");
+
+    const pushToken = await this.prisma.pushToken.upsert({
+      where: { token: input.token },
+      update: {
+        userId: input.auth.userId,
+        communityId,
+        platform: input.platform,
+        updatedAt: input.now,
+      },
+      create: {
+        userId: input.auth.userId,
+        communityId,
+        token: input.token,
+        platform: input.platform,
+        createdAt: input.now,
+        updatedAt: input.now,
+      },
+    });
+
+    return { id: pushToken.id, token: pushToken.token };
   }
 
   async listCurrentHouseholdVehicles(auth: AuthSessionRecord): Promise<VehicleRecord[]> {

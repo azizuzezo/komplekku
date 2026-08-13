@@ -39,9 +39,9 @@ describe("WhatsApp OTP provider", () => {
   });
 
   it("menangani status 503 dari bot sebagai OTP_PROVIDER_OFFLINE", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("WhatsApp disconnect", { status: 503 }),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("WhatsApp disconnect", { status: 503 }));
 
     await expect(
       sendWhatsAppOtp({
@@ -56,9 +56,9 @@ describe("WhatsApp OTP provider", () => {
   });
 
   it("menangani status 429 dari bot sebagai OTP_RATE_LIMIT", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("Rate limited", { status: 429 }),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("Rate limited", { status: 429 }));
 
     await expect(
       sendWhatsAppOtp({
@@ -73,9 +73,9 @@ describe("WhatsApp OTP provider", () => {
   });
 
   it("menangani status 401 dari bot sebagai error autentikasi", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("Unauthorized", { status: 401 }),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
 
     await expect(
       sendWhatsAppOtp({

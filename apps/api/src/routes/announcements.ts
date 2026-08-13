@@ -1,10 +1,12 @@
+import { createAnnouncementSchema } from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 
 import type { AppRepository } from "../domain/repository";
 import { getAuthContext, requirePermission } from "../lib/authentication";
 import { AppError } from "../lib/errors";
-import { responseMeta } from "../lib/http";
+import { requestUserAgent, responseMeta } from "../lib/http";
+import type { PushNotificationProvider } from "../lib/push-notification-provider";
 
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -34,6 +36,7 @@ export async function registerAnnouncementRoutes(
   app: FastifyInstance,
   repository: AppRepository,
   authenticate: preHandlerHookHandler,
+  pushNotificationProvider?: PushNotificationProvider,
 ) {
   const guards = [authenticate, requirePermission("announcement.read")];
 
@@ -66,6 +69,41 @@ export async function registerAnnouncementRoutes(
       meta: responseMeta(request),
     };
   });
+
+  app.post(
+    "/api/v1/announcements",
+    { preHandler: [authenticate, requirePermission("announcement.manage")] },
+    async (request, reply) => {
+      const input = createAnnouncementSchema.parse(request.body);
+      const auth = getAuthContext(request);
+      const created = await repository.createAnnouncement({
+        auth,
+        announcement: input,
+        now: new Date(),
+        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+      });
+
+      if (auth.currentCommunityId && pushNotificationProvider) {
+        await pushNotificationProvider
+          .broadcastToCommunity(auth.currentCommunityId, {
+            title: `Pengumuman: ${created.title}`,
+            body: created.summary,
+            data: { type: "ANNOUNCEMENT", id: created.id },
+          })
+          .catch(() => {});
+      }
+
+      return reply.status(201).send({
+        data: {
+          announcement: {
+            ...announcementSummary(created),
+            body: created.body,
+          },
+        },
+        meta: responseMeta(request),
+      });
+    },
+  );
 
   app.post("/api/v1/announcements/:id/read", { preHandler: guards }, async (request) => {
     const { id } = idParamsSchema.parse(request.params);

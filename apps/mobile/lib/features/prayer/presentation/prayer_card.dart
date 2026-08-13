@@ -52,7 +52,7 @@ class _PrayerCardState extends State<PrayerCard> {
       MapEntry(PrayerName.isya, times[PrayerName.isya]!),
     ];
 
-    var nextEntry = upcoming.firstWhere(
+    final nextEntry = upcoming.firstWhere(
       (e) => e.value.isAfter(_now),
       orElse: () {
         final tomorrow = _now.add(const Duration(days: 1));

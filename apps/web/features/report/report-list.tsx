@@ -89,11 +89,7 @@ function CreateReportForm() {
   const isPending = createMutation.isPending || isUploadingPhotos;
 
   return (
-    <form
-      className="form-stack report-create-form"
-      onSubmit={handleSubmit}
-      noValidate
-    >
+    <form className="form-stack report-create-form" onSubmit={handleSubmit} noValidate>
       <div className="field">
         <label htmlFor="report-category">Kategori</label>
         <select className="input" id="report-category" {...form.register("category")}>

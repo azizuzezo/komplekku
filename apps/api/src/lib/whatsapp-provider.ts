@@ -10,7 +10,7 @@ export interface SendOtpOptions {
 export async function sendWhatsAppOtp(options: SendOtpOptions): Promise<void> {
   const { botUrl, apiKey, phoneE164, otp } = options;
   const digitsOnlyPhone = phoneE164.replace(/^\+/, "");
-  
+
   // Format URL target: POST /api/otp/send
   const targetUrl = new URL("/api/otp/send", botUrl).toString();
 

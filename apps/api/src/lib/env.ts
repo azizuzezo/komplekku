@@ -35,10 +35,7 @@ const envSchema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
-    WA_BOT_URL: z
-      .string()
-      .url()
-      .default("https://wabot-production-fa77.up.railway.app"),
+    WA_BOT_URL: z.string().url().default("https://wabot-production-fa77.up.railway.app"),
     WA_BOT_API_KEY: z.string().default("komplekku-x-muter"),
     OTP_BYPASS_PHONE_E164: z.string().optional(),
     OTP_BYPASS_CODE: z
@@ -125,4 +122,3 @@ export function loadConfig(
     ...(appEnv === "local" && source.DEV_OTP === undefined ? { DEV_OTP: "123456" } : {}),
   });
 }
-

@@ -8,7 +8,6 @@ export function generateRandomOtp(): string {
   return randomInt(100000, 1000000).toString();
 }
 
-
 export function normalizeIndonesianPhone(value: string): string {
   const compact = value.trim().replace(/[\s().-]/g, "");
   let normalized = compact;

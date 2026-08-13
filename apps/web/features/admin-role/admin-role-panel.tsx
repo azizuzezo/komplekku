@@ -141,7 +141,10 @@ export function AdminRolePanel() {
                   value={currentRoleCode}
                   disabled={isPending}
                   onChange={(e) =>
-                    setRoleMutation.mutate({ residentId: member.residentId, roleCode: e.target.value })
+                    setRoleMutation.mutate({
+                      residentId: member.residentId,
+                      roleCode: e.target.value,
+                    })
                   }
                 >
                   <option value="" disabled>

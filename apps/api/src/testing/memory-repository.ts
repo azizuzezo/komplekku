@@ -10,6 +10,7 @@ import type {
   CashTransactionType,
   CashVisibility,
   CreateAgendaEventInput,
+  CreateAnnouncementInput,
   CreateCameraInput,
   CreateCashTransactionInput,
   CreateDuesTypeInput,
@@ -223,6 +224,12 @@ interface MemoryHousehold {
   communityId: string;
   houseId: string;
   displayName: string;
+}
+
+interface MemoryAnnouncement extends AnnouncementRecord {
+  communityId: string;
+  authorId?: string | null;
+  archivedAt: Date | null;
 }
 
 interface MemoryAgendaEvent extends AgendaRecord {
@@ -487,12 +494,8 @@ interface MemoryCashTransaction {
   createdAt: Date;
 }
 
-const roleIdByCode = new Map<string, string>(
-  roleDefinitions.map(([code]) => [code, randomUUID()]),
-);
-const roleNameByCode = new Map<string, string>(
-  roleDefinitions.map(([code, name]) => [code, name]),
-);
+const roleIdByCode = new Map<string, string>(roleDefinitions.map(([code]) => [code, randomUUID()]));
+const roleNameByCode = new Map<string, string>(roleDefinitions.map(([code, name]) => [code, name]));
 
 const readPermissions = [
   "agenda.read",
@@ -573,6 +576,8 @@ const superAdminPermissions = [
 
 const treasurerPermissions = [
   "community.read",
+  "announcement.read",
+  "announcement.manage",
   "notification.read",
   "dues.manage",
   "invoice.read",
@@ -688,6 +693,13 @@ export class MemoryRepository implements AppRepository {
   private readonly invoices: MemoryInvoice[];
   private readonly payments: MemoryPayment[] = [];
   private readonly cashTransactions: MemoryCashTransaction[] = [];
+  private readonly pushTokens: Array<{
+    id: string;
+    userId: string;
+    communityId: string;
+    token: string;
+    platform: string;
+  }> = [];
 
   constructor() {
     this.communities.set(demoIds.community, {
@@ -1487,7 +1499,9 @@ export class MemoryRepository implements AppRepository {
     const household = this.households.get(householdId);
     if (!household || household.communityId !== communityId) return { outcome: "NOT_FOUND" };
 
-    let user = [...this.users.values()].find((candidate) => candidate.phoneE164 === input.phoneE164);
+    let user = [...this.users.values()].find(
+      (candidate) => candidate.phoneE164 === input.phoneE164,
+    );
     if (user) {
       const existingResident = this.residents.get(`${user.id}:${communityId}`);
       if (existingResident?.status === "ACTIVE") {
@@ -1896,6 +1910,65 @@ export class MemoryRepository implements AppRepository {
     return now;
   }
 
+  async createAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcement: CreateAnnouncementInput;
+    now: Date;
+    audit: { ipAddress: string | null; userAgent: string | null };
+  }): Promise<AnnouncementRecord> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) throw new Error("No community selected.");
+
+    const id = randomUUID();
+    const item: MemoryAnnouncement = {
+      id,
+      communityId,
+      authorId: input.auth.userId,
+      title: input.announcement.title,
+      summary: input.announcement.summary,
+      body: input.announcement.body,
+      priority: input.announcement.priority,
+      publishedAt: input.now,
+      isRead: false,
+      archivedAt: null,
+    };
+    this.announcements.push(item);
+
+    const activeResidents = [...this.residents.values()].filter(
+      (r) => r.communityId === communityId && r.status === "ACTIVE",
+    );
+    const uniqueUserIds = [...new Set(activeResidents.map((r) => r.userId))];
+    for (const userId of uniqueUserIds) {
+      this.notifications.push({
+        id: randomUUID(),
+        communityId,
+        userId,
+        title: `Pengumuman: ${item.title}`,
+        message: item.summary,
+        entityType: "ANNOUNCEMENT",
+        entityId: item.id,
+        priority:
+          item.priority === "URGENT"
+            ? "URGENT"
+            : item.priority === "IMPORTANT"
+              ? "IMPORTANT"
+              : "NORMAL",
+        readAt: null,
+        createdAt: input.now,
+      });
+    }
+
+    return {
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      body: item.body,
+      priority: item.priority,
+      publishedAt: item.publishedAt,
+      isRead: false,
+    };
+  }
+
   async listAgenda(input: {
     auth: AuthSessionRecord;
     now: Date;
@@ -2132,6 +2205,34 @@ export class MemoryRepository implements AppRepository {
       });
     }
     return { readAt: input.now, updatedCount: unread.length };
+  }
+
+  async registerPushToken(input: {
+    auth: AuthSessionRecord;
+    token: string;
+    platform: string;
+    now: Date;
+  }): Promise<{ id: string; token: string }> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) throw new Error("No community selected.");
+
+    const existing = this.pushTokens.find((t) => t.token === input.token);
+    if (existing) {
+      existing.userId = input.auth.userId;
+      existing.communityId = communityId;
+      existing.platform = input.platform;
+      return { id: existing.id, token: existing.token };
+    }
+
+    const created = {
+      id: randomUUID(),
+      userId: input.auth.userId,
+      communityId,
+      token: input.token,
+      platform: input.platform,
+    };
+    this.pushTokens.push(created);
+    return { id: created.id, token: created.token };
   }
 
   async listCurrentHouseholdVehicles(auth: AuthSessionRecord): Promise<VehicleRecord[]> {

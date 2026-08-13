@@ -4,6 +4,7 @@ import {
   markAnnouncementReadResponseSchema,
   type AnnouncementDetailResponse,
   type AnnouncementListResponse,
+  type CreateAnnouncementInput,
   type MarkAnnouncementReadResponse,
 } from "@komplekku/contracts";
 
@@ -25,4 +26,13 @@ export function markAnnouncementRead(id: string): Promise<MarkAnnouncementReadRe
       method: "POST",
     },
   );
+}
+
+export function createAnnouncement(
+  data: CreateAnnouncementInput,
+): Promise<AnnouncementDetailResponse> {
+  return apiRequest("/announcements", announcementDetailResponseSchema, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }

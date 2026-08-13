@@ -71,4 +71,34 @@ class AnnouncementRepository {
       throw ApiException.fromDio(error);
     }
   }
+
+  Future<AnnouncementDetail> create({
+    required String title,
+    required String summary,
+    required String body,
+    String priority = 'NORMAL',
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/announcements',
+        data: {
+          'title': title,
+          'summary': summary,
+          'body': body,
+          'priority': priority,
+        },
+      );
+      final announcement = response.data?['data']?['announcement'];
+      if (announcement is! Map<String, dynamic>) {
+        throw ApiException.malformedResponse();
+      }
+      return AnnouncementDetail.fromJson(announcement);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
 }

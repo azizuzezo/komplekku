@@ -23,9 +23,7 @@ export function addHouseholdMember(
   });
 }
 
-export function removeHouseholdMember(
-  residentId: string,
-): Promise<RemoveHouseholdMemberResponse> {
+export function removeHouseholdMember(residentId: string): Promise<RemoveHouseholdMemberResponse> {
   return apiRequest(`/household/members/${residentId}`, removeHouseholdMemberResponseSchema, {
     method: "DELETE",
   });

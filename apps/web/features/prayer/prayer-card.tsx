@@ -125,7 +125,7 @@ export function PrayerCard() {
         }
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adzanState, isMuted]);
 
   // Determine next upcoming prayer (chronological search)
@@ -197,7 +197,6 @@ export function PrayerCard() {
 
           {/* ── Audio Controls ── */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-
             {/* Adzan button — always visible */}
             <button
               type="button"

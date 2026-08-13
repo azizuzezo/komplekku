@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/data/announcement_repository.dart';
@@ -14,9 +15,28 @@ class AnnouncementListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final announcements = ref.watch(announcementListProvider);
+    final permissions = ref.watch(currentPermissionsProvider);
+    final canManage = permissions.contains('announcement.manage');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pengumuman')),
+      floatingActionButton: canManage
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final created = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => const _CreateAnnouncementDialog(),
+                );
+                if (created == true) {
+                  ref.invalidate(announcementListProvider);
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Buat Pengumuman'),
+              backgroundColor: KomplekkuColors.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
       body: SafeArea(
         child: announcements.when(
           loading: () => const _AnnouncementListSkeleton(),
@@ -61,7 +81,7 @@ class AnnouncementListScreen extends ConsumerWidget {
               onRefresh: () => ref.refresh(announcementListProvider.future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                 itemCount: items.length,
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: 10),
@@ -77,6 +97,139 @@ class AnnouncementListScreen extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _CreateAnnouncementDialog extends ConsumerStatefulWidget {
+  const _CreateAnnouncementDialog();
+
+  @override
+  ConsumerState<_CreateAnnouncementDialog> createState() =>
+      __CreateAnnouncementDialogState();
+}
+
+class __CreateAnnouncementDialogState
+    extends ConsumerState<_CreateAnnouncementDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _summaryController = TextEditingController();
+  final _bodyController = TextEditingController();
+  String _priority = 'NORMAL';
+  bool _submitting = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _summaryController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _submitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(announcementRepositoryProvider).create(
+            title: _titleController.text.trim(),
+            summary: _summaryController.text.trim(),
+            body: _bodyController.text.trim(),
+            priority: _priority,
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _errorMessage = error is ApiException
+              ? error.message
+              : 'Gagal membuat pengumuman.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Buat Pengumuman Baru'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: KomplekkuColors.danger),
+                  ),
+                ),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Judul Pengumuman',
+                  hintText: 'Misal: Kerja Bakti Blok F',
+                ),
+                validator: (val) =>
+                    val == null || val.trim().length < 3 ? 'Judul minimal 3 karakter' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _summaryController,
+                decoration: const InputDecoration(
+                  labelText: 'Ringkasan Singkat',
+                  hintText: 'Ringkasan 1-2 kalimat',
+                ),
+                validator: (val) =>
+                    val == null || val.trim().length < 5 ? 'Ringkasan minimal 5 karakter' : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _priority,
+                decoration: const InputDecoration(labelText: 'Prioritas'),
+                items: const [
+                  DropdownMenuItem(value: 'NORMAL', child: Text('Biasa (Normal)')),
+                  DropdownMenuItem(value: 'IMPORTANT', child: Text('Penting')),
+                  DropdownMenuItem(value: 'URGENT', child: Text('Mendesak (Darurat)')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _priority = val);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _bodyController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Isi Pengumuman Lengkap',
+                  hintText: 'Tuliskan pengumuman secara lengkap...',
+                ),
+                validator: (val) =>
+                    val == null || val.trim().length < 10 ? 'Isi minimal 10 karakter' : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          child: Text(_submitting ? 'Menerbitkan...' : 'Terbitkan'),
+        ),
+      ],
     );
   }
 }

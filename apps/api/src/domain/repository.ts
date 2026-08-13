@@ -10,6 +10,7 @@ import type {
   CashVisibility,
   CommunitySummary,
   CreateAgendaEventInput,
+  CreateAnnouncementInput,
   CreateCameraInput,
   CreateCashTransactionInput,
   CreateDuesTypeInput,
@@ -38,6 +39,7 @@ import type {
   PackageStatus,
   PatrolSessionStatus,
   PaymentStatus,
+  RegisterPushTokenInput,
   ReportCategory,
   ReportStatus,
   ResidentStatus,
@@ -75,6 +77,11 @@ export interface AuthSessionRecord {
   currentCommunityId: string | null;
   currentHouseholdId: string | null;
   permissions: string[];
+}
+
+export interface RequestAuditContext {
+  ipAddress: string | null;
+  userAgent: string | null;
 }
 
 export interface MeRecord {
@@ -142,8 +149,7 @@ export type AddHouseholdMemberResult =
   | { outcome: "NOT_FOUND" | "ALREADY_MEMBER" | "ALREADY_RESIDENT_ELSEWHERE" };
 
 export type RemoveHouseholdMemberResult =
-  | { outcome: "REMOVED"; residentId: string }
-  | { outcome: "NOT_FOUND" | "CANNOT_REMOVE_PRIMARY" };
+  { outcome: "REMOVED"; residentId: string } | { outcome: "NOT_FOUND" | "CANNOT_REMOVE_PRIMARY" };
 
 export interface VehicleRecord {
   id: string;
@@ -757,6 +763,12 @@ export interface AppRepository {
     now: Date,
   ): Promise<AnnouncementRecord | null>;
   markAnnouncementRead(auth: AuthSessionRecord, id: string, now: Date): Promise<Date | null>;
+  createAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcement: CreateAnnouncementInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<AnnouncementRecord>;
   listAgenda(input: {
     auth: AuthSessionRecord;
     now: Date;
@@ -801,6 +813,12 @@ export interface AppRepository {
     now: Date;
     audit: RequestAuditContext;
   }): Promise<{ readAt: Date; updatedCount: number }>;
+  registerPushToken(input: {
+    auth: AuthSessionRecord;
+    token: string;
+    platform: string;
+    now: Date;
+  }): Promise<{ id: string; token: string }>;
   listCurrentHouseholdVehicles(auth: AuthSessionRecord): Promise<VehicleRecord[]>;
   createVehicle(input: {
     auth: AuthSessionRecord;

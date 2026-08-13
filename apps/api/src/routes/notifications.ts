@@ -1,4 +1,4 @@
-import { notificationListQuerySchema } from "@komplekku/contracts";
+import { notificationListQuerySchema, registerPushTokenSchema } from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 
@@ -23,6 +23,24 @@ export async function registerNotificationRoutes(
   authenticate: preHandlerHookHandler,
 ) {
   const guards = [authenticate, requirePermission("notification.read")];
+
+  app.post(
+    "/api/v1/notifications/device-token",
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const input = registerPushTokenSchema.parse(request.body);
+      const result = await repository.registerPushToken({
+        auth: getAuthContext(request),
+        token: input.token,
+        platform: input.platform,
+        now: new Date(),
+      });
+      return reply.status(201).send({
+        data: { pushTokenId: result.id, token: result.token },
+        meta: responseMeta(request),
+      });
+    },
+  );
 
   app.get("/api/v1/notifications", { preHandler: guards }, async (request) => {
     const query = notificationListQuerySchema.parse(request.query);

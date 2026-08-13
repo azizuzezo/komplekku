@@ -5,7 +5,8 @@ import { AdminRolePanel } from "@/features/admin-role/admin-role-panel";
 
 export const metadata: Metadata = {
   title: "Kelola pengguna",
-  description: "Ubah peran warga aktif di komunitas ini, misalnya Ketua RT, Ketua RW, atau Sekretaris.",
+  description:
+    "Ubah peran warga aktif di komunitas ini, misalnya Ketua RT, Ketua RW, atau Sekretaris.",
 };
 
 export default function AdminRolePage() {

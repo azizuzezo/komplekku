@@ -54,7 +54,9 @@ describe("peran anggota komunitas (super admin panel)", () => {
     expect(communityMemberListResponseSchema.safeParse(membersBefore.json()).success).toBe(true);
     const security = membersBefore
       .json()
-      .data.items.find((item: { residentId: string }) => item.residentId === demoIds.securityResident);
+      .data.items.find(
+        (item: { residentId: string }) => item.residentId === demoIds.securityResident,
+      );
     expect(security.roles[0].code).toBe("SECURITY");
 
     const changed = await app.inject({
@@ -74,7 +76,9 @@ describe("peran anggota komunitas (super admin panel)", () => {
     });
     const updatedSecurity = membersAfter
       .json()
-      .data.items.find((item: { residentId: string }) => item.residentId === demoIds.securityResident);
+      .data.items.find(
+        (item: { residentId: string }) => item.residentId === demoIds.securityResident,
+      );
     expect(updatedSecurity.roles[0].code).toBe("SEKRETARIS");
     expect(updatedSecurity.roles[0].name).toBe("Sekretaris");
 

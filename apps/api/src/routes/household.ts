@@ -32,7 +32,11 @@ export async function registerHouseholdRoutes(
     async (request) => {
       const household = await repository.getCurrentHousehold(getAuthContext(request));
       if (!household) {
-        throw new AppError(409, "HOUSEHOLD_CONTEXT_REQUIRED", "Pilih rumah tangga terlebih dahulu.");
+        throw new AppError(
+          409,
+          "HOUSEHOLD_CONTEXT_REQUIRED",
+          "Pilih rumah tangga terlebih dahulu.",
+        );
       }
       return {
         data: {
@@ -79,7 +83,11 @@ export async function registerHouseholdRoutes(
         );
       }
       if (result.outcome !== "OK") {
-        throw new AppError(409, "HOUSEHOLD_CONTEXT_REQUIRED", "Pilih rumah tangga terlebih dahulu.");
+        throw new AppError(
+          409,
+          "HOUSEHOLD_CONTEXT_REQUIRED",
+          "Pilih rumah tangga terlebih dahulu.",
+        );
       }
       return reply.status(201).send({
         data: { member: publicMember(result.member) },
@@ -108,7 +116,11 @@ export async function registerHouseholdRoutes(
         );
       }
       if (result.outcome !== "REMOVED") {
-        throw new AppError(404, "HOUSEHOLD_MEMBER_NOT_FOUND", "Anggota rumah tangga tidak ditemukan.");
+        throw new AppError(
+          404,
+          "HOUSEHOLD_MEMBER_NOT_FOUND",
+          "Anggota rumah tangga tidak ditemukan.",
+        );
       }
       return {
         data: { residentId: result.residentId, removed: true as const },

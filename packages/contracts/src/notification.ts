@@ -62,3 +62,10 @@ export const markAllNotificationsReadResponseSchema = dataEnvelopeSchema(
 export type MarkAllNotificationsReadResponse = z.infer<
   typeof markAllNotificationsReadResponseSchema
 >;
+
+export const registerPushTokenSchema = z.object({
+  token: z.string().min(1, "Token tidak boleh kosong"),
+  platform: z.enum(["ANDROID", "IOS", "WEB"]).default("ANDROID"),
+});
+
+export type RegisterPushTokenInput = z.infer<typeof registerPushTokenSchema>;

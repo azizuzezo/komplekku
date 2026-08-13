@@ -125,7 +125,12 @@ export function PhotoPicker({ onChange, disabled = false }: PhotoPickerProps) {
     setSlots((prev) =>
       prev.map((s) =>
         s.localUrl === slot.localUrl
-          ? ({ kind: "uploading", localUrl: slot.localUrl, percent: 0, file: slot.file } satisfies PhotoSlot)
+          ? ({
+              kind: "uploading",
+              localUrl: slot.localUrl,
+              percent: 0,
+              file: slot.file,
+            } satisfies PhotoSlot)
           : s,
       ),
     );
@@ -155,7 +160,12 @@ export function PhotoPicker({ onChange, disabled = false }: PhotoPickerProps) {
       setSlots((prev) => {
         const next = prev.map((s) =>
           s.localUrl === slot.localUrl
-            ? ({ kind: "error", localUrl: slot.localUrl, message, file: slot.file } satisfies PhotoSlot)
+            ? ({
+                kind: "error",
+                localUrl: slot.localUrl,
+                message,
+                file: slot.file,
+              } satisfies PhotoSlot)
             : s,
         );
         notifyParent(next);
@@ -168,9 +178,8 @@ export function PhotoPicker({ onChange, disabled = false }: PhotoPickerProps) {
     <div className="photo-picker" aria-label="Lampiran foto">
       {configError && (
         <p className="photo-picker__config-error">
-          ⚠ Cloudinary belum dikonfigurasi. Tambahkan{" "}
-          <code>NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code> dan{" "}
-          <code>NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code> ke <code>.env.local</code>.
+          ⚠ Cloudinary belum dikonfigurasi. Tambahkan <code>NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code>{" "}
+          dan <code>NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code> ke <code>.env.local</code>.
         </p>
       )}
 
@@ -236,9 +245,7 @@ export function PhotoPicker({ onChange, disabled = false }: PhotoPickerProps) {
             <span className="photo-picker__add-label">
               {slots.length === 0 ? "Tambah foto" : "Foto lagi"}
             </span>
-            <span className="photo-picker__add-hint">
-              {MAX_PHOTOS - slots.length} tersisa
-            </span>
+            <span className="photo-picker__add-hint">{MAX_PHOTOS - slots.length} tersisa</span>
           </button>
         )}
       </div>

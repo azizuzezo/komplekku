@@ -10,6 +10,7 @@ import type { AppRepository } from "./domain/repository";
 import { createAuthenticate } from "./lib/authentication";
 import { loadConfig, type AppConfig } from "./lib/env";
 import { registerErrorHandler } from "./lib/errors";
+import { PushNotificationProvider } from "./lib/push-notification-provider";
 import { PrismaRepository } from "./repositories/prisma-repository";
 import { registerAdminRoleRoutes } from "./routes/admin-roles";
 import { registerAgendaRoutes } from "./routes/agenda";
@@ -85,9 +86,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
       servers: [{ url: "http://localhost:3001" }],
     },
   });
-  if (config.APP_ENV === "local") {
+  if (config.APP_ENV === "local" && options.logger !== false) {
     await app.register(swaggerUi, { routePrefix: "/documentation" });
   }
+
+  const pushNotificationProvider = (repository as any).prisma
+    ? new PushNotificationProvider((repository as any).prisma)
+    : undefined;
 
   registerErrorHandler(app);
   const authenticate = createAuthenticate(repository, config);
@@ -96,7 +101,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   await registerResidentRoutes(app, repository, authenticate);
   await registerHouseholdRoutes(app, repository, authenticate);
   await registerAdminRoleRoutes(app, repository, authenticate);
-  await registerAnnouncementRoutes(app, repository, authenticate);
+  await registerAnnouncementRoutes(app, repository, authenticate, pushNotificationProvider);
   await registerAgendaRoutes(app, repository, authenticate);
   await registerNotificationRoutes(app, repository, authenticate);
   await registerOnboardingRoutes(app, repository, authenticate);

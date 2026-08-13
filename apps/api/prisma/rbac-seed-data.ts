@@ -89,6 +89,7 @@ export const rolePermissionKeys: Record<string, readonly string[]> = {
     "community.read",
     "household.read",
     "announcement.read",
+    "announcement.manage",
     "agenda.read",
     "notification.read",
     "directory.read",

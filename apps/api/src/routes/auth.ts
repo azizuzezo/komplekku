@@ -43,11 +43,7 @@ export async function registerAuthRoutes(
       let bypassedWhatsApp = false;
 
       if (config.AUTH_MODE === "development") {
-        if (
-          config.APP_ENV !== "local" ||
-          !config.ALLOW_DEV_OTP ||
-          !config.DEV_OTP
-        ) {
+        if (config.APP_ENV !== "local" || !config.ALLOW_DEV_OTP || !config.DEV_OTP) {
           throw new AppError(
             503,
             "OTP_PROVIDER_UNAVAILABLE",
@@ -93,7 +89,10 @@ export async function registerAuthRoutes(
         entityId: requestId,
         ipAddress: request.ip,
         userAgent: requestUserAgent(request),
-        metadata: { phoneSuffix: phoneE164.slice(-4), ...(bypassedWhatsApp ? { bypassedWhatsApp: true } : {}) },
+        metadata: {
+          phoneSuffix: phoneE164.slice(-4),
+          ...(bypassedWhatsApp ? { bypassedWhatsApp: true } : {}),
+        },
       });
 
       return reply.status(202).send({
