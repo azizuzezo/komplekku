@@ -1,24 +1,29 @@
 "use client";
 
 import type { AgendaView } from "@komplekku/contracts";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import Link from "next/link";
 
 import { AgendaListSkeleton } from "@/components/ui/content-skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
+import { getMe } from "@/features/auth/auth-api";
 import { getRequestState } from "@/lib/api/client";
 
 import { agendaKeys, getAgendaPage } from "./agenda-api";
 import { AgendaRow } from "./agenda-row";
+import { CreateAgendaModal } from "./create-agenda-modal";
 
 export function AgendaList({ view }: { view: AgendaView }) {
+  const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const agendaQuery = useInfiniteQuery({
     queryKey: agendaKeys.list(view),
     queryFn: ({ pageParam }) => getAgendaPage({ view, cursor: pageParam, limit: 20 }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.meta.nextCursor,
   });
+
+  const canManage = meQuery.data?.data.permissions.includes("agenda.manage") ?? false;
 
   if (agendaQuery.isPending) return <AgendaListSkeleton />;
 
@@ -73,6 +78,12 @@ export function AgendaList({ view }: { view: AgendaView }) {
 
   return (
     <div className="agenda-index">
+      {canManage && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+          <CreateAgendaModal />
+        </div>
+      )}
+
       <nav className="agenda-view-switcher" aria-label="Rentang agenda">
         <Link href="/agenda?view=upcoming" aria-current={view === "upcoming" ? "page" : undefined}>
           Mendatang

@@ -775,6 +775,44 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
   - Added and executed `announcement-creation.test.ts` integration test suite.
   - Formatted workspace files with Prettier.
 
+---
+
+### 2026-08-13 11:09:00 WIB — Mobile App Launcher Icon & Splash Logo Replacement
+
+- Status: Completed
+- Objective: Replace default Flutter launcher icons (`ic_launcher.png`) with the official Komplekku brand mark logo (`komplekku-mark.png`) across all Android density buckets, configure adaptive icon support, set native splash launch image, and update Android app label.
+- Contributors: single agent (Antigravity).
+- Work performed:
+  - Created `scripts/generate_android_icons.py` using Python PIL to process `assets/brand/komplekku-mark.png`.
+  - Generated legacy launcher icons (`ic_launcher.png`, `ic_launcher_round.png`) across all mipmap density buckets (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+  - Generated Android Adaptive Icon foreground assets (`ic_launcher_foreground.png`) formatted inside the safe 66% area for API 26+ device masking.
+  - Created `apps/mobile/android/app/src/main/res/values/colors.xml` defining `ic_launcher_background` (`#FFFFFF`).
+  - Created `apps/mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` adaptive icon definitions.
+  - Generated native splash image assets (`launch_image.png`) across all mipmap density buckets.
+  - Updated `launch_background.xml` and `drawable-v21/launch_background.xml` to display centered `launch_image.png` on app startup.
+  - Updated `AndroidManifest.xml` with capitalized app label `Komplekku` and `android:roundIcon` reference.
+- Files touched:
+  - `scripts/generate_android_icons.py` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/ic_launcher.png` (updated)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/ic_launcher_round.png` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/ic_launcher_foreground.png` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/launch_image.png` (new)
+  - `apps/mobile/android/app/src/main/res/values/colors.xml` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` (new)
+  - `apps/mobile/android/app/src/main/res/drawable/launch_background.xml`
+  - `apps/mobile/android/app/src/main/res/drawable-v21/launch_background.xml`
+  - `apps/mobile/android/app/src/main/AndroidManifest.xml`
+  - `Engineering.md`
+- Decisions and assumptions:
+  - Used white (`#FFFFFF`) background for adaptive icon container to provide high-contrast visibility for the dark green Komplekku mark on all system launcher themes.
+  - Kept native icon generation script reproducible under `scripts/generate_android_icons.py`.
+- Verification:
+  - Executed `flutter analyze`: 0 issues found.
+  - Executed `flutter test`: 88/88 unit tests passed.
+  - Executed `flutter build apk --debug`: built successfully (`build\app\outputs\flutter-apk\app-debug.apk`).
+
+
 
 
 

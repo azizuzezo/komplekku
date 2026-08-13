@@ -1,9 +1,12 @@
 import {
   agendaDetailResponseSchema,
   agendaListResponseSchema,
+  agendaMutationResponseSchema,
   type AgendaDetailResponse,
   type AgendaListResponse,
+  type AgendaMutationResponse,
   type AgendaView,
+  type CreateAgendaEventInput,
 } from "@komplekku/contracts";
 
 import { apiRequest } from "@/lib/api/client";
@@ -33,4 +36,13 @@ export function getAgendaPage(params: AgendaPageParams): Promise<AgendaListRespo
 
 export function getAgendaEvent(id: string): Promise<AgendaDetailResponse> {
   return apiRequest(`/agenda/${encodeURIComponent(id)}`, agendaDetailResponseSchema);
+}
+
+export function createAgendaEvent(
+  data: CreateAgendaEventInput,
+): Promise<AgendaMutationResponse> {
+  return apiRequest("/admin/agenda", agendaMutationResponseSchema, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
