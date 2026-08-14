@@ -56,15 +56,20 @@ export async function registerNotificationRoutes(
         );
       }
       const auth = getAuthContext(request);
-      const result = await pushNotificationProvider.sendToUser(auth.userId, {
-        title: "Tes Notifikasi Komplekku",
-        body: "Jika kamu menerima ini, push notification sudah berjalan dengan baik.",
-        data: { type: "TEST" },
-      });
-      return {
-        data: result,
-        meta: responseMeta(request),
-      };
+      try {
+        const result = await pushNotificationProvider.sendToUser(auth.userId, {
+          title: "Tes Notifikasi Komplekku",
+          body: "Jika kamu menerima ini, push notification sudah berjalan dengan baik.",
+          data: { type: "TEST" },
+        });
+        return {
+          data: result,
+          meta: responseMeta(request),
+        };
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new AppError(502, "PUSH_SEND_FAILED", `Gagal mengirim push notification: ${detail}`);
+      }
     },
   );
 
