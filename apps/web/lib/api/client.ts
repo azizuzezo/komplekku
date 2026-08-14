@@ -12,13 +12,18 @@ export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
   readonly offline: boolean;
+  readonly details: unknown;
 
-  constructor(message: string, options: { code: string; status: number; offline?: boolean }) {
+  constructor(
+    message: string,
+    options: { code: string; status: number; offline?: boolean; details?: unknown },
+  ) {
     super(message);
     this.name = "ApiError";
     this.code = options.code;
     this.status = options.status;
     this.offline = options.offline ?? false;
+    this.details = options.details;
   }
 }
 
@@ -75,6 +80,7 @@ async function request(path: string, options: ApiRequestOptions = {}) {
       throw new ApiError(parsedError.data.error.message, {
         code: parsedError.data.error.code,
         status: response.status,
+        details: parsedError.data.error.details,
       });
     }
 

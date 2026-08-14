@@ -30,7 +30,16 @@ export function CreateAnnouncementModal() {
       setErrorMsg("");
     },
     onError: (err: Error) => {
-      setErrorMsg(err.message || "Gagal membuat pengumuman.");
+      const details = (err as { details?: unknown }).details;
+      const fieldMessages =
+        Array.isArray(details) && details.length > 0
+          ? details
+              .map((d) =>
+                d && typeof d === "object" && "message" in d ? String(d.message) : String(d),
+              )
+              .join(" ")
+          : null;
+      setErrorMsg(fieldMessages ?? err.message ?? "Gagal membuat pengumuman.");
     },
   });
 

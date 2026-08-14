@@ -24,4 +24,20 @@ class SessionApiService {
       throw ApiException.fromDio(error);
     }
   }
+
+  Future<String?> updateDisplayName(String displayName) async {
+    try {
+      final response = await _client.patch<Map<String, dynamic>>(
+        '/me',
+        data: {'displayName': displayName},
+      );
+      final data = response.data?['data'];
+      if (data is! Map<String, dynamic>) {
+        throw ApiException.malformedResponse();
+      }
+      return data['displayName'] as String?;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
 }

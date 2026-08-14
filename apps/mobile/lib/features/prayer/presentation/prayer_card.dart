@@ -7,6 +7,47 @@ import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/notifications/push_notification_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 
+const _weekdayNames = [
+  'Senin',
+  'Selasa',
+  'Rabu',
+  'Kamis',
+  'Jumat',
+  'Sabtu',
+  'Minggu',
+];
+
+const _monthNames = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
+
+String _formatIndonesianDate(DateTime date) {
+  final weekday = _weekdayNames[date.weekday - 1];
+  final month = _monthNames[date.month - 1];
+  return '$weekday, ${date.day} $month ${date.year}';
+}
+
+String _formatCountdown(int totalSeconds) {
+  final hours = totalSeconds ~/ 3600;
+  final minutes = (totalSeconds % 3600) ~/ 60;
+  final seconds = totalSeconds % 60;
+  final mm = minutes.toString().padLeft(2, '0');
+  final ss = seconds.toString().padLeft(2, '0');
+  if (hours > 0) return '${hours}j ${mm}m ${ss}d';
+  return '${minutes}m ${ss}d';
+}
+
 class PrayerCard extends ConsumerStatefulWidget {
   const PrayerCard({super.key});
 
@@ -51,28 +92,29 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
     super.dispose();
   }
 
-  Future<void> _playAdzanAudio({String? prayerName}) async {
-    if (_isMuted) return;
+  Future<void> _playAudio(String asset, {String? prayerName}) async {
+    if (_isMuted && prayerName != null) return;
     try {
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
+      await _audioPlayer.play(AssetSource(asset));
       setState(() {
         _isPlayingAudio = true;
       });
 
-      // Trigger local push notification banner on HP
-      final name = prayerName ?? 'Sholat';
-      ref.read(pushNotificationServiceProvider).showNotification(
-            id: 999,
-            title: '📢 Waktu Adzan $name Tiba',
-            body: 'Kumandang adzan $name telah masuk. Mari persiapkan diri untuk sholat.',
-          );
+      if (prayerName != null) {
+        ref.read(pushNotificationServiceProvider).showNotification(
+              id: 999,
+              title: '📢 Waktu Adzan $prayerName Tiba',
+              body:
+                  'Kumandang adzan $prayerName telah masuk. Mari persiapkan diri untuk sholat.',
+            );
+      }
     } catch (_) {
       // Audio playback fallback handle
     }
   }
 
-  Future<void> _stopAdzanAudio() async {
+  Future<void> _stopAudio() async {
     await _audioPlayer.stop();
     setState(() {
       _isPlayingAudio = false;
@@ -107,302 +149,455 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
 
     final secondsToNext = max(0, nextEntry.value.difference(_now).inSeconds);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 0,
-      color: KomplekkuColors.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Realtime Digital Clock Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: KomplekkuColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Dark hero header: clock, date, location badge, audio controls
+          Container(
+            color: KomplekkuColors.textPrimary,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: KomplekkuColors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(8),
+                    Text(
+                      timeString,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'monospace',
+                        color: Colors.white,
+                        height: 1,
                       ),
-                      child: const Icon(Icons.access_time, color: KomplekkuColors.primary, size: 22),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              timeString,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'monospace',
-                                color: KomplekkuColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'WIB',
-                              style: TextStyle(fontSize: 10, color: KomplekkuColors.textSecondary),
-                            ),
-                          ],
+                    const Text(
+                      'WIB',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                        color: KomplekkuColors.borderStrong,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: KomplekkuColors.primary.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: KomplekkuColors.primary.withValues(alpha: 0.4),
                         ),
-                        const Text(
-                          'Jadwal Sholat & Adzan GPS',
-                          style: TextStyle(fontSize: 11, color: KomplekkuColors.textSecondary),
-                        ),
-                      ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.explore_outlined,
+                            size: 12,
+                            color: KomplekkuColors.borderStrong,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Lokasi Komplek',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: KomplekkuColors.surfaceMuted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                Row(
+                const SizedBox(height: 4),
+                Text(
+                  _formatIndonesianDate(_now),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: KomplekkuColors.surfaceMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    _HeaderButton(
+                      label: 'Adzan',
+                      icon: Icons.play_arrow,
+                      background: KomplekkuColors.primary,
+                      foreground: Colors.white,
+                      onPressed: _isPlayingAudio
+                          ? null
+                          : () => _playAudio(
+                              'audio/adzan.mp3',
+                              prayerName: prayerLabels[nextEntry.key],
+                            ),
+                    ),
+                    _HeaderButton(
+                      label: 'Iqomah',
+                      icon: Icons.volume_up,
+                      background: KomplekkuColors.borderStrong,
+                      foreground: KomplekkuColors.textPrimary,
+                      onPressed: _isPlayingAudio
+                          ? null
+                          : () => _playAudio('audio/iqomah.wav'),
+                    ),
                     if (_isPlayingAudio)
-                      IconButton(
-                        icon: const Icon(Icons.stop_circle, color: KomplekkuColors.danger, size: 22),
-                        tooltip: 'Hentikan Audio Adzan',
-                        onPressed: _stopAdzanAudio,
-                      )
-                    else
-                      IconButton(
-                        icon: const Icon(Icons.volume_up_outlined, color: KomplekkuColors.primary, size: 22),
-                        tooltip: 'Tes Audio Adzan',
-                        onPressed: () => _playAdzanAudio(prayerName: prayerLabels[nextEntry.key]),
+                      _HeaderButton(
+                        label: 'Stop',
+                        icon: Icons.stop_circle_outlined,
+                        background: KomplekkuColors.danger.withValues(
+                          alpha: 0.18,
+                        ),
+                        foreground: KomplekkuColors.danger,
+                        onPressed: _stopAudio,
                       ),
                     IconButton(
-                      icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, size: 20),
-                      tooltip: _isMuted ? 'Unmute Adzan' : 'Mute Adzan',
-                      onPressed: () {
-                        setState(() {
-                          _isMuted = !_isMuted;
-                          if (_isMuted) _stopAdzanAudio();
-                        });
-                      },
+                      onPressed: () => setState(() => _isMuted = !_isMuted),
+                      tooltip: _isMuted
+                          ? 'Auto-adzan mati'
+                          : 'Auto-adzan aktif',
+                      icon: Icon(
+                        _isMuted ? Icons.volume_off : Icons.volume_up_outlined,
+                        size: 18,
+                        color: _isMuted
+                            ? Colors.white.withValues(alpha: 0.4)
+                            : Colors.white,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(
+                          alpha: _isMuted ? 0.08 : 0.15,
+                        ),
+                        minimumSize: const Size(34, 34),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+          ),
 
-            // Next Prayer Countdown Bar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: KomplekkuColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Menuju ${prayerLabels[nextEntry.key]}',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Next Prayer Countdown Bar
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
                   ),
-                  Text(
-                    '-${formatDurationMMSS(secondsToNext)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                      color: KomplekkuColors.primary,
-                    ),
+                  decoration: BoxDecoration(
+                    color: KomplekkuColors.surfaceSoft,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: KomplekkuColors.border),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Adzan & Iqomah Banner
-            if (adzanState.kind != AdzanStateKind.idle &&
-                adzanState.activePrayer != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: KomplekkuColors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: KomplekkuColors.primary),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: KomplekkuColors.textPrimary,
+                            ),
+                            children: [
+                              const TextSpan(text: 'Menuju sholat '),
+                              TextSpan(
+                                text: prayerLabels[nextEntry.key],
+                                style: const TextStyle(
+                                  color: KomplekkuColors.primary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' (${formatTime24(nextEntry.value)})',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KomplekkuColors.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: KomplekkuColors.border),
+                        ),
+                        child: Text(
+                          '-${_formatCountdown(secondsToNext)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: KomplekkuColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (adzanState.kind == AdzanStateKind.adzan) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '📢 Waktu Adzan ${prayerLabels[adzanState.activePrayer]}',
+                const SizedBox(height: 12),
+
+                // Adzan & Iqomah Banner
+                if (adzanState.kind != AdzanStateKind.idle &&
+                    adzanState.activePrayer != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: KomplekkuColors.surfaceSoft,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: KomplekkuColors.primary),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (adzanState.kind == AdzanStateKind.adzan) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '📢 Waktu Adzan ${prayerLabels[adzanState.activePrayer]} Tiba',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: KomplekkuColors.primary,
-                                  ),
-                                ),
-                                const Text(
-                                  'Jeda Adzan ke Iqomah 5m...',
-                                  style: TextStyle(fontSize: 12, color: KomplekkuColors.textSecondary),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: KomplekkuColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            ),
-                            onPressed: () => _playAdzanAudio(prayerName: prayerLabels[adzanState.activePrayer]),
-                            icon: const Icon(Icons.play_arrow, size: 16),
-                            label: const Text('Adzan', style: TextStyle(fontSize: 11)),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (adzanState.kind == AdzanStateKind.postAdzanGap) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Adzan ${prayerLabels[adzanState.activePrayer]} Berkumandang',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                   ),
                                 ),
-                                const Text(
-                                  'Jeda persiapan (5m)',
-                                  style: TextStyle(fontSize: 11, color: KomplekkuColors.textSecondary),
+                              ),
+                              TextButton(
+                                onPressed: () => _playAudio(
+                                  'audio/adzan.mp3',
+                                  prayerName:
+                                      prayerLabels[adzanState.activePrayer],
                                 ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            formatDurationMMSS(adzanState.gapSecondsRemaining),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: KomplekkuColors.primary,
-                            ),
+                                child: const Text('Putar Adzan'),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
-                    if (adzanState.kind == AdzanStateKind.iqomahCountdown) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Hitung Mundur Iqomah ${prayerLabels[adzanState.activePrayer]}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: KomplekkuColors.danger,
+                        if (adzanState.kind == AdzanStateKind.postAdzanGap) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Adzan ${prayerLabels[adzanState.activePrayer]} Berkumandang',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Jeda persiapan (5m)',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: KomplekkuColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                formatDurationMMSS(
+                                  adzanState.gapSecondsRemaining,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: KomplekkuColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (adzanState.kind ==
+                            AdzanStateKind.iqomahCountdown) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hitung Mundur Iqomah ${prayerLabels[adzanState.activePrayer]}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: KomplekkuColors.danger,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Menuju sholat berjamaah',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: KomplekkuColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        _playAudio('audio/iqomah.wav'),
+                                    child: const Text('Suara Iqomah'),
                                   ),
-                                ),
-                                const Text(
-                                  'Menuju sholat berjamaah',
-                                  style: TextStyle(fontSize: 11, color: KomplekkuColors.textSecondary),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            formatDurationMMSS(adzanState.iqomahSecondsRemaining),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: KomplekkuColors.danger,
-                            ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    formatDurationMMSS(
+                                      adzanState.iqomahSecondsRemaining,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: KomplekkuColors.danger,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // 6 Grid Items
-            Row(
-              children: [
-                PrayerName.subuh,
-                PrayerName.syuruq,
-                PrayerName.dzuhur,
-                PrayerName.ashar,
-                PrayerName.maghrib,
-                PrayerName.isya
-              ].map((pName) {
-                final isNext = pName == nextEntry.key;
-                final isActiveAdzan = adzanState.activePrayer == pName;
-
-                return Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isActiveAdzan
-                          ? KomplekkuColors.primary
-                          : isNext
-                              ? KomplekkuColors.surfaceSoft
-                              : KomplekkuColors.surfaceSoft,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isNext || isActiveAdzan
-                            ? KomplekkuColors.primary
-                            : KomplekkuColors.border,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          prayerLabels[pName]!,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isActiveAdzan
-                                ? Colors.white
-                                : KomplekkuColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          formatTime24(times[pName]!),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isActiveAdzan
-                                ? Colors.white
-                                : KomplekkuColors.textPrimary,
-                          ),
-                        ),
                       ],
                     ),
                   ),
-                );
-              }).toList(),
+                  const SizedBox(height: 12),
+                ],
+
+                // 6 Grid Items
+                Row(
+                  children: [
+                        PrayerName.subuh,
+                        PrayerName.syuruq,
+                        PrayerName.dzuhur,
+                        PrayerName.ashar,
+                        PrayerName.maghrib,
+                        PrayerName.isya,
+                      ]
+                      .map((pName) {
+                        final isNext = pName == nextEntry.key;
+                        final isActiveAdzan = adzanState.activePrayer == pName;
+
+                        return Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isActiveAdzan
+                                  ? KomplekkuColors.primary
+                                  : KomplekkuColors.surfaceSoft,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isNext || isActiveAdzan
+                                    ? KomplekkuColors.primary
+                                    : KomplekkuColors.border,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  prayerLabels[pName]!,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isActiveAdzan
+                                        ? Colors.white
+                                        : KomplekkuColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  formatTime24(times[pName]!),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isActiveAdzan
+                                        ? Colors.white
+                                        : KomplekkuColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 15, color: foreground),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        backgroundColor: background,
+        foregroundColor: foreground,
+        disabledBackgroundColor: background.withValues(alpha: 0.4),
+        minimumSize: Size.zero,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+}

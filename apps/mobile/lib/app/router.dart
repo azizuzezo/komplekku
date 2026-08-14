@@ -7,6 +7,7 @@ import 'package:komplekku/app/shell/keamanan_hub_screen.dart';
 import 'package:komplekku/app/shell/layanan_hub_screen.dart';
 import 'package:komplekku/app/shell/main_shell.dart';
 import 'package:komplekku/features/account/presentation/account_screen.dart';
+import 'package:komplekku/features/admin_residency/presentation/residency_request_queue_screen.dart';
 import 'package:komplekku/features/agenda/presentation/agenda_detail_screen.dart';
 import 'package:komplekku/features/agenda/presentation/agenda_list_screen.dart';
 import 'package:komplekku/features/announcement/presentation/announcement_detail_screen.dart';
@@ -216,6 +217,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/akun',
                 builder: (context, state) => const AccountScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'permohonan-warga',
+                    builder: (context, state) =>
+                        const ResidencyRequestQueueScreen(),
+                  ),
+                ],
               ),
             ],
           ),

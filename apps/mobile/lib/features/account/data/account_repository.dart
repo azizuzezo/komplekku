@@ -25,4 +25,8 @@ class AccountRepository {
       throw ApiException.malformedResponse();
     }
   }
+
+  Future<String?> updateDisplayName(String displayName) {
+    return _service.updateDisplayName(displayName);
+  }
 }

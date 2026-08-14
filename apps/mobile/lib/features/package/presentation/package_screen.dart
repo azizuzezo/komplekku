@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
@@ -41,16 +42,19 @@ String _formatDateTime(DateTime value) {
       '${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
 }
 
-/// Resident-facing "Paket" screen. Read-only parity with
-/// `apps/web/features/package/package-list.tsx` — residents can see what
-/// security has logged for their house, but collection is a security-only
-/// action performed on the web/security console, not here.
+/// "Paket" screen, mirroring `apps/web/features/package/package-list.tsx`
+/// (resident, read-only) and `package-manage-panel.tsx` (security, log +
+/// collect) collapsed into one screen: everyone sees the list; only
+/// `package.manage` holders also see the log-package form and the
+/// "Tandai diambil" action on uncollected items.
 class PackageScreen extends ConsumerWidget {
   const PackageScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final packages = ref.watch(packageListProvider);
+    final canManage =
+        hasPermission(ref.watch(currentPermissionsProvider), 'package.manage');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Paket')),
@@ -85,42 +89,215 @@ class PackageScreen extends ConsumerWidget {
                   : () => ref.invalidate(packageListProvider),
             );
           },
-          data: (items) {
-            if (items.isEmpty) {
-              return const StatePanel(
-                icon: Icons.inventory_2_outlined,
-                title: 'Belum ada paket',
-                message:
-                    'Paket yang diterima satpam untuk rumahmu akan muncul di sini.',
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: () => ref.refresh(packageListProvider.future),
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                itemCount: items.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 10),
-                itemBuilder: (context, index) => _PackageCard(
-                  package: items[index],
-                ),
-              ),
-            );
-          },
+          data: (items) => RefreshIndicator(
+            onRefresh: () => ref.refresh(packageListProvider.future),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                if (canManage) ...[
+                  const _PackageCreateForm(),
+                  const SizedBox(height: 20),
+                ],
+                if (items.isEmpty)
+                  const StatePanel(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Belum ada paket',
+                    message:
+                        'Paket yang diterima satpam untuk rumahmu akan muncul di sini.',
+                  )
+                else
+                  for (final package in items)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _PackageCard(
+                        package: package,
+                        canManage: canManage,
+                      ),
+                    ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _PackageCard extends StatelessWidget {
-  const _PackageCard({required this.package});
+class _PackageCreateForm extends ConsumerStatefulWidget {
+  const _PackageCreateForm();
 
-  final Package package;
+  @override
+  ConsumerState<_PackageCreateForm> createState() => _PackageCreateFormState();
+}
+
+class _PackageCreateFormState extends ConsumerState<_PackageCreateForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _houseCodeController = TextEditingController();
+  final _recipientNameController = TextEditingController();
+  final _courierController = TextEditingController();
+  final _trackingNumberController = TextEditingController();
+  bool _isSaving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _houseCodeController.dispose();
+    _recipientNameController.dispose();
+    _courierController.dispose();
+    _trackingNumberController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(packageRepositoryProvider).create(
+            houseCode: _houseCodeController.text.trim(),
+            recipientName: _recipientNameController.text.trim(),
+            courier: _courierController.text.trim(),
+            trackingNumber: _trackingNumberController.text.trim(),
+          );
+      _houseCodeController.clear();
+      _recipientNameController.clear();
+      _courierController.clear();
+      _trackingNumberController.clear();
+      ref.invalidate(packageListProvider);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Catat paket baru', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              Text('Kode rumah', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _houseCodeController,
+                textCapitalization: TextCapitalization.characters,
+                validator: (value) {
+                  if ((value ?? '').trim().isEmpty) {
+                    return 'Masukkan kode rumah yang valid.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              Text('Nama penerima', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _recipientNameController,
+                validator: (value) {
+                  if ((value ?? '').trim().length < 2) {
+                    return 'Masukkan nama penerima, minimal 2 karakter.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              Text('Kurir', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _courierController,
+                validator: (value) {
+                  if ((value ?? '').trim().isEmpty) {
+                    return 'Masukkan nama kurir.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Nomor resi (opsional)',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 6),
+              TextFormField(controller: _trackingNumberController),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!, style: const TextStyle(color: KomplekkuColors.danger)),
+              ],
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _isSaving ? null : _submit,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Catat paket'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PackageCard extends ConsumerStatefulWidget {
+  const _PackageCard({required this.package, required this.canManage});
+
+  final Package package;
+  final bool canManage;
+
+  @override
+  ConsumerState<_PackageCard> createState() => _PackageCardState();
+}
+
+class _PackageCardState extends ConsumerState<_PackageCard> {
+  final _collectedByController = TextEditingController();
+  bool _isCollecting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _collectedByController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _collect() async {
+    final name = _collectedByController.text.trim();
+    if (name.length < 2) {
+      setState(() => _error = 'Masukkan nama pengambil, minimal 2 karakter.');
+      return;
+    }
+    setState(() {
+      _isCollecting = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(packageRepositoryProvider)
+          .collect(widget.package.id, collectedByName: name);
+      ref.invalidate(packageListProvider);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isCollecting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final package = widget.package;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
@@ -192,6 +369,39 @@ class _PackageCard extends StatelessWidget {
                         '${package.collectedByName != null ? ' oleh ${package.collectedByName}' : ''}'
                     : 'Sudah diambil',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ] else if (widget.canManage) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _collectedByController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'Nama pengambil',
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  onPressed: _isCollecting ? null : _collect,
+                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                  label: Text(_isCollecting ? 'Menyimpan...' : 'Tandai diambil'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                ),
               ),
             ],
           ],

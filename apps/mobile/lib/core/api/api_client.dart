@@ -1,9 +1,15 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:komplekku/core/auth/session_store.dart';
 
-const defaultApiOrigin = 'http://10.0.2.2:3001';
+const _productionApiOrigin = 'https://api.komplekku.duacincin.id';
+const _emulatorApiOrigin = 'http://10.0.2.2:3001';
+
+// Release builds (flutter build apk --release) default to production so a
+// forgotten --dart-define doesn't silently ship an emulator-only address.
+const defaultApiOrigin = kReleaseMode ? _productionApiOrigin : _emulatorApiOrigin;
 
 String resolveApiBaseUrl(String configuredUrl) {
   final normalized = configuredUrl.trim().replaceFirst(RegExp(r'/+$'), '');

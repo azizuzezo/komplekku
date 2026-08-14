@@ -36,4 +36,53 @@ class PackageRepository {
       throw ApiException.malformedResponse();
     }
   }
+
+  Future<Package> create({
+    required String houseCode,
+    required String recipientName,
+    required String courier,
+    String? trackingNumber,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/packages',
+        data: {
+          'houseCode': houseCode,
+          'recipientName': recipientName,
+          'courier': courier,
+          if (trackingNumber != null && trackingNumber.isNotEmpty)
+            'trackingNumber': trackingNumber,
+        },
+      );
+      return _requirePackage(response.data);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  Future<Package> collect(String id, {required String collectedByName}) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/packages/${Uri.encodeComponent(id)}/collect',
+        data: {'collectedByName': collectedByName},
+      );
+      return _requirePackage(response.data);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  Package _requirePackage(Map<String, dynamic>? data) {
+    final package = data?['data']?['package'];
+    if (package is! Map<String, dynamic>) throw ApiException.malformedResponse();
+    return Package.fromJson(package);
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/komplekku_logo.dart';
@@ -7,6 +8,8 @@ import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/account/data/account_repository.dart';
 import 'package:komplekku/features/account/domain/account_snapshot.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/features/household/data/household_repository.dart';
+import 'package:komplekku/features/onboarding/domain/residency_request.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -68,31 +71,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (snapshot.hasActiveResidency)
-                  _ResidentCredential(snapshot: snapshot)
-                else
-                  _AccountStatusCard(snapshot: snapshot),
-                const SizedBox(height: 28),
-                Text(
-                  'Sesi akun',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Keluar jika perangkat ini dipakai bersama orang lain.',
-                ),
+                _CredentialCard(snapshot: snapshot),
+                if (snapshot.hasActiveResidency) ...[
+                  const SizedBox(height: 16),
+                  const _HouseholdSection(),
+                ],
+                if (snapshot.permissions.contains('resident.manage')) ...[
+                  const SizedBox(height: 16),
+                  const _AdminTaskCard(),
+                ],
                 const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _isLoggingOut ? null : _logout,
-                  icon: const Icon(Icons.logout),
-                  label: Text(
-                    _isLoggingOut ? 'Mengakhiri sesi…' : 'Keluar dari akun',
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: KomplekkuColors.danger,
-                    side: const BorderSide(color: KomplekkuColors.danger),
-                  ),
-                ),
+                _SessionCard(isLoggingOut: _isLoggingOut, onLogout: _logout),
               ],
             ),
           ),
@@ -102,207 +91,293 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 }
 
-class _ResidentCredential extends StatelessWidget {
-  const _ResidentCredential({required this.snapshot});
+Color _statusTone(AccountResidentStatus? status) {
+  switch (status) {
+    case AccountResidentStatus.active:
+      return KomplekkuColors.success;
+    case AccountResidentStatus.pending:
+      return KomplekkuColors.primary;
+    case AccountResidentStatus.rejected:
+    case AccountResidentStatus.suspended:
+      return KomplekkuColors.danger;
+    case AccountResidentStatus.movedOut:
+    case null:
+      return KomplekkuColors.textSecondary;
+  }
+}
+
+class _CredentialCard extends ConsumerStatefulWidget {
+  const _CredentialCard({required this.snapshot});
 
   final AccountSnapshot snapshot;
 
   @override
+  ConsumerState<_CredentialCard> createState() => _CredentialCardState();
+}
+
+class _CredentialCardState extends ConsumerState<_CredentialCard> {
+  bool _isEditing = false;
+  bool _isSaving = false;
+  String? _error;
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.snapshot.displayName ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _controller.text.trim();
+    if (name.length < 2) {
+      setState(() => _error = 'Nama minimal 2 karakter.');
+      return;
+    }
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(accountRepositoryProvider)
+          .updateDisplayName(name);
+      ref.invalidate(accountSnapshotProvider);
+      if (mounted) setState(() => _isEditing = false);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final context_ = snapshot.context!;
+    final snapshot = widget.snapshot;
+    final context_ = snapshot.context;
+    final displayName = snapshot.displayName ?? 'Pengguna Komplekku';
+    final tone = _statusTone(snapshot.residentStatus);
+    final statusLabel = snapshot.residentStatus != null
+        ? residentStatusLabel(snapshot.residentStatus!)
+        : null;
+
     return Container(
-      // The border must be a foregroundDecoration: it paints after the
-      // clipped children, otherwise the opaque white header row covers it.
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surface,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: KomplekkuColors.border),
       ),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.primary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              color: KomplekkuColors.surface,
-              padding: const EdgeInsets.all(16),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [KomplekkuLogo(width: 36), _StatusBadge()],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Nama warga',
-                    style: TextStyle(color: KomplekkuColors.surfaceMuted),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    snapshot.displayName ?? 'Pengguna Komplekku',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: KomplekkuColors.surface,
-                      fontSize: 26,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: KomplekkuColors.textPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const KomplekkuLogo(width: 34),
+                if (statusLabel != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tone.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: tone.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: tone,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 6),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'NAMA WARGA',
+                      style: TextStyle(
+                        color: KomplekkuColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    if (!_isEditing)
+                      TextButton.icon(
+                        onPressed: () => setState(() {
+                          _controller.text = displayName;
+                          _isEditing = true;
+                          _error = null;
+                        }),
+                        icon: const Icon(Icons.edit_outlined, size: 14),
+                        label: const Text('Ubah nama'),
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          backgroundColor: KomplekkuColors.surfaceSoft,
+                          foregroundColor: KomplekkuColors.primary,
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: const BorderSide(
+                              color: KomplekkuColors.border,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                if (_isEditing) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            hintText: 'Nama baru',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: _isSaving ? null : _save,
+                        icon: const Icon(Icons.check, size: 18),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton.outlined(
+                        onPressed: () => setState(() => _isEditing = false),
+                        icon: const Icon(Icons.close, size: 18),
+                      ),
+                    ],
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: KomplekkuColors.danger,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ] else ...[
                   Text(
-                    snapshot.phoneMasked,
-                    style: const TextStyle(color: KomplekkuColors.surfaceMuted),
+                    displayName,
+                    style: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(fontSize: 26),
                   ),
                 ],
-              ),
-            ),
-            const Divider(color: KomplekkuColors.primaryDark, height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Column(
-                children: [
-                  _CredentialRow(
-                    label: 'Lingkungan',
-                    value: context_.communityName,
+                const SizedBox(height: 4),
+                Text(
+                  snapshot.phoneMasked,
+                  style: const TextStyle(
+                    color: KomplekkuColors.textSecondary,
+                    fontFamily: 'monospace',
                   ),
-                  _CredentialRow(
-                    label: 'Rumah',
-                    value: context_.house.addressLabel,
-                  ),
-                  _CredentialRow(
-                    label: 'Rumah tangga',
-                    value: context_.householdDisplayName,
+                ),
+                if (!snapshot.hasActiveResidency &&
+                    snapshot.residentStatus != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _statusDescription(snapshot.residentStatus!),
+                    style: const TextStyle(color: KomplekkuColors.textSecondary),
                   ),
                 ],
-              ),
+              ],
             ),
+          ),
+          if (snapshot.hasActiveResidency && context_ != null) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: const BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: KomplekkuColors.terracotta, width: 3),
+                  top: BorderSide(color: KomplekkuColors.border),
                 ),
               ),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _InfoCell(
+                      label: 'Lingkungan',
+                      value: context_.communityName,
+                    ),
+                  ),
+                  const VerticalDivider(width: 1, color: KomplekkuColors.border),
+                  Expanded(
+                    child: _InfoCell(
+                      label: 'Rumah',
+                      value: context_.house.addressLabel,
+                    ),
+                  ),
+                  const VerticalDivider(width: 1, color: KomplekkuColors.border),
+                  Expanded(
+                    child: _InfoCell(
+                      label: 'Rumah tangga',
+                      value: context_.householdDisplayName,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              color: KomplekkuColors.textPrimary,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     context_.communityName,
-                    style: const TextStyle(color: KomplekkuColors.surfaceMuted),
+                    style: const TextStyle(
+                      color: KomplekkuColors.borderStrong,
+                      fontSize: 12,
+                    ),
                   ),
                   Text(
                     context_.house.code,
                     style: const TextStyle(
-                      color: KomplekkuColors.surface,
+                      color: KomplekkuColors.borderStrong,
                       fontWeight: FontWeight.w800,
-                      fontSize: 18,
+                      fontSize: 16,
+                      letterSpacing: 1,
                     ),
                   ),
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CredentialRow extends StatelessWidget {
-  const _CredentialRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(color: KomplekkuColors.surfaceMuted),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: KomplekkuColors.surface,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.success.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: KomplekkuColors.success.withValues(alpha: 0.4),
-        ),
-      ),
-      child: const Text(
-        'Aktif',
-        style: TextStyle(
-          color: KomplekkuColors.success,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-}
-
-class _AccountStatusCard extends StatelessWidget {
-  const _AccountStatusCard({required this.snapshot});
-
-  final AccountSnapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    final status = snapshot.residentStatus;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        border: Border.all(color: KomplekkuColors.border),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const KomplekkuLogo(width: 36),
-          const SizedBox(height: 16),
-          Text(
-            snapshot.displayName ?? 'Pengguna Komplekku',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(snapshot.phoneMasked),
-          const SizedBox(height: 16),
-          Text(
-            status != null
-                ? _statusDescription(status)
-                : 'Belum ada tempat tinggal yang terhubung ke akun ini.',
-          ),
         ],
       ),
     );
@@ -321,5 +396,550 @@ class _AccountStatusCard extends StatelessWidget {
       case AccountResidentStatus.active:
         return '';
     }
+  }
+}
+
+class _InfoCell extends StatelessWidget {
+  const _InfoCell({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: KomplekkuColors.textSecondary,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: KomplekkuColors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminTaskCard extends StatelessWidget {
+  const _AdminTaskCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surface,
+        border: Border.all(color: KomplekkuColors.surfaceMuted),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push('/akun/permohonan-warga'),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: KomplekkuColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.fact_check_outlined,
+                color: KomplekkuColors.primary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tugas pengurus',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 15,
+                        ),
+                  ),
+                  const Text(
+                    'Tinjau permohonan tempat tinggal.',
+                    style: TextStyle(
+                      color: KomplekkuColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: KomplekkuColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionCard extends StatelessWidget {
+  const _SessionCard({required this.isLoggingOut, required this.onLogout});
+
+  final bool isLoggingOut;
+  final Future<void> Function() onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surface,
+        border: Border.all(color: KomplekkuColors.border),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Sesi akun', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          const Text('Keluar jika perangkat ini dipakai bersama orang lain.'),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: isLoggingOut ? null : onLogout,
+            icon: const Icon(Icons.logout),
+            label: Text(isLoggingOut ? 'Mengakhiri sesi…' : 'Keluar dari akun'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: KomplekkuColors.danger,
+              side: const BorderSide(color: KomplekkuColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HouseholdSection extends ConsumerStatefulWidget {
+  const _HouseholdSection();
+
+  @override
+  ConsumerState<_HouseholdSection> createState() => _HouseholdSectionState();
+}
+
+class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
+  bool _isAdding = false;
+  bool _isSaving = false;
+  String? _error;
+  String? _removingResidentId;
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  HouseholdRelationship _relationship = HouseholdRelationship.spouse;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitAdd() async {
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    if (name.isEmpty || phone.isEmpty) return;
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(householdRepositoryProvider).addMember(
+            fullName: name,
+            phone: phone,
+            relationship: _relationship,
+          );
+      ref.invalidate(currentHouseholdProvider);
+      if (mounted) {
+        setState(() {
+          _isAdding = false;
+          _nameController.clear();
+          _phoneController.clear();
+          _relationship = HouseholdRelationship.spouse;
+        });
+      }
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _remove(String residentId) async {
+    setState(() => _removingResidentId = residentId);
+    try {
+      await ref.read(householdRepositoryProvider).removeMember(residentId);
+      ref.invalidate(currentHouseholdProvider);
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _removingResidentId = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final account = ref.watch(accountSnapshotProvider).value;
+    final household = ref.watch(currentHouseholdProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surface,
+        border: Border.all(color: KomplekkuColors.surfaceMuted),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: KomplekkuColors.surfaceSoft,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.groups_outlined,
+                      color: KomplekkuColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Anggota Keluarga',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 15,
+                        ),
+                      ),
+                      const Text(
+                        'Penghuni rumah tangga ini',
+                        style: TextStyle(
+                          color: KomplekkuColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (!_isAdding)
+                FilledButton.icon(
+                  onPressed: () => setState(() => _isAdding = true),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Tambah'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+          if (_isAdding) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: KomplekkuColors.background,
+                border: Border.all(color: KomplekkuColors.border),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(
+                        Icons.person_add_alt_outlined,
+                        size: 14,
+                        color: KomplekkuColors.primary,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Anggota Baru',
+                        style: TextStyle(
+                          color: KomplekkuColors.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      hintText: 'Nama lengkap',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      hintText: 'Nomor HP (08xxxxxxxxxx)',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<HouseholdRelationship>(
+                    initialValue: _relationship,
+                    decoration: const InputDecoration(isDense: true),
+                    items: HouseholdRelationship.values
+                        .where((r) => r != HouseholdRelationship.head)
+                        .map(
+                          (r) => DropdownMenuItem(
+                            value: r,
+                            child: Text(r.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => _relationship = value);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Anggota baru akan mendapatkan akun sendiri dan bisa masuk memakai nomor HP ini.',
+                    style: TextStyle(
+                      color: KomplekkuColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: KomplekkuColors.danger,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _isAdding = false;
+                          _error = null;
+                        }),
+                        child: const Text('Batal'),
+                      ),
+                      const SizedBox(width: 4),
+                      FilledButton(
+                        onPressed: _isSaving ? null : _submitAdd,
+                        style: FilledButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                        child: Text(_isSaving ? 'Menyimpan...' : 'Simpan'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          household.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Memuat anggota rumah tangga...',
+                style: TextStyle(
+                  color: KomplekkuColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            error: (_, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Belum dapat memuat anggota rumah tangga.',
+                      style: TextStyle(
+                        color: KomplekkuColors.danger,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.invalidate(currentHouseholdProvider),
+                    child: const Text('Coba lagi'),
+                  ),
+                ],
+              ),
+            ),
+            data: (data) => Column(
+              children: data.members.map((member) {
+                final isSelf = account != null && member.userId == account.id;
+                final isRemoving = _removingResidentId == member.residentId;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isSelf
+                          ? KomplekkuColors.surfaceSoft
+                          : KomplekkuColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelf
+                          ? null
+                          : Border.all(color: KomplekkuColors.surfaceMuted),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: isSelf
+                              ? KomplekkuColors.primary
+                              : KomplekkuColors.surfaceSoft,
+                          child: Text(
+                            member.displayName.length >= 2
+                                ? member.displayName
+                                      .substring(0, 2)
+                                      .toUpperCase()
+                                : member.displayName.toUpperCase(),
+                            style: TextStyle(
+                              color: isSelf
+                                  ? KomplekkuColors.surface
+                                  : KomplekkuColors.textSecondary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      member.displayName,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: isSelf
+                                            ? FontWeight.w800
+                                            : FontWeight.w700,
+                                        fontSize: 14,
+                                        color: KomplekkuColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isSelf) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: KomplekkuColors.textPrimary,
+                                        borderRadius: BorderRadius.circular(
+                                          20,
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Saya',
+                                        style: TextStyle(
+                                          color: KomplekkuColors.borderStrong,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              Text(
+                                [
+                                  member.relationship.label,
+                                  if (member.phoneMasked != null)
+                                    member.phoneMasked!,
+                                ].join(' · '),
+                                style: const TextStyle(
+                                  color: KomplekkuColors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isSelf)
+                          IconButton(
+                            onPressed: isRemoving
+                                ? null
+                                : () => _remove(member.residentId),
+                            icon: isRemoving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.delete_outline, size: 18),
+                            color: KomplekkuColors.textSecondary,
+                            tooltip: 'Hapus ${member.displayName}',
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

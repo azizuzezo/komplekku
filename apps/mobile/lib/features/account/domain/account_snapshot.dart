@@ -55,6 +55,7 @@ AccountResidentStatus? _residentStatusFromApi(Object? value) {
 
 class AccountSnapshot {
   const AccountSnapshot({
+    required this.id,
     required this.displayName,
     required this.phoneMasked,
     required this.residentStatus,
@@ -62,6 +63,7 @@ class AccountSnapshot {
     required this.permissions,
   });
 
+  final String id;
   final String? displayName;
   final String phoneMasked;
   final AccountResidentStatus? residentStatus;
@@ -75,6 +77,7 @@ class AccountSnapshot {
     final contextJson = json['currentContext'];
     final permissions = json['permissions'] as List<dynamic>? ?? const [];
     return AccountSnapshot(
+      id: json['id'] as String,
       displayName: json['displayName'] as String?,
       phoneMasked: json['phoneMasked'] as String,
       residentStatus: _residentStatusFromApi(json['residentStatus']),

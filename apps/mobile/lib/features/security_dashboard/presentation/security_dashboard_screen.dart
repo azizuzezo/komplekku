@@ -6,13 +6,10 @@ import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/security_dashboard/data/security_dashboard_repository.dart';
-import 'package:komplekku/features/security_dashboard/domain/security_dashboard_snapshot.dart';
+import 'package:komplekku/features/security_shift/data/security_shift_repository.dart';
 
-/// Read-only ops summary for security staff/admins, mirroring
-/// `apps/web/features/security-dashboard/security-dashboard-panel.tsx`'s
-/// stat grid (shift jaga is shown as read-only status here — starting or
-/// ending a shift stays in the dedicated security-shift feature, out of
-/// scope for this dashboard screen).
+/// Ops summary for security staff/admins, mirroring
+/// `apps/web/features/security-dashboard/security-dashboard-panel.tsx`.
 class SecurityDashboardScreen extends ConsumerWidget {
   const SecurityDashboardScreen({super.key});
 
@@ -79,7 +76,7 @@ class _DashboardBody extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            _ShiftCard(shift: snapshot.activeShift),
+            const _ShiftCard(),
             const SizedBox(height: 16),
             GridView.count(
               crossAxisCount: 2,
@@ -121,43 +118,163 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
-class _ShiftCard extends StatelessWidget {
-  const _ShiftCard({required this.shift});
+class _ShiftCard extends ConsumerStatefulWidget {
+  const _ShiftCard();
 
-  final SecurityDashboardShift? shift;
+  @override
+  ConsumerState<_ShiftCard> createState() => _ShiftCardState();
+}
+
+class _ShiftCardState extends ConsumerState<_ShiftCard> {
+  final _notesController = TextEditingController();
+  bool _isMutating = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _refreshAfterMutation() {
+    ref.invalidate(activeSecurityShiftProvider);
+    ref.invalidate(securityDashboardProvider);
+  }
+
+  Future<void> _start() async {
+    setState(() {
+      _isMutating = true;
+      _error = null;
+    });
+    try {
+      await ref.read(securityShiftRepositoryProvider).start();
+      _refreshAfterMutation();
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isMutating = false);
+    }
+  }
+
+  Future<void> _end() async {
+    setState(() {
+      _isMutating = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(securityShiftRepositoryProvider)
+          .end(notes: _notesController.text);
+      _notesController.clear();
+      _refreshAfterMutation();
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isMutating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final shiftAsync = ref.watch(activeSecurityShiftProvider);
+    final shift = shiftAsync.value;
+    final shiftLoadError = shiftAsync.hasError
+        ? (shiftAsync.error is ApiException
+            ? (shiftAsync.error as ApiException).message
+            : 'Status shift belum bisa dimuat.')
+        : null;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              shift != null ? Icons.shield_outlined : Icons.shield_moon_outlined,
-              color: shift != null
-                  ? KomplekkuColors.success
-                  : KomplekkuColors.textSecondary,
+            Row(
+              children: [
+                Icon(
+                  shift != null
+                      ? Icons.shield_outlined
+                      : Icons.shield_moon_outlined,
+                  color: shift != null
+                      ? KomplekkuColors.success
+                      : KomplekkuColors.textSecondary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Shift jaga',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        shift != null
+                            ? 'Aktif sejak ${formatDashboardDateTime(shift.startedAt)}'
+                            : 'Belum ada shift aktif',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      if (shift != null)
+                        Text(
+                          'Petugas: ${shift.officerName}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Shift jaga',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    shift != null
-                        ? 'Aktif sejak ${formatDashboardDateTime(shift!.startedAt)}'
-                        : 'Belum ada shift aktif',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
+            const SizedBox(height: 12),
+            if (_error != null) ...[
+              Text(
+                _error!,
+                style: const TextStyle(color: KomplekkuColors.danger),
               ),
-            ),
+              const SizedBox(height: 8),
+            ],
+            if (shiftLoadError != null)
+              Text(
+                shiftLoadError,
+                style: const TextStyle(color: KomplekkuColors.danger),
+              )
+            else if (shift != null) ...[
+              TextField(
+                controller: _notesController,
+                maxLines: 3,
+                maxLength: 1000,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan akhir shift (opsional)',
+                ),
+              ),
+              FilledButton(
+                onPressed: _isMutating ? null : _end,
+                style: FilledButton.styleFrom(
+                  backgroundColor: KomplekkuColors.danger,
+                ),
+                child: _isMutating
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Akhiri shift'),
+              ),
+            ] else
+              FilledButton(
+                onPressed: _isMutating ? null : _start,
+                child: _isMutating
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Mulai shift'),
+              ),
           ],
         ),
       ),

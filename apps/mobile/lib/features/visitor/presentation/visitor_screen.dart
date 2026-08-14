@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
@@ -44,10 +45,13 @@ String _formatVisitDateLabel(String isoDate) {
   return '${int.parse(parts[2])} ${months[month - 1]} ${parts[0]}';
 }
 
-/// Resident-facing "Tamu" screen. Mirrors
-/// `apps/web/features/visitor/visitor-invite-panel.tsx`: an inline invite
-/// form (guest name, visit date, optional details) that reveals the guest's
-/// QR token on success, plus a list of the resident's own past invitations.
+/// "Tamu" screen, mirroring both `visitor-invite-panel.tsx` (resident: an
+/// inline invite form that reveals the guest's QR token on success) and
+/// `visitor-checkin-panel.tsx` (security: QR lookup + check-in, walk-in
+/// registration, check-out) collapsed into one screen — the invite form
+/// shows for `visitor.create` holders, the check-in tools show for
+/// `visitor.checkin` holders, and the shared list below adapts its actions
+/// to whichever permission the viewer has.
 class VisitorScreen extends ConsumerStatefulWidget {
   const VisitorScreen({super.key});
 
@@ -139,6 +143,9 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
   @override
   Widget build(BuildContext context) {
     final inviteState = ref.watch(visitorInviteControllerProvider);
+    final permissions = ref.watch(currentPermissionsProvider);
+    final canCreate = hasPermission(permissions, 'visitor.create');
+    final canCheckin = hasPermission(permissions, 'visitor.checkin');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tamu')),
@@ -178,6 +185,11 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (canCheckin) ...[
+                    const _VisitorCheckinSection(),
+                    const SizedBox(height: 28),
+                  ],
+                  if (canCreate) ...[
                   Text(
                     'Undang tamu dan bagikan kode QR yang ditunjukkan ke '
                     'petugas keamanan saat mereka tiba.',
@@ -320,12 +332,13 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                     _QrRevealCard(visitor: state.lastInvite!),
                   ],
                   const SizedBox(height: 28),
+                  ],
                   Text(
-                    'Undangan tamu kamu',
+                    canCheckin ? 'Daftar tamu' : 'Undangan tamu kamu',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 10),
-                  const _VisitorInviteList(),
+                  _VisitorInviteList(canCheckin: canCheckin),
                 ],
               ),
             );
@@ -385,7 +398,9 @@ class _QrRevealCard extends StatelessWidget {
 }
 
 class _VisitorInviteList extends ConsumerWidget {
-  const _VisitorInviteList();
+  const _VisitorInviteList({required this.canCheckin});
+
+  final bool canCheckin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -428,7 +443,7 @@ class _VisitorInviteList extends ConsumerWidget {
         return Column(
           children: [
             for (final visitor in items) ...[
-              _VisitorRow(visitor: visitor),
+              _VisitorRow(visitor: visitor, canCheckin: canCheckin),
               const SizedBox(height: 10),
             ],
           ],
@@ -438,13 +453,38 @@ class _VisitorInviteList extends ConsumerWidget {
   }
 }
 
-class _VisitorRow extends StatelessWidget {
-  const _VisitorRow({required this.visitor});
+class _VisitorRow extends ConsumerStatefulWidget {
+  const _VisitorRow({required this.visitor, required this.canCheckin});
 
   final Visitor visitor;
+  final bool canCheckin;
+
+  @override
+  ConsumerState<_VisitorRow> createState() => _VisitorRowState();
+}
+
+class _VisitorRowState extends ConsumerState<_VisitorRow> {
+  bool _isCheckingOut = false;
+  String? _error;
+
+  Future<void> _checkOut() async {
+    setState(() {
+      _isCheckingOut = true;
+      _error = null;
+    });
+    try {
+      await ref.read(visitorRepositoryProvider).checkOut(widget.visitor.id);
+      ref.invalidate(visitorListProvider);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isCheckingOut = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final visitor = widget.visitor;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
@@ -463,19 +503,57 @@ class _VisitorRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatVisitDateLabel(visitor.visitDate) +
-                        (visitor.isWalkIn ? ' · Walk-in' : ''),
+                    '${visitor.houseCode} · '
+                    '${_formatVisitDateLabel(visitor.visitDate)}'
+                    '${visitor.isWalkIn ? ' · Walk-in' : ''}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: KomplekkuColors.danger,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            Text(
-              _statusLabels[visitor.status]!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: KomplekkuColors.primary,
-                    fontWeight: FontWeight.w700,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _statusLabels[visitor.status]!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: KomplekkuColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                if (widget.canCheckin &&
+                    visitor.status == VisitorStatus.checkedIn) ...[
+                  const SizedBox(height: 6),
+                  OutlinedButton(
+                    onPressed: _isCheckingOut ? null : _checkOut,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                    child: _isCheckingOut
+                        ? const SizedBox(
+                            height: 14,
+                            width: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Check-out'),
                   ),
+                ],
+              ],
             ),
           ],
         ),
@@ -506,6 +584,341 @@ class _VisitorListSkeleton extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Security-facing check-in tools, mirroring `visitor-checkin-panel.tsx`'s
+/// `VisitorLookupCard` + `VisitorWalkInForm`.
+class _VisitorCheckinSection extends ConsumerStatefulWidget {
+  const _VisitorCheckinSection();
+
+  @override
+  ConsumerState<_VisitorCheckinSection> createState() =>
+      _VisitorCheckinSectionState();
+}
+
+class _VisitorCheckinSectionState
+    extends ConsumerState<_VisitorCheckinSection> {
+  final _tokenController = TextEditingController();
+  bool _isLookingUp = false;
+  bool _isCheckingIn = false;
+  String? _lookupError;
+  Visitor? _foundVisitor;
+  bool _searched = false;
+
+  @override
+  void dispose() {
+    _tokenController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _lookup() async {
+    final token = _tokenController.text.trim();
+    if (token.isEmpty) return;
+    setState(() {
+      _isLookingUp = true;
+      _lookupError = null;
+      _foundVisitor = null;
+      _searched = false;
+    });
+    try {
+      final visitor =
+          await ref.read(visitorRepositoryProvider).lookupByQrToken(token);
+      if (mounted) {
+        setState(() {
+          _foundVisitor = visitor;
+          _searched = true;
+        });
+      }
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _lookupError = error.message);
+    } finally {
+      if (mounted) setState(() => _isLookingUp = false);
+    }
+  }
+
+  Future<void> _checkIn() async {
+    final token = _tokenController.text.trim();
+    if (token.isEmpty) return;
+    setState(() {
+      _isCheckingIn = true;
+      _lookupError = null;
+    });
+    try {
+      final visitor = await ref.read(visitorRepositoryProvider).checkIn(token);
+      if (mounted) setState(() => _foundVisitor = visitor);
+      ref.invalidate(visitorListProvider);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _lookupError = error.message);
+    } finally {
+      if (mounted) setState(() => _isCheckingIn = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visitor = _foundVisitor;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cari kode QR tamu',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _tokenController,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          labelText: 'Kode QR',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _isLookingUp ? null : _lookup,
+                      child: _isLookingUp
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Cari'),
+                    ),
+                  ],
+                ),
+                if (_lookupError != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _lookupError!,
+                    style: const TextStyle(color: KomplekkuColors.danger),
+                  ),
+                ],
+                if (_searched && visitor == null && _lookupError == null) ...[
+                  const SizedBox(height: 10),
+                  const Text('Kode tidak ditemukan.'),
+                ],
+                if (visitor != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: KomplekkuColors.surfaceSoft,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                visitor.guestName,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              Text(
+                                '${visitor.houseCode} · '
+                                '${_formatVisitDateLabel(visitor.visitDate)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              Text(
+                                _statusLabels[visitor.status]!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: KomplekkuColors.primary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (visitor.status == VisitorStatus.pending)
+                          FilledButton(
+                            onPressed: _isCheckingIn ? null : _checkIn,
+                            child: _isCheckingIn
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Check-in'),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const _VisitorWalkInForm(),
+      ],
+    );
+  }
+}
+
+class _VisitorWalkInForm extends ConsumerStatefulWidget {
+  const _VisitorWalkInForm();
+
+  @override
+  ConsumerState<_VisitorWalkInForm> createState() => _VisitorWalkInFormState();
+}
+
+class _VisitorWalkInFormState extends ConsumerState<_VisitorWalkInForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _houseCodeController = TextEditingController();
+  final _guestNameController = TextEditingController();
+  final _guestPhoneController = TextEditingController();
+  final _vehicleInfoController = TextEditingController();
+  final _plateController = TextEditingController();
+  final _purposeController = TextEditingController();
+  bool _isSaving = false;
+  String? _error;
+  String? _successGuestName;
+
+  @override
+  void dispose() {
+    _houseCodeController.dispose();
+    _guestNameController.dispose();
+    _guestPhoneController.dispose();
+    _vehicleInfoController.dispose();
+    _plateController.dispose();
+    _purposeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _isSaving = true;
+      _error = null;
+      _successGuestName = null;
+    });
+    try {
+      final visitor = await ref.read(visitorRepositoryProvider).createWalkIn(
+            houseCode: _houseCodeController.text.trim(),
+            guestName: _guestNameController.text.trim(),
+            guestPhone: _guestPhoneController.text.trim(),
+            vehicleInfo: _vehicleInfoController.text.trim(),
+            plate: _plateController.text.trim(),
+            purpose: _purposeController.text.trim(),
+          );
+      _houseCodeController.clear();
+      _guestNameController.clear();
+      _guestPhoneController.clear();
+      _vehicleInfoController.clear();
+      _plateController.clear();
+      _purposeController.clear();
+      ref.invalidate(visitorListProvider);
+      if (mounted) setState(() => _successGuestName = visitor.guestName);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Catat tamu walk-in',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _houseCodeController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(labelText: 'Kode rumah'),
+                validator: (value) => (value ?? '').trim().isEmpty
+                    ? 'Masukkan kode rumah yang dituju.'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _guestNameController,
+                decoration: const InputDecoration(labelText: 'Nama tamu'),
+                validator: (value) => (value ?? '').trim().length < 2
+                    ? 'Masukkan nama tamu, minimal 2 karakter.'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _guestPhoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Nomor HP tamu (opsional)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _vehicleInfoController,
+                decoration: const InputDecoration(
+                  labelText: 'Kendaraan (opsional)',
+                  hintText: 'Contoh: Mobil sedan hitam',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _plateController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'Nomor polisi (opsional)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _purposeController,
+                decoration: const InputDecoration(labelText: 'Tujuan (opsional)'),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!, style: const TextStyle(color: KomplekkuColors.danger)),
+              ],
+              if (_successGuestName != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '$_successGuestName berhasil dicatat dan sudah check-in.',
+                  style: const TextStyle(color: KomplekkuColors.success),
+                ),
+              ],
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _isSaving ? null : _submit,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Catat & check-in tamu'),
+              ),
+            ],
           ),
         ),
       ),

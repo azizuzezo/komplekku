@@ -33,6 +33,7 @@ flutter:
     - assets/brand/komplekku-lockup.png
     - assets/brand/komplekku-mark.png
     - assets/audio/adzan.mp3
+    - assets/audio/iqomah.wav
   fonts:
     - family: Plus Jakarta Sans
       fonts:
