@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "192882982454",
+    "project_id": "komplekku-6e0c6",
+    "storage_bucket": "komplekku-6e0c6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:192882982454:android:a02b4d09ca85fd1f1ca297",
+        "android_client_info": {
+          "package_name": "id.komplekku"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZmp0fX8-WdUeb8BYEg8afrEtu5ZIc9Uo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

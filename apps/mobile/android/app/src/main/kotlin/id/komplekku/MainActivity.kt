@@ -1,4 +1,4 @@
-package id.komplekku.komplekku
+package id.komplekku
 
 import io.flutter.embedding.android.FlutterActivity
 

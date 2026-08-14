@@ -6,6 +6,7 @@ import type { AppRepository, NotificationRecord } from "../domain/repository";
 import { getAuthContext, requirePermission } from "../lib/authentication";
 import { AppError } from "../lib/errors";
 import { requestUserAgent, responseMeta } from "../lib/http";
+import type { PushNotificationProvider } from "../lib/push-notification-provider";
 
 const idParamsSchema = z.object({ id: z.string().uuid() });
 
@@ -21,6 +22,7 @@ export async function registerNotificationRoutes(
   app: FastifyInstance,
   repository: AppRepository,
   authenticate: preHandlerHookHandler,
+  pushNotificationProvider?: PushNotificationProvider,
 ) {
   const guards = [authenticate, requirePermission("notification.read")];
 
@@ -39,6 +41,30 @@ export async function registerNotificationRoutes(
         data: { pushTokenId: result.id, token: result.token },
         meta: responseMeta(request),
       });
+    },
+  );
+
+  app.post(
+    "/api/v1/notifications/test",
+    { preHandler: [authenticate, requirePermission("announcement.manage")] },
+    async (request) => {
+      if (!pushNotificationProvider) {
+        throw new AppError(
+          503,
+          "PUSH_NOT_CONFIGURED",
+          "Push notification belum dikonfigurasi di server.",
+        );
+      }
+      const auth = getAuthContext(request);
+      const result = await pushNotificationProvider.sendToUser(auth.userId, {
+        title: "Tes Notifikasi Komplekku",
+        body: "Jika kamu menerima ini, push notification sudah berjalan dengan baik.",
+        data: { type: "TEST" },
+      });
+      return {
+        data: result,
+        meta: responseMeta(request),
+      };
     },
   );
 

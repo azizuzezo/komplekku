@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AnnouncementListSkeleton } from "@/components/ui/content-skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { getMe } from "@/features/auth/auth-api";
+import { TestPushNotificationButton } from "@/features/notification/test-push-notification-button";
 import { getRequestState } from "@/lib/api/client";
 
 import { getAnnouncements } from "./announcement-api";
@@ -70,7 +71,15 @@ export function AnnouncementList() {
   return (
     <div className="announcement-page-wrapper">
       {canManage && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+          }}
+        >
+          <TestPushNotificationButton />
           <CreateAnnouncementModal />
         </div>
       )}

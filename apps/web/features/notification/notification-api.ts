@@ -3,10 +3,12 @@ import {
   markNotificationReadResponseSchema,
   notificationListResponseSchema,
   notificationUnreadCountResponseSchema,
+  testPushNotificationResponseSchema,
   type MarkAllNotificationsReadResponse,
   type MarkNotificationReadResponse,
   type NotificationListResponse,
   type NotificationUnreadCountResponse,
+  type TestPushNotificationResponse,
 } from "@komplekku/contracts";
 
 import { apiRequest } from "@/lib/api/client";
@@ -49,6 +51,12 @@ export function markNotificationRead(id: string): Promise<MarkNotificationReadRe
 
 export function markAllNotificationsRead(): Promise<MarkAllNotificationsReadResponse> {
   return apiRequest("/notifications/read-all", markAllNotificationsReadResponseSchema, {
+    method: "POST",
+  });
+}
+
+export function sendTestPushNotification(): Promise<TestPushNotificationResponse> {
+  return apiRequest("/notifications/test", testPushNotificationResponseSchema, {
     method: "POST",
   });
 }

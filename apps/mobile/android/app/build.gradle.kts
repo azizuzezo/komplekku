@@ -2,10 +2,11 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "id.komplekku.komplekku"
+    namespace = "id.komplekku"
     // flutter_secure_storage requires compiling against API 37; Flutter's own
     // default (flutter.compileSdkVersion) still resolves to 36 on this toolchain.
     compileSdk = 37
@@ -18,8 +19,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "id.komplekku.komplekku"
+        applicationId = "id.komplekku"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -1,25 +1,40 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/notifications/push_notification_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 
-class PrayerCard extends StatefulWidget {
+class PrayerCard extends ConsumerStatefulWidget {
   const PrayerCard({super.key});
 
   @override
-  State<PrayerCard> createState() => _PrayerCardState();
+  ConsumerState<PrayerCard> createState() => _PrayerCardState();
 }
 
-class _PrayerCardState extends State<PrayerCard> {
+class _PrayerCardState extends ConsumerState<PrayerCard> {
   late DateTime _now;
   Timer? _timer;
   bool _isMuted = false;
+  bool _isPlayingAudio = false;
+  late final AudioPlayer _audioPlayer;
 
   @override
   void initState() {
     super.initState();
     _now = DateTime.now();
+    _audioPlayer = AudioPlayer();
+
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlayingAudio = false;
+        });
+      }
+    });
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() {
@@ -32,7 +47,36 @@ class _PrayerCardState extends State<PrayerCard> {
   @override
   void dispose() {
     _timer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _playAdzanAudio({String? prayerName}) async {
+    if (_isMuted) return;
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
+      setState(() {
+        _isPlayingAudio = true;
+      });
+
+      // Trigger local push notification banner on HP
+      final name = prayerName ?? 'Sholat';
+      ref.read(pushNotificationServiceProvider).showNotification(
+            id: 999,
+            title: '📢 Waktu Adzan $name Tiba',
+            body: 'Kumandang adzan $name telah masuk. Mari persiapkan diri untuk sholat.',
+          );
+    } catch (_) {
+      // Audio playback fallback handle
+    }
+  }
+
+  Future<void> _stopAdzanAudio() async {
+    await _audioPlayer.stop();
+    setState(() {
+      _isPlayingAudio = false;
+    });
   }
 
   @override
@@ -117,14 +161,31 @@ class _PrayerCardState extends State<PrayerCard> {
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, size: 20),
-                  tooltip: _isMuted ? 'Unmute Adzan' : 'Mute Adzan',
-                  onPressed: () {
-                    setState(() {
-                      _isMuted = !_isMuted;
-                    });
-                  },
+                Row(
+                  children: [
+                    if (_isPlayingAudio)
+                      IconButton(
+                        icon: const Icon(Icons.stop_circle, color: KomplekkuColors.danger, size: 22),
+                        tooltip: 'Hentikan Audio Adzan',
+                        onPressed: _stopAdzanAudio,
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(Icons.volume_up_outlined, color: KomplekkuColors.primary, size: 22),
+                        tooltip: 'Tes Audio Adzan',
+                        onPressed: () => _playAdzanAudio(prayerName: prayerLabels[nextEntry.key]),
+                      ),
+                    IconButton(
+                      icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, size: 20),
+                      tooltip: _isMuted ? 'Unmute Adzan' : 'Mute Adzan',
+                      onPressed: () {
+                        setState(() {
+                          _isMuted = !_isMuted;
+                          if (_isMuted) _stopAdzanAudio();
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -173,16 +234,38 @@ class _PrayerCardState extends State<PrayerCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (adzanState.kind == AdzanStateKind.adzan) ...[
-                      Text(
-                        '📢 Waktu Adzan ${prayerLabels[adzanState.activePrayer]}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: KomplekkuColors.primary,
-                        ),
-                      ),
-                      const Text(
-                        'Jeda Adzan ke Iqomah 5m...',
-                        style: TextStyle(fontSize: 12, color: KomplekkuColors.textSecondary),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '📢 Waktu Adzan ${prayerLabels[adzanState.activePrayer]}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: KomplekkuColors.primary,
+                                  ),
+                                ),
+                                const Text(
+                                  'Jeda Adzan ke Iqomah 5m...',
+                                  style: TextStyle(fontSize: 12, color: KomplekkuColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: KomplekkuColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                            onPressed: () => _playAdzanAudio(prayerName: prayerLabels[adzanState.activePrayer]),
+                            icon: const Icon(Icons.play_arrow, size: 16),
+                            label: const Text('Adzan', style: TextStyle(fontSize: 11)),
+                          ),
+                        ],
                       ),
                     ],
                     if (adzanState.kind == AdzanStateKind.postAdzanGap) ...[
@@ -322,3 +405,4 @@ class _PrayerCardState extends State<PrayerCard> {
     );
   }
 }
+

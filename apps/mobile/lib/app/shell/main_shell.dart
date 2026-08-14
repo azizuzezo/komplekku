@@ -1,24 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:komplekku/core/notifications/fcm_service.dart';
+import 'package:komplekku/core/notifications/push_notification_service.dart';
+import 'package:komplekku/core/notifications/realtime_notification_service.dart';
 import 'package:komplekku/features/notification/data/notification_repository.dart';
 
-class MainShell extends ConsumerWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(realtimeNotificationServiceProvider).startSync();
+      ref.read(fcmServiceProvider).initialize(
+            onToken: (token) =>
+                ref.read(pushNotificationServiceProvider).registerDeviceToken(token),
+          );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final unreadCount = ref.watch(unreadNotificationCountProvider).value ?? 0;
 
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
+        selectedIndex: widget.navigationShell.currentIndex,
+        onDestinationSelected: (index) => widget.navigationShell.goBranch(
           index,
-          initialLocation: index == navigationShell.currentIndex,
+          initialLocation: index == widget.navigationShell.currentIndex,
         ),
         destinations: [
           const NavigationDestination(
@@ -59,3 +79,4 @@ class MainShell extends ConsumerWidget {
     );
   }
 }
+

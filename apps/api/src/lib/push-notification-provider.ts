@@ -1,4 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getMessaging, type Messaging } from "firebase-admin/messaging";
 
 export interface PushNotificationPayload {
   title: string;
@@ -6,8 +8,22 @@ export interface PushNotificationPayload {
   data?: Record<string, string>;
 }
 
+function createMessaging(serviceAccountKey: string | undefined): Messaging | undefined {
+  if (!serviceAccountKey) return undefined;
+  const serviceAccount = JSON.parse(serviceAccountKey);
+  const app = getApps()[0] ?? initializeApp({ credential: cert(serviceAccount) });
+  return getMessaging(app);
+}
+
 export class PushNotificationProvider {
-  constructor(private readonly prisma: PrismaClient) {}
+  private readonly messaging?: Messaging;
+
+  constructor(
+    private readonly prisma: PrismaClient,
+    firebaseServiceAccountKey?: string,
+  ) {
+    this.messaging = createMessaging(firebaseServiceAccountKey);
+  }
 
   /**
    * Send a push notification payload to specific device tokens.
@@ -18,14 +34,21 @@ export class PushNotificationProvider {
   ): Promise<{ successCount: number; failureCount: number }> {
     if (tokens.length === 0) return { successCount: 0, failureCount: 0 };
 
-    // Log the notification payload for local-first testing
-    console.log(
-      `[PushNotification] Sending "${payload.title}" - "${payload.body}" to ${tokens.length} token(s):`,
-      tokens,
-    );
+    if (!this.messaging) {
+      // No Firebase credentials configured: log instead of sending for local-first testing.
+      console.log(
+        `[PushNotification] Sending "${payload.title}" - "${payload.body}" to ${tokens.length} token(s):`,
+        tokens,
+      );
+      return { successCount: tokens.length, failureCount: 0 };
+    }
 
-    // Simulated/local push delivery result
-    return { successCount: tokens.length, failureCount: 0 };
+    const response = await this.messaging.sendEachForMulticast({
+      tokens,
+      notification: { title: payload.title, body: payload.body },
+      data: payload.data,
+    });
+    return { successCount: response.successCount, failureCount: response.failureCount };
   }
 
   /**

@@ -69,3 +69,12 @@ export const registerPushTokenSchema = z.object({
 });
 
 export type RegisterPushTokenInput = z.infer<typeof registerPushTokenSchema>;
+
+export const testPushNotificationResponseSchema = dataEnvelopeSchema(
+  z.object({
+    successCount: z.number().int().nonnegative(),
+    failureCount: z.number().int().nonnegative(),
+  }),
+);
+
+export type TestPushNotificationResponse = z.infer<typeof testPushNotificationResponseSchema>;

@@ -49,14 +49,7 @@ class _SessionLoading extends StatelessWidget {
       label: 'Memeriksa sesi Komplekku',
       liveRegion: true,
       child: const ExcludeSemantics(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            KomplekkuLogo(width: 54),
-            SizedBox(height: 28),
-            LinearProgressIndicator(minHeight: 3),
-          ],
-        ),
+        child: KomplekkuLogo(width: 54),
       ),
     );
   }

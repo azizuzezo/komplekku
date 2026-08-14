@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+*firebase-adminsdk*.json
+serviceAccountKey.json
 
 # JavaScript / TypeScript
 node_modules/

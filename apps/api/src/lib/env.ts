@@ -42,6 +42,7 @@ const envSchema = z
       .string()
       .regex(/^\d{6}$/)
       .optional(),
+    FIREBASE_SERVICE_ACCOUNT_KEY: z.string().optional(),
   })
   .superRefine((value, context) => {
     if (Boolean(value.OTP_BYPASS_PHONE_E164) !== Boolean(value.OTP_BYPASS_CODE)) {

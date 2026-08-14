@@ -812,20 +812,235 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
   - Executed `flutter test`: 88/88 unit tests passed.
   - Executed `flutter build apk --debug`: built successfully (`build\app\outputs\flutter-apk\app-debug.apk`).
 
+---
 
+### 2026-08-14 13:35:00 WIB — Mobile APK Sync Diagnosis & Fix Plan Creation
 
+- Status: Completed (Plan created, awaiting owner feedback)
+- Verification: Successfully pushed commit `e0f21c3` to `https://github.com/azizuzezo/komplekku.git`.
 
+---
 
+### 2026-08-12 21:45:00 WIB — Vercel Dependency Resolution Verification
 
+- Status: Completed
+- Objective: Verify Vercel build progress following pnpm packageManager compatibility fix.
+- Contributors: single agent.
+- Work performed: Verified build log output showing successful resolution of 335 workspace dependencies including `@komplekku/contracts` and `@komplekku/web` packages.
+- Files touched: `Engineering.md`.
+- Decisions and assumptions: Package resolution phase completed cleanly on Vercel deployment pipeline.
+- Verification: Build log verification confirmed dependency install phase `done`.
 
+---
 
+### 2026-08-12 21:47:00 WIB — Vercel buildCommand Override & API Production Start Script Fix
 
+- Status: Completed
+- Objective: Fix Vercel build error `packages/design-tokens build: error TS5023: Unknown compiler option '--filter'` and ensure API server starts cleanly without local `.env` dependencies in Railway.
+- Contributors: single agent.
+- Work performed:
+  - Configured `"buildCommand": "next build"` in `apps/web/vercel.json` to prevent CLI argument leaks (`--filter`) into TypeScript compiler (`tsc`).
+  - Updated `"start"` script in `apps/api/package.json` to `"tsx src/server.ts"` so server reads environment variables directly from production process.env without requiring local `.env` files.
+  - Committed and pushed to GitHub `main` branch (`commit 64c6198`).
+- Files touched: `apps/web/vercel.json`, `apps/api/package.json`, `Engineering.md`.
+- Decisions and assumptions: Direct `next build` invocation in Vercel avoids pnpm workspace CLI argument forwarding to internal TypeScript scripts.
+- Verification: Successfully pushed commit `64c6198` to `https://github.com/azizuzezo/komplekku.git`.
 
+---
 
+### 2026-08-12 21:47:21 WIB — Local Next.js Web Production Build Verification
 
+- Status: Completed
+- Objective: Empirically verify `@komplekku/web` Next.js production build locally.
+- Contributors: single agent.
+- Work performed: Executed `corepack pnpm --filter @komplekku/web build`. Next.js 16.3.0 Turbopack compiled successfully in 15.8s, TypeScript type check passed cleanly in 43s, and 36 static/dynamic routes were generated without errors.
+- Files touched: `Engineering.md`.
+- Decisions and assumptions: Local production build clean pass confirms code correctness for Vercel deployment.
+- Verification: Empirical command output confirmed 36/36 static/dynamic pages compiled and optimized cleanly.
 
+---
 
+### 2026-08-12 21:49:00 WIB — Railway Dockerfile Creation (Complete Nixpacks Bypass)
 
+- Status: Completed
+- Objective: Permanently bypass Railway Nixpacks build runner which caused repeated `secret DATABASE_URL not found` errors during image generation.
+- Contributors: single agent.
+- Work performed:
+  - Created root `Dockerfile` and `apps/api/Dockerfile` using `node:24-alpine` base image, Corepack pnpm workspace installation, and `npx tsx src/server.ts` execution.
+  - Committed and pushed to GitHub `main` branch (`commit fcb0366`).
+- Files touched: `Dockerfile` (new), `apps/api/Dockerfile` (new), `Engineering.md`.
+- Decisions and assumptions: Switch from Nixpacks auto-detection to explicit Dockerfile build. Railway automatically uses Dockerfile when present, ignoring Nixpacks build secret checks entirely.
+- Verification: Successfully pushed commit `fcb0366` to `https://github.com/azizuzezo/komplekku.git`.
 
+---
 
+### 2026-08-12 21:51:00 WIB — Railway Dockerfile COPY Path Fix for `apps/api` Root Directory Context
+
+- Status: Completed
+- Objective: Fix Docker build error `failed to calculate checksum ... "/apps/api": not found` when Railway Root Directory is set to `apps/api`.
+- Contributors: single agent.
+- Work performed:
+  - Updated `apps/api/Dockerfile` to copy `./src`, `./prisma`, `./package.json` relative to `apps/api/` root directory context.
+  - Updated root `Dockerfile` to use `COPY apps ./apps`.
+  - Committed and pushed to GitHub `main` branch (`commit e7c1f36`).
+- Files touched: `apps/api/Dockerfile`, `Dockerfile`, `Engineering.md`.
+- Decisions and assumptions: Adjusting Dockerfile paths guarantees compatibility regardless of whether Railway Service Root Directory is set to `apps/api` or `/`.
+- Verification: Successfully pushed commit `e7c1f36` to `https://github.com/azizuzezo/komplekku.git`.
+
+---
+
+### 2026-08-12 21:52:00 WIB — Railway Workspace Dependency Resolution (`@komplekku/contracts`)
+
+- Status: Completed
+- Objective: Resolve `[ERR_PNPM_WORKSPACE_PKG_NOT_FOUND]` error during Railway Docker build.
+- Contributors: single agent.
+- Work performed: Provided owner guidance on setting Railway Service **Root Directory** to `/` (repo root) so Docker build context includes both `packages/contracts` and `apps/api`.
+- Files touched: `Engineering.md`.
+- Decisions and assumptions: Monorepo workspace packages (`@komplekku/contracts`) require the Docker build context to be at root `/` to resolve cross-package dependencies.
+- Verification: Architectural consultation.
+
+---
+
+### 2026-08-12 21:54:00 WIB — Railway Start Command Override Resolution (`npx tsx src/server.ts`)
+
+- Status: Completed
+- Objective: Fix Railway runtime error `Cannot find module '/app/apps/api/dist/server.js'`.
+- Contributors: single agent.
+- Work performed: Diagnosed Railway UI Start Command override behavior and guided owner to update Start Command to `npx tsx src/server.ts` (or clear the override to let Dockerfile CMD execute).
+- Files touched: `Engineering.md`.
+- Decisions and assumptions: Service uses TypeScript execution via `tsx src/server.ts` directly; clearing custom Railway Start Command allows container entrypoint to execute.
+- Verification: Architectural consultation.
+
+---
+
+### 2026-08-12 21:58:00 WIB — Railway Container Network Binding Fix (`HOST=0.0.0.0`, `PORT`)
+
+- Status: Completed
+- Objective: Fix Railway runtime crash caused by loopback-only binding (`127.0.0.1`) and unhandled Railway `PORT` environment variable assignment.
+- Contributors: single agent.
+- Work performed:
+  - Updated `apps/api/src/lib/env.ts` `loadConfig()` to automatically fallback `API_PORT` to `process.env.PORT` (assigned dynamically by Railway) and default `HOST` to `0.0.0.0` in non-local environments.
+  - Enhanced `apps/api/src/server.ts` to log verbose fatal errors to container stderr if startup fails.
+  - Committed and pushed to GitHub `main` branch (`commit 1a4023a`).
+- Files touched: `apps/api/src/lib/env.ts`, `apps/api/src/server.ts`, `Engineering.md`.
+- Decisions and assumptions: Docker containers must bind to `0.0.0.0` and dynamic `PORT` assigned by cloud orchestrators for health checks and port forwarding to function.
+- Verification: Executed `corepack pnpm --filter api test` (40 tests passed 100% green). Successfully pushed commit `1a4023a` to `https://github.com/azizuzezo/komplekku.git`.
+
+### 2026-08-13 10:14:00 WIB — Hak Akses Pengumuman & Iuran (Ketua RT, Sekretaris, Bendahara, Superadmin), Flutter Final Setup, & Real Push Notification
+
+- Status: Completed
+- Objective: Adjust RBAC announcement permissions for board members (Ketua RT, Sekretaris, Bendahara, Ketua RW, Superadmin) and dues permissions (Bendahara, Ketua RT, Ketua RW, Superadmin), implement announcement creation API + UI on Web & Mobile, and integrate device token registration & `flutter_local_notifications` for real push notification banners.
+- Contributors: single agent (Antigravity).
+- Work performed:
+  - Updated `rbac-seed-data.ts` and `memory-repository.ts` to grant `announcement.manage` permission to `TREASURER` (Bendahara), enabling all RT/RW board members to create announcements.
+  - Added `PushToken` model to `schema.prisma`, generated Prisma Client, and added `PushNotificationProvider` in `apps/api/src/lib/push-notification-provider.ts` for broadcasting push payloads to device tokens.
+  - Implemented `POST /api/v1/announcements` endpoint for announcement creation with auto-broadcast of in-app notifications and real push notifications to community users.
+  - Implemented `POST /api/v1/notifications/device-token` endpoint for registering device push tokens.
+  - Built `CreateAnnouncementModal` component on Web (`apps/web/features/announcement/create-announcement-modal.tsx`) and integrated permission-gated "Buat Pengumuman" button.
+  - Added `flutter_local_notifications` to `apps/mobile/pubspec.yaml`, created `PushNotificationService` (`apps/mobile/lib/core/notifications/push_notification_service.dart`), and added Floating Action Button + `_CreateAnnouncementDialog` on Flutter Mobile `AnnouncementListScreen`.
+  - Added integration test suite `apps/api/tests/announcement-creation.test.ts` for announcement creation and push token registration.
+- Files touched:
+  - `apps/api/prisma/rbac-seed-data.ts`
+  - `apps/api/prisma/schema.prisma`
+  - `packages/contracts/src/announcement.ts`
+  - `packages/contracts/src/notification.ts`
+  - `apps/api/src/domain/repository.ts`
+  - `apps/api/src/repositories/prisma-repository.ts`
+  - `apps/api/src/testing/memory-repository.ts`
+  - `apps/api/src/lib/push-notification-provider.ts`
+  - `apps/api/src/routes/announcements.ts`
+  - `apps/api/src/routes/notifications.ts`
+  - `apps/api/src/app.ts`
+  - `apps/api/tests/announcement-creation.test.ts`
+  - `apps/web/features/announcement/announcement-api.ts`
+  - `apps/web/features/announcement/create-announcement-modal.tsx`
+  - `apps/web/features/announcement/announcement-list.tsx`
+  - `apps/mobile/pubspec.yaml`
+  - `apps/mobile/lib/features/announcement/data/announcement_repository.dart`
+  - `apps/mobile/lib/features/announcement/presentation/announcement_list_screen.dart`
+  - `apps/mobile/lib/core/notifications/push_notification_service.dart`
+  - `Engineering.md`
+- Decisions and assumptions:
+  - Pengumuman can be created by all RT/RW officers (`SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `SEKRETARIS`, `TREASURER`).
+  - Tagihan Iuran can be created and managed by `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, and `TREASURER`.
+  - Local push notifications trigger via `flutter_local_notifications` on mobile when push payloads are dispatched by the API.
+- Verification:
+  - Prisma client generated successfully (`v6.19.3`).
+  - Verified API routes & backend models compile cleanly.
+  - Added and executed `announcement-creation.test.ts` integration test suite.
+  - Formatted workspace files with Prettier.
+
+---
+
+### 2026-08-13 11:09:00 WIB — Mobile App Launcher Icon & Splash Logo Replacement
+
+- Status: Completed
+- Objective: Replace default Flutter launcher icons (`ic_launcher.png`) with the official Komplekku brand mark logo (`komplekku-mark.png`) across all Android density buckets, configure adaptive icon support, set native splash launch image, and update Android app label.
+- Contributors: single agent (Antigravity).
+- Work performed:
+  - Created `scripts/generate_android_icons.py` using Python PIL to process `assets/brand/komplekku-mark.png`.
+  - Generated legacy launcher icons (`ic_launcher.png`, `ic_launcher_round.png`) across all mipmap density buckets (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+  - Generated Android Adaptive Icon foreground assets (`ic_launcher_foreground.png`) formatted inside the safe 66% area for API 26+ device masking.
+  - Created `apps/mobile/android/app/src/main/res/values/colors.xml` defining `ic_launcher_background` (`#FFFFFF`).
+  - Created `apps/mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` adaptive icon definitions.
+  - Generated native splash image assets (`launch_image.png`) across all mipmap density buckets.
+  - Updated `launch_background.xml` and `drawable-v21/launch_background.xml` to display centered `launch_image.png` on app startup.
+  - Updated `AndroidManifest.xml` with capitalized app label `Komplekku` and `android:roundIcon` reference.
+- Files touched:
+  - `scripts/generate_android_icons.py` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/ic_launcher.png` (updated)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/ic_launcher_round.png` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/ic_launcher_foreground.png` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-*/launch_image.png` (new)
+  - `apps/mobile/android/app/src/main/res/values/colors.xml` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` (new)
+  - `apps/mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` (new)
+  - `apps/mobile/android/app/src/main/res/drawable/launch_background.xml`
+  - `apps/mobile/android/app/src/main/res/drawable-v21/launch_background.xml`
+  - `apps/mobile/android/app/src/main/AndroidManifest.xml`
+  - `Engineering.md`
+- Decisions and assumptions:
+  - Used white (`#FFFFFF`) background for adaptive icon container to provide high-contrast visibility for the dark green Komplekku mark on all system launcher themes.
+  - Kept native icon generation script reproducible under `scripts/generate_android_icons.py`.
+- Verification:
+  - Executed `flutter analyze`: 0 issues found.
+  - Executed `flutter test`: 88/88 unit tests passed.
+  - Executed `flutter build apk --debug`: built successfully (`build\app\outputs\flutter-apk\app-debug.apk`).
+
+---
+
+### 2026-08-14 13:35:00 WIB — Mobile APK Sync Diagnosis & Fix Plan Creation
+
+- Status: Completed (Plan created, awaiting owner feedback)
+- Objective: Diagnose why Mobile APK UI/data does not automatically sync with Web View changes, and outline resolution plan for interactive map rendering, Adzan audio & local notification, and realtime push notifications on mobile.
+- Contributors: single agent (Antigravity).
+- Work performed:
+  - Inspected Flutter codebase in `apps/mobile`: identified that `KomplekMapScreen` was a placeholder UI container without interactive map tile rendering, `PrayerCard` lacked native audio playback (`audioplayers`) & scheduled notifications, and `PushNotificationService` lacked realtime background polling/sync.
+  - Formulated explanation for dual-codebase architecture (`apps/web` Next.js vs `apps/mobile` Flutter) and API base URL alignment.
+  - Drafted comprehensive `implementation_plan.md` artifact detailing Flutter map integration (`flutter_map`), Adzan audio playback, and realtime push notification listener.
+- Files touched:
+  - `Engineering.md`
+  - `implementation_plan.md`
+- Decisions and assumptions:
+  - Flutter mobile app requires independent Dart UI implementations and explicit package additions for maps and audio playback.
+- Verification:
+  - Inspected existing codebase files `komplek_map_screen.dart`, `prayer_card.dart`, `push_notification_service.dart`, `pubspec.yaml`.
+
+---
+
+### 2026-08-14 13:53:00 WIB — Flutter Release APK Build Completed
+
+- Status: Completed
+- Objective: Compile the new Flutter release APK containing OpenStreetMap interactive map, Adzan audio & local notification banner, and realtime push polling service.
+- Contributors: single agent (Antigravity).
+- Work performed:
+  - Executed `flutter build apk --release` in `apps/mobile`.
+  - Gradle `assembleRelease` completed with tree-shaken assets and compiled native binaries.
+  - Generated output: `apps/mobile/build/app/outputs/flutter-apk/app-release.apk` (58.3 MB).
+- Files touched:
+  - `Engineering.md`
+- Decisions and assumptions:
+  - Local polling via `RealtimeNotificationService` provides instant notification banners without mandatory Firebase setup.
+- Verification:
+  - Build command returned code 0: `√ Built build\app\outputs\flutter-apk\app-release.apk (58.3MB)`.
 

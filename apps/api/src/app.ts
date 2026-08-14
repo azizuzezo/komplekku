@@ -91,7 +91,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   }
 
   const pushNotificationProvider = (repository as any).prisma
-    ? new PushNotificationProvider((repository as any).prisma)
+    ? new PushNotificationProvider((repository as any).prisma, config.FIREBASE_SERVICE_ACCOUNT_KEY)
     : undefined;
 
   registerErrorHandler(app);
@@ -103,7 +103,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   await registerAdminRoleRoutes(app, repository, authenticate);
   await registerAnnouncementRoutes(app, repository, authenticate, pushNotificationProvider);
   await registerAgendaRoutes(app, repository, authenticate);
-  await registerNotificationRoutes(app, repository, authenticate);
+  await registerNotificationRoutes(app, repository, authenticate, pushNotificationProvider);
   await registerOnboardingRoutes(app, repository, authenticate);
   await registerCameraRoutes(app, repository, authenticate);
   await registerEmergencyRoutes(app, repository, authenticate);
