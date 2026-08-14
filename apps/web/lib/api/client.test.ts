@@ -48,6 +48,24 @@ describe("apiRequest", () => {
     expect(error).toMatchObject({ code: "FORBIDDEN", status: 403, message: "Akses ditolak." });
   });
 
+  it("sends an object body as a single JSON-encoded object, not a stringified string", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: { ok: true }, meta: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiRequest("/health", testSchema, {
+      method: "POST",
+      body: { title: "hello" },
+    });
+
+    const sentBody = fetchMock.mock.calls[0][1].body;
+    expect(JSON.parse(sentBody)).toEqual({ title: "hello" });
+  });
+
   it("classifies a failed fetch as offline", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
 

@@ -48,6 +48,20 @@ export class PushNotificationProvider {
       notification: { title: payload.title, body: payload.body },
       data: payload.data,
     });
+
+    const staleTokens = response.responses.reduce<string[]>((acc, result, index) => {
+      const code = result.error?.code;
+      const isStale =
+        code === "messaging/registration-token-not-registered" ||
+        code === "messaging/invalid-registration-token";
+      if (isStale) acc.push(tokens[index]!);
+      return acc;
+    }, []);
+
+    if (staleTokens.length > 0) {
+      await this.prisma.pushToken.deleteMany({ where: { token: { in: staleTokens } } });
+    }
+
     return { successCount: response.successCount, failureCount: response.failureCount };
   }
 

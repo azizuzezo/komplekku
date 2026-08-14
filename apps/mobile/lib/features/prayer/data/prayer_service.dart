@@ -9,6 +9,10 @@ class Coordinates {
 
 const defaultCoordinates = Coordinates(-6.5204, 106.7725);
 
+double _fixAngle(double angle) => angle - 360 * (angle / 360).floor();
+
+double _fixHour(double hour) => hour - 24 * (hour / 24).floor();
+
 enum PrayerName { subuh, syuruq, dzuhur, ashar, maghrib, isya }
 
 const prayerLabels = {
@@ -60,17 +64,20 @@ Map<PrayerName, DateTime> calculatePrayerTimes({
 
   final d = jd - 2451545.0;
 
-  final g = 357.529 + 0.98560028 * d;
-  final q = 280.459 + 0.98564736 * d;
-  final l = q + 1.915 * sin(g * pi / 180) + 0.02 * sin(2 * g * pi / 180);
+  final g = _fixAngle(357.529 + 0.98560028 * d);
+  final q = _fixAngle(280.459 + 0.98564736 * d);
+  final l = _fixAngle(
+    q + 1.915 * sin(g * pi / 180) + 0.02 * sin(2 * g * pi / 180),
+  );
   final e = 23.439 - 0.00000036 * d;
 
-  final ra = (atan2(cos(e * pi / 180) * sin(l * pi / 180), cos(l * pi / 180)) *
-          180) /
-      pi;
-  final dec =
-      (asin(sin(e * pi / 180) * sin(l * pi / 180)) * 180) / pi;
-  final eqT = q / 15 - (((ra < 0 ? ra + 360 : ra) % 360) / 15);
+  final ra = _fixHour(
+    (atan2(cos(e * pi / 180) * sin(l * pi / 180), cos(l * pi / 180)) * 180) /
+        pi /
+        15,
+  );
+  final dec = (asin(sin(e * pi / 180) * sin(l * pi / 180)) * 180) / pi;
+  final eqT = q / 15 - ra;
 
   final timezone = dDate.timeZoneOffset.inMinutes / 60.0;
   const longitude = 106.7725;
@@ -95,14 +102,12 @@ Map<PrayerName, DateTime> calculatePrayerTimes({
   final syuruqHA = hourAngle(0.833);
 
   final asharAngle =
-      (atan(1 + tan((latRad - declRad).abs())) * 180) / pi;
-  final asharHA = hourAngle(90 - asharAngle);
+      -(atan(1 / (1 + tan((latRad - declRad).abs()))) * 180) / pi;
+  final asharHA = hourAngle(asharAngle);
 
   DateTime makeDate(double hoursFloat) {
     final totalMinutes = (hoursFloat * 60).round();
-    final hours = totalMinutes ~/ 60;
-    final minutes = totalMinutes % 60;
-    return DateTime(year, month, day, hours, minutes);
+    return DateTime(year, month, day).add(Duration(minutes: totalMinutes));
   }
 
   const ihtiyatiMinutes = 2 / 60;

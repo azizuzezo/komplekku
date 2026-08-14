@@ -33,6 +33,6 @@ export function createAnnouncement(
 ): Promise<AnnouncementDetailResponse> {
   return apiRequest("/announcements", announcementDetailResponseSchema, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: data,
   });
 }

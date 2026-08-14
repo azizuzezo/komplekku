@@ -43,6 +43,6 @@ export function createAgendaEvent(
 ): Promise<AgendaMutationResponse> {
   return apiRequest("/admin/agenda", agendaMutationResponseSchema, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: data,
   });
 }
