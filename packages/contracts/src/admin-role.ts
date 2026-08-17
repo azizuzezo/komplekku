@@ -24,6 +24,7 @@ export const communityMemberSchema = z.object({
   displayName: z.string().min(1),
   phoneMasked: z.string().min(1),
   houseCode: z.string().min(1).nullable(),
+  rtCode: z.string().min(1).nullable(),
   roles: z.array(roleSummarySchema),
 });
 
@@ -39,6 +40,7 @@ export type CommunityMemberListResponse = z.infer<typeof communityMemberListResp
 
 export const setMemberRoleInputSchema = z.object({
   roleCode: z.string().trim().min(1).max(64),
+  rtId: z.string().uuid().optional(),
 });
 
 export type SetMemberRoleInput = z.infer<typeof setMemberRoleInputSchema>;

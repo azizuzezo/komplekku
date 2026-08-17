@@ -67,4 +67,40 @@ class AgendaRepository {
       throw ApiException.malformedResponse();
     }
   }
+
+  Future<AgendaEvent> create({
+    required String title,
+    required String date,
+    required String startTime,
+    required String endTime,
+    required String location,
+    required String organizer,
+    required String description,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/admin/agenda',
+        data: {
+          'title': title,
+          'date': date,
+          'startTime': startTime,
+          'endTime': endTime,
+          'location': location,
+          'organizer': organizer,
+          'description': description,
+        },
+      );
+      final event = response.data?['data']?['event'];
+      if (event is! Map<String, dynamic>) {
+        throw ApiException.malformedResponse();
+      }
+      return AgendaEvent.fromJson(event);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
 }

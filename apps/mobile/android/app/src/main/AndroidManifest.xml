@@ -3,6 +3,13 @@
          talks to a plain-HTTP API, so cleartext traffic stays enabled until a
          real deployment target with TLS is configured. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Adzan/iqomah notifications must fire at an exact clock time even while the
+         device is idle, and must survive a reboot — see PrayerSchedulerService. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- image_picker's gallery flow uses the system Photo Picker and needs no
+         permission, but its "take photo" flow does not declare CAMERA itself. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="Komplekku"
         android:name="${applicationName}"
@@ -42,6 +49,22 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@mipmap/ic_launcher" />
+        <!-- flutter_local_notifications does not declare these in its own manifest,
+             so scheduled adzan/iqomah notifications would silently not survive a
+             reboot or replay their action buttons without registering them here. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

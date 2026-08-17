@@ -11,6 +11,7 @@ async function main() {
       name: "Billabong Blok F",
       address: "Billabong, Bogor",
       timezone: "Asia/Jakarta",
+      rwLabel: "RW 13",
       registrationOpen: true,
       deletedAt: null,
     },
@@ -19,6 +20,7 @@ async function main() {
       name: "Billabong Blok F",
       address: "Billabong, Bogor",
       timezone: "Asia/Jakarta",
+      rwLabel: "RW 13",
       registrationOpen: true,
     },
   });
@@ -43,14 +45,54 @@ async function main() {
 
   const { roles } = await seedRbac(prisma);
 
+  // Billabong Blok F has two RTs under one RW, matching the real neighborhood
+  // structure — the owner's actual RT numbers are RT 03 and RT 04. All the
+  // regular Blok F houses sit in RT 03 (kept together so the seeded admin
+  // fixture retains community-wide reach across the existing test suite);
+  // F2D2-17 sits in RT 04 to demonstrate a second, genuinely separate RT
+  // without disturbing that fixture's scope. Both remain editable by a
+  // super admin / Ketua RW via PATCH /admin/rts/:id (community.manage).
+  const billabongRt01 = await prisma.rt.upsert({
+    where: { communityId_code: { communityId: billabong.id, code: "RT 03" } },
+    update: { name: "RT 03", deletedAt: null },
+    create: { communityId: billabong.id, code: "RT 03", name: "RT 03" },
+  });
+  const billabongRt02 = await prisma.rt.upsert({
+    where: { communityId_code: { communityId: billabong.id, code: "RT 04" } },
+    update: { name: "RT 04", deletedAt: null },
+    create: { communityId: billabong.id, code: "RT 04", name: "RT 04" },
+  });
+  const tamanCendanaRt01 = await prisma.rt.upsert({
+    where: { communityId_code: { communityId: tamanCendana.id, code: "RT 01" } },
+    update: { name: "RT 01", deletedAt: null },
+    create: { communityId: tamanCendana.id, code: "RT 01", name: "RT 01" },
+  });
+
+  // Forum Warga channels aren't backfilled by a migration (no production data
+  // exists to migrate yet) — ensure one per RT plus one community-wide
+  // channel exists for every seeded community, mirroring what the API does
+  // automatically for RTs/communities created after this point.
+  async function ensureForumChannel(communityId: string, rtId: string | null, name: string) {
+    const existing = await prisma.forumChannel.findFirst({ where: { communityId, rtId } });
+    if (existing) return existing;
+    return prisma.forumChannel.create({ data: { communityId, rtId, name } });
+  }
+  await ensureForumChannel(billabong.id, null, "Forum Warga");
+  await ensureForumChannel(billabong.id, billabongRt01.id, billabongRt01.name);
+  await ensureForumChannel(billabong.id, billabongRt02.id, billabongRt02.name);
+  await ensureForumChannel(tamanCendana.id, null, "Forum Warga");
+  await ensureForumChannel(tamanCendana.id, tamanCendanaRt01.id, tamanCendanaRt01.name);
+
   const billabongHouses = new Map<string, string>();
   for (const number of ["01", "02", "03", "04", "05"]) {
     const code = `F${number}`;
+    const rtId = billabongRt01.id;
     const house = await prisma.house.upsert({
       where: { communityId_code: { communityId: billabong.id, code } },
       update: {
         block: "F",
         number,
+        rtId,
         occupancyStatus: number === "05" ? "VACANT" : "OWNER_OCCUPIED",
         deletedAt: null,
       },
@@ -59,6 +101,7 @@ async function main() {
         code,
         block: "F",
         number,
+        rtId,
         occupancyStatus: number === "05" ? "VACANT" : "OWNER_OCCUPIED",
       },
     });
@@ -69,12 +112,19 @@ async function main() {
   // plus a two-digit number (e.g. multi-block cluster names like "F2D2").
   const superAdminHouse = await prisma.house.upsert({
     where: { communityId_code: { communityId: billabong.id, code: "F2D2-17" } },
-    update: { block: "F2D2", number: "17", occupancyStatus: "OWNER_OCCUPIED", deletedAt: null },
+    update: {
+      block: "F2D2",
+      number: "17",
+      rtId: billabongRt02.id,
+      occupancyStatus: "OWNER_OCCUPIED",
+      deletedAt: null,
+    },
     create: {
       communityId: billabong.id,
       code: "F2D2-17",
       block: "F2D2",
       number: "17",
+      rtId: billabongRt02.id,
       occupancyStatus: "OWNER_OCCUPIED",
     },
   });
@@ -87,6 +137,7 @@ async function main() {
     update: {
       block: "C",
       number: "01",
+      rtId: tamanCendanaRt01.id,
       occupancyStatus: "OWNER_OCCUPIED",
       deletedAt: null,
     },
@@ -95,6 +146,7 @@ async function main() {
       code: "C01",
       block: "C",
       number: "01",
+      rtId: tamanCendanaRt01.id,
       occupancyStatus: "OWNER_OCCUPIED",
     },
   });
@@ -111,6 +163,7 @@ async function main() {
     fullName: string;
     roleCode: string;
     allowResidentContact?: boolean;
+    rtId?: string;
   }) {
     const household = await prisma.household.upsert({
       where: { houseId: input.houseId },
@@ -204,8 +257,13 @@ async function main() {
           roleId,
         },
       },
-      update: {},
-      create: { userId: user.id, communityId: input.communityId, roleId },
+      update: { rtId: input.rtId ?? null },
+      create: {
+        userId: user.id,
+        communityId: input.communityId,
+        roleId,
+        rtId: input.rtId ?? null,
+      },
     });
     return { household, resident, user };
   }
@@ -226,6 +284,7 @@ async function main() {
     phoneE164: "+6281200000002",
     fullName: "Rina Wulandari",
     roleCode: "RT_ADMIN",
+    rtId: billabongRt01.id,
   });
   const tamanCendanaAdmin = await seedApprovedUser({
     communityId: tamanCendana.id,
@@ -235,6 +294,7 @@ async function main() {
     fullName: "Dimas Cendana",
     roleCode: "RT_ADMIN",
     allowResidentContact: true,
+    rtId: tamanCendanaRt01.id,
   });
   const f03Id = billabongHouses.get("F03");
   if (!f03Id) throw new Error("Seed rumah F03 gagal dibuat.");

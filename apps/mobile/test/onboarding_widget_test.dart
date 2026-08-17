@@ -12,6 +12,13 @@ void main() {
     name: 'Billabong Blok F',
     slug: 'billabong-blok-f',
     timezone: 'Asia/Jakarta',
+    rts: [
+      RtOption(
+        id: '00000000-0000-4000-8000-000000000f01',
+        code: 'RT 01',
+        name: 'RT 01',
+      ),
+    ],
   );
 
   testWidgets('community selection exposes a real selectable option', (
@@ -42,6 +49,7 @@ void main() {
   testWidgets('residency request submits manual house data', (tester) async {
     _usePhoneViewport(tester);
     String? submittedName;
+    String? submittedRtId;
     String? submittedHouseCode;
     HouseholdRelationship? submittedRelationship;
     await tester.pumpWidget(
@@ -52,10 +60,12 @@ void main() {
           submissionError: null,
           onSubmit: ({
             required fullName,
+            required rtId,
             required houseCode,
             required relationship,
           }) async {
             submittedName = fullName;
+            submittedRtId = rtId;
             submittedHouseCode = houseCode;
             submittedRelationship = relationship;
           },
@@ -74,6 +84,11 @@ void main() {
       find.byKey(const ValueKey('resident-full-name')),
       'Ayu Pratama',
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('rt')));
+    await tester.tap(find.byKey(const ValueKey('rt')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('RT 01').last);
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('house-code')),
       'F01',
@@ -90,6 +105,7 @@ void main() {
     await tester.pump();
 
     expect(submittedName, 'Ayu Pratama');
+    expect(submittedRtId, '00000000-0000-4000-8000-000000000f01');
     expect(submittedHouseCode, 'F01');
     expect(submittedRelationship, HouseholdRelationship.tenant);
   });

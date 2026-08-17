@@ -8,6 +8,7 @@ import type {
   CreateAnnouncementInput,
   CreateCameraInput,
   CreateCashTransactionInput,
+  CreateCommunityInput,
   CreateDuesTypeInput,
   CreateFacilityBookingInput,
   CreateHouseInput,
@@ -16,6 +17,7 @@ import type {
   CreatePackageInput,
   CreatePaymentInput,
   CreateReportInput,
+  CreateRtInput,
   CreateVehicleInput,
   CreateVisitorInput,
   CreateWalkInVisitorInput,
@@ -24,12 +26,16 @@ import type {
   IncidentStatus,
   InvoiceStatus,
   LetterRequestStatus,
+  OnboardingCommunityOption,
   PaymentStatus,
   ReportStatus,
   UpdateAgendaEventInput,
   UpdateCameraInput,
+  UpdateCommunityInput,
+  UpdateHouseInput,
   UpdateIncidentInput,
   UpdateProfileInput,
+  UpdateRtInput,
   UpdateVehicleInput,
 } from "@komplekku/contracts";
 
@@ -50,18 +56,26 @@ import type {
   CashLedgerRecord,
   CashTransactionRecord,
   CollectPackageResult,
+  CommunityAdminRecord,
   CommunityMemberRecord,
+  CreateCommunityResult,
   CreateFacilityBookingResult,
   CreateHouseResult,
   CreateLetterRequestResult,
   CreatePackageResult,
   CreatePaymentResult,
+  CreateForumMessageResult,
   CreateReportResult,
   CreateResidencyRequestResult,
+  CreateRtResult,
   CreateVisitorResult,
   CurrentCommunityRecord,
   CurrentHouseholdRecord,
+  CursorPageResult,
+  DeleteForumMessageResult,
   DirectoryRecord,
+  ForumChannelRecord,
+  ForumMessageRecord,
   DuesTypeRecord,
   EmergencyRecord,
   EmergencyTransitionResult,
@@ -86,17 +100,22 @@ import type {
   PaymentTransitionResult,
   RemoveHouseholdMemberResult,
   ReportRecord,
+  RequestAuditContext,
   ResidencyRequestRecord,
   ReviewResidencyRequestResult,
   RoleSummary,
+  RtRecord,
   ScanCheckpointResult,
   SecurityDashboardRecord,
   SecurityShiftRecord,
   SessionCreationResult,
   SetMemberRoleResult,
   StreamTicketResult,
+  UpdateCommunityResult,
+  UpdateHouseResult,
   UpdateIncidentResult,
   UpdateProfileResult,
+  UpdateRtResult,
   VehicleMutationResult,
   VehicleRecord,
   VehicleSearchRecord,
@@ -105,6 +124,7 @@ import type {
   WaiveInvoiceResult,
 } from "../domain/repository";
 import { formatVehiclePlate, normalizeVehiclePlate } from "../lib/security";
+import { computeRtScopeId } from "../lib/rt-scope";
 
 function mapOtp(record: {
   id: string;
@@ -411,6 +431,10 @@ export class PrismaRepository implements AppRepository {
       currentCommunityId: session.currentCommunityId,
       currentHouseholdId: session.currentHouseholdId,
       permissions,
+      rtScopeId: computeRtScopeId(userRoles.map((userRole) => ({
+        roleCode: userRole.role.code,
+        rtId: userRole.rtId,
+      }))),
     };
   }
 
@@ -559,9 +583,245 @@ export class PrismaRepository implements AppRepository {
         slug: true,
         timezone: true,
         address: true,
+        rwLabel: true,
         contactPhone: true,
         emergencyContactPhone: true,
       },
+    });
+  }
+
+  async updateCommunity(input: {
+    auth: AuthSessionRecord;
+    changes: UpdateCommunityInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateCommunityResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.community.findFirst({
+      where: { id: communityId, deletedAt: null },
+    });
+    if (!existing) return { outcome: "NOT_FOUND" };
+
+    const community = await this.prisma.community.update({
+      where: { id: communityId },
+      data: {
+        name: input.changes.name,
+        address: input.changes.address,
+        rwLabel: input.changes.rwLabel,
+        contactPhone: input.changes.contactPhone,
+        emergencyContactPhone: input.changes.emergencyContactPhone,
+        registrationOpen: input.changes.registrationOpen,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        communityId,
+        actorUserId: input.auth.userId,
+        sessionId: input.auth.sessionId,
+        action: "community.updated",
+        entityType: "Community",
+        entityId: communityId,
+        ipAddress: input.audit.ipAddress,
+        userAgent: input.audit.userAgent,
+        createdAt: input.now,
+      },
+    });
+
+    return {
+      outcome: "OK",
+      community: {
+        id: community.id,
+        slug: community.slug,
+        name: community.name,
+        address: community.address,
+        rwLabel: community.rwLabel,
+        timezone: community.timezone,
+        registrationOpen: community.registrationOpen,
+      },
+    };
+  }
+
+  async createCommunity(input: {
+    auth: AuthSessionRecord;
+    community: CreateCommunityInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateCommunityResult> {
+    return this.prisma.$transaction(async (transaction) => {
+      const conflict = await transaction.community.findUnique({
+        where: { slug: input.community.slug },
+      });
+      if (conflict) return { outcome: "SLUG_CONFLICT" as const };
+
+      const community = await transaction.community.create({
+        data: {
+          slug: input.community.slug,
+          name: input.community.name,
+          address: input.community.address ?? null,
+          rwLabel: input.community.rwLabel ?? null,
+          timezone: input.community.timezone,
+        },
+      });
+      // Every community gets one community-wide Forum Warga channel
+      // automatically (rtId null), alongside a per-RT channel created
+      // whenever an RT is added.
+      await transaction.forumChannel.create({
+        data: { communityId: community.id, rtId: null, name: "Forum Warga" },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          communityId: community.id,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "community.created",
+          entityType: "Community",
+          entityId: community.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return {
+        outcome: "OK" as const,
+        community: {
+          id: community.id,
+          slug: community.slug,
+          name: community.name,
+          address: community.address,
+          rwLabel: community.rwLabel,
+          timezone: community.timezone,
+          registrationOpen: community.registrationOpen,
+        },
+      };
+    });
+  }
+
+  async listCommunitiesForPlatformAdmin(): Promise<CommunityAdminRecord[]> {
+    const communities = await this.prisma.community.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: "asc" },
+    });
+    return communities.map((community) => ({
+      id: community.id,
+      slug: community.slug,
+      name: community.name,
+      address: community.address,
+      rwLabel: community.rwLabel,
+      timezone: community.timezone,
+      registrationOpen: community.registrationOpen,
+    }));
+  }
+
+  async listRts(auth: AuthSessionRecord): Promise<RtRecord[]> {
+    if (!auth.currentCommunityId) return [];
+    const rts = await this.prisma.rt.findMany({
+      where: { communityId: auth.currentCommunityId, deletedAt: null },
+      orderBy: { code: "asc" },
+    });
+    return rts.map((rt) => ({ id: rt.id, code: rt.code, name: rt.name }));
+  }
+
+  async createRt(input: {
+    auth: AuthSessionRecord;
+    rt: CreateRtInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateRtResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CODE_CONFLICT" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const conflict = await transaction.rt.findFirst({
+        where: { communityId, code: input.rt.code, deletedAt: null },
+      });
+      if (conflict) return { outcome: "CODE_CONFLICT" as const };
+
+      const rt = await transaction.rt.create({
+        data: { communityId, code: input.rt.code, name: input.rt.name },
+      });
+      // Every RT gets its own Forum Warga channel automatically — residents
+      // never create channels themselves.
+      await transaction.forumChannel.create({
+        data: { communityId, rtId: rt.id, name: rt.name },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "rt.created",
+          entityType: "Rt",
+          entityId: rt.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return { outcome: "OK" as const, rt: { id: rt.id, code: rt.code, name: rt.name } };
+    });
+  }
+
+  async updateRt(input: {
+    auth: AuthSessionRecord;
+    rtId: string;
+    changes: UpdateRtInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateRtResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.rt.findFirst({
+        where: { id: input.rtId, communityId, deletedAt: null },
+      });
+      if (!existing) return { outcome: "NOT_FOUND" as const };
+
+      if (input.changes.code) {
+        const conflict = await transaction.rt.findFirst({
+          where: {
+            communityId,
+            code: input.changes.code,
+            deletedAt: null,
+            id: { not: input.rtId },
+          },
+        });
+        if (conflict) return { outcome: "CODE_CONFLICT" as const };
+      }
+
+      const rt = await transaction.rt.update({
+        where: { id: input.rtId },
+        data: { code: input.changes.code, name: input.changes.name },
+      });
+      if (input.changes.name) {
+        await transaction.forumChannel.updateMany({
+          where: { communityId, rtId: rt.id },
+          data: { name: rt.name },
+        });
+      }
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "rt.updated",
+          entityType: "Rt",
+          entityId: rt.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return { outcome: "OK" as const, rt: { id: rt.id, code: rt.code, name: rt.name } };
     });
   }
 
@@ -895,12 +1155,29 @@ export class PrismaRepository implements AppRepository {
     });
   }
 
-  async listRegistrationCommunities() {
-    return this.prisma.community.findMany({
+  async listRegistrationCommunities(): Promise<OnboardingCommunityOption[]> {
+    const communities = await this.prisma.community.findMany({
       where: { registrationOpen: true, deletedAt: null },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, slug: true, timezone: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        timezone: true,
+        rts: {
+          where: { deletedAt: null },
+          orderBy: { code: "asc" },
+          select: { id: true, code: true, name: true },
+        },
+      },
     });
+    return communities.map((community) => ({
+      id: community.id,
+      name: community.name,
+      slug: community.slug,
+      timezone: community.timezone,
+      rts: community.rts,
+    }));
   }
 
   async listRoles(): Promise<RoleSummary[]> {
@@ -913,12 +1190,22 @@ export class PrismaRepository implements AppRepository {
     if (!communityId) return [];
 
     const residents = await this.prisma.resident.findMany({
-      where: { communityId, status: "ACTIVE" },
+      where: {
+        communityId,
+        status: "ACTIVE",
+        ...(auth.rtScopeId
+          ? {
+              householdMemberships: {
+                some: { endedAt: null, household: { house: { rtId: auth.rtScopeId } } },
+              },
+            }
+          : {}),
+      },
       include: {
         user: true,
         householdMemberships: {
           where: { endedAt: null },
-          include: { household: { include: { house: true } } },
+          include: { household: { include: { house: { include: { rt: true } } } } },
           take: 1,
         },
       },
@@ -942,6 +1229,7 @@ export class PrismaRepository implements AppRepository {
       displayName: resident.user.displayName ?? resident.fullName,
       phoneE164: resident.user.phoneE164,
       houseCode: resident.householdMemberships[0]?.household.house.code ?? null,
+      rtCode: resident.householdMemberships[0]?.household.house.rt?.code ?? null,
       roles: rolesByUser.get(resident.userId) ?? [],
     }));
   }
@@ -950,15 +1238,42 @@ export class PrismaRepository implements AppRepository {
     auth: AuthSessionRecord;
     residentId: string;
     roleCode: string;
+    rtId?: string | null;
     now: Date;
     audit: { ipAddress: string | null; userAgent: string | null };
   }): Promise<SetMemberRoleResult> {
     const communityId = input.auth.currentCommunityId;
     if (!communityId) return { outcome: "NOT_FOUND" };
 
+    // An RT-scoped admin (Ketua RT) can never grant SUPER_ADMIN/COMMUNITY_ADMIN
+    // (that would be self-escalation), and any RT_ADMIN they grant is forced
+    // into their own RT — they have no visibility into any other RT to grant
+    // scope over it in the first place.
+    if (input.auth.rtScopeId) {
+      if (input.roleCode === "SUPER_ADMIN" || input.roleCode === "COMMUNITY_ADMIN") {
+        return { outcome: "FORBIDDEN" };
+      }
+    }
+    const effectiveRtId =
+      input.roleCode === "RT_ADMIN" ? (input.auth.rtScopeId ?? input.rtId ?? null) : null;
+    if (input.roleCode === "RT_ADMIN" && !effectiveRtId) {
+      return { outcome: "RT_REQUIRED" };
+    }
+
     return this.prisma.$transaction(async (transaction) => {
       const resident = await transaction.resident.findFirst({
-        where: { id: input.residentId, communityId, status: "ACTIVE" },
+        where: {
+          id: input.residentId,
+          communityId,
+          status: "ACTIVE",
+          ...(input.auth.rtScopeId
+            ? {
+                householdMemberships: {
+                  some: { endedAt: null, household: { house: { rtId: input.auth.rtScopeId } } },
+                },
+              }
+            : {}),
+        },
       });
       if (!resident) return { outcome: "NOT_FOUND" as const };
       if (resident.userId === input.auth.userId) {
@@ -968,9 +1283,16 @@ export class PrismaRepository implements AppRepository {
       const role = await transaction.role.findUnique({ where: { code: input.roleCode } });
       if (!role) return { outcome: "ROLE_NOT_FOUND" as const };
 
+      if (effectiveRtId) {
+        const rt = await transaction.rt.findFirst({
+          where: { id: effectiveRtId, communityId, deletedAt: null },
+        });
+        if (!rt) return { outcome: "RT_NOT_FOUND" as const };
+      }
+
       await transaction.userRole.deleteMany({ where: { userId: resident.userId, communityId } });
       await transaction.userRole.create({
-        data: { userId: resident.userId, communityId, roleId: role.id },
+        data: { userId: resident.userId, communityId, roleId: role.id, rtId: effectiveRtId },
       });
 
       await transaction.auditLog.create({
@@ -999,6 +1321,7 @@ export class PrismaRepository implements AppRepository {
   async createResidencyRequest(input: {
     auth: AuthSessionRecord;
     communityId: string;
+    rtId: string;
     houseCode: string;
     fullName: string;
     relationship: HouseholdRelationship;
@@ -1037,7 +1360,10 @@ export class PrismaRepository implements AppRepository {
           deletedAt: null,
         },
       });
-      if (!house) return { outcome: "HOUSE_NOT_FOUND" };
+      // A mismatched RT is reported identically to a missing house — the
+      // onboarding flow deliberately never confirms which houses exist per
+      // RT, to avoid letting a resident enumerate the neighborhood roster.
+      if (!house || house.rtId !== input.rtId) return { outcome: "HOUSE_NOT_FOUND" };
 
       const user = await transaction.user.update({
         where: { id: input.auth.userId },
@@ -1120,6 +1446,7 @@ export class PrismaRepository implements AppRepository {
       communityId: auth.currentCommunityId,
       status: "PENDING",
       requestedHouseId: { not: null },
+      ...(auth.rtScopeId ? { requestedHouse: { rtId: auth.rtScopeId } } : {}),
     };
     const [requests, total] = await this.prisma.$transaction([
       this.prisma.resident.findMany({
@@ -1178,6 +1505,9 @@ export class PrismaRepository implements AppRepository {
         where: {
           id: input.requestId,
           communityId: input.auth.currentCommunityId ?? undefined,
+          ...(input.auth.rtScopeId
+            ? { requestedHouse: { rtId: input.auth.rtScopeId } }
+            : {}),
         },
         include: { requestedHouse: true },
       });
@@ -1336,6 +1666,9 @@ export class PrismaRepository implements AppRepository {
         where: {
           id: input.requestId,
           communityId: input.auth.currentCommunityId ?? undefined,
+          ...(input.auth.rtScopeId
+            ? { requestedHouse: { rtId: input.auth.rtScopeId } }
+            : {}),
         },
       });
       if (!request) return { outcome: "NOT_FOUND" };
@@ -4597,15 +4930,19 @@ export class PrismaRepository implements AppRepository {
     code: string;
     block: string;
     number: string;
+    rtId: string | null;
     occupancyStatus: HouseRecord["occupancyStatus"];
     createdAt: Date;
     household: { id: string } | null;
+    rt: { code: string } | null;
   }): HouseRecord {
     return {
       id: house.id,
       code: house.code,
       block: house.block,
       number: house.number,
+      rtId: house.rtId,
+      rtCode: house.rt?.code ?? null,
       occupancyStatus: house.occupancyStatus,
       addressLabel: addressLabel(house.block, house.number),
       hasHousehold: house.household !== null,
@@ -4616,8 +4953,12 @@ export class PrismaRepository implements AppRepository {
   async listHouses(auth: AuthSessionRecord): Promise<HouseRecord[]> {
     if (!auth.currentCommunityId) return [];
     const houses = await this.prisma.house.findMany({
-      where: { communityId: auth.currentCommunityId, deletedAt: null },
-      include: { household: { select: { id: true } } },
+      where: {
+        communityId: auth.currentCommunityId,
+        deletedAt: null,
+        ...(auth.rtScopeId ? { rtId: auth.rtScopeId } : {}),
+      },
+      include: { household: { select: { id: true } }, rt: { select: { code: true } } },
       orderBy: [{ block: "asc" }, { number: "asc" }],
     });
     return houses.map((house) => this.mapHouse(house));
@@ -4633,6 +4974,16 @@ export class PrismaRepository implements AppRepository {
       throw new Error("Community context is required to create a house.");
     }
     const communityId = input.auth.currentCommunityId;
+    // An RT-scoped admin (Ketua RT) can only ever create houses inside their
+    // own RT — silently correcting the target RT here, rather than trusting
+    // a client-supplied rtId, is what actually enforces that scope.
+    const rtId = input.auth.rtScopeId ?? input.house.rtId;
+
+    const rt = await this.prisma.rt.findFirst({
+      where: { id: rtId, communityId, deletedAt: null },
+    });
+    if (!rt) return { outcome: "RT_NOT_FOUND" };
+
     const existing = await this.prisma.house.findFirst({
       where: { communityId, code: input.house.code },
     });
@@ -4640,12 +4991,13 @@ export class PrismaRepository implements AppRepository {
     const house = await this.prisma.house.create({
       data: {
         communityId,
+        rtId,
         code: input.house.code,
         block: input.house.block,
         number: input.house.number,
         occupancyStatus: input.house.occupancyStatus,
       },
-      include: { household: { select: { id: true } } },
+      include: { household: { select: { id: true } }, rt: { select: { code: true } } },
     });
     await this.recordAudit({
       communityId,
@@ -4658,6 +5010,295 @@ export class PrismaRepository implements AppRepository {
       metadata: { code: house.code },
     });
     return { outcome: "OK", house: this.mapHouse(house) };
+  }
+
+  async updateHouse(input: {
+    auth: AuthSessionRecord;
+    houseId: string;
+    changes: UpdateHouseInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateHouseResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.house.findFirst({
+        where: {
+          id: input.houseId,
+          communityId,
+          deletedAt: null,
+          ...(input.auth.rtScopeId ? { rtId: input.auth.rtScopeId } : {}),
+        },
+      });
+      if (!existing) return { outcome: "NOT_FOUND" as const };
+
+      // An RT-scoped admin may only reassign a house within their own RT.
+      const nextRtId = input.auth.rtScopeId ?? input.changes.rtId;
+      if (nextRtId) {
+        const rt = await transaction.rt.findFirst({
+          where: { id: nextRtId, communityId, deletedAt: null },
+        });
+        if (!rt) return { outcome: "RT_NOT_FOUND" as const };
+      }
+
+      const house = await transaction.house.update({
+        where: { id: input.houseId },
+        data: {
+          block: input.changes.block,
+          number: input.changes.number,
+          rtId: nextRtId,
+          occupancyStatus: input.changes.occupancyStatus,
+        },
+        include: { household: { select: { id: true } }, rt: { select: { code: true } } },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "house.updated",
+          entityType: "House",
+          entityId: house.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return { outcome: "OK" as const, house: this.mapHouse(house) };
+    });
+  }
+
+  /** RT of the viewer's own household, distinct from rtScopeId (which is only
+   * about admin authority, not personal membership) — used to decide which
+   * RT-scoped forum channel a plain resident may read/post in. */
+  private async viewerHouseRtId(auth: AuthSessionRecord): Promise<string | null> {
+    if (!auth.currentHouseholdId) return null;
+    const household = await this.prisma.household.findUnique({
+      where: { id: auth.currentHouseholdId },
+      select: { house: { select: { rtId: true } } },
+    });
+    return household?.house.rtId ?? null;
+  }
+
+  private mapForumMessage(message: {
+    id: string;
+    channelId: string;
+    authorUserId: string;
+    body: string;
+    imageUrls: string[];
+    createdAt: Date;
+    author: { displayName: string | null; phoneE164: string };
+  }): ForumMessageRecord {
+    return {
+      id: message.id,
+      channelId: message.channelId,
+      authorUserId: message.authorUserId,
+      authorName: displayNameOf(message.author),
+      body: message.body,
+      imageUrls: message.imageUrls,
+      createdAt: message.createdAt,
+    };
+  }
+
+  async listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return [];
+
+    const canSeeAllChannels = auth.permissions.includes("community.manage");
+    const viewerRtId = canSeeAllChannels ? null : await this.viewerHouseRtId(auth);
+    const allowedRtIds = new Set([auth.rtScopeId, viewerRtId].filter((id): id is string => !!id));
+
+    const channels = await this.prisma.forumChannel.findMany({
+      where: {
+        communityId,
+        ...(canSeeAllChannels
+          ? {}
+          : { OR: [{ rtId: null }, { rtId: { in: [...allowedRtIds] } }] }),
+      },
+      orderBy: [{ rtId: "asc" }, { name: "asc" }],
+    });
+    return channels.map((channel) => ({ id: channel.id, rtId: channel.rtId, name: channel.name }));
+  }
+
+  private async canAccessForumChannel(
+    auth: AuthSessionRecord,
+    channel: { rtId: string | null },
+  ): Promise<boolean> {
+    if (channel.rtId === null) return true;
+    if (auth.permissions.includes("community.manage")) return true;
+    if (auth.rtScopeId === channel.rtId) return true;
+    return (await this.viewerHouseRtId(auth)) === channel.rtId;
+  }
+
+  async listForumMessages(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    cursor?: string;
+    limit: number;
+  }): Promise<CursorPageResult<ForumMessageRecord>> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "OK", items: [], total: 0, nextCursor: null };
+
+    const channel = await this.prisma.forumChannel.findFirst({
+      where: { id: input.channelId, communityId },
+    });
+    if (!channel || !(await this.canAccessForumChannel(input.auth, channel))) {
+      return { outcome: "OK", items: [], total: 0, nextCursor: null };
+    }
+
+    const where: Prisma.ForumMessageWhereInput = {
+      communityId,
+      channelId: input.channelId,
+      deletedAt: null,
+    };
+    if (input.cursor) {
+      const visibleCursor = await this.prisma.forumMessage.findFirst({
+        where: { ...where, id: input.cursor },
+        select: { id: true },
+      });
+      if (!visibleCursor) return { outcome: "INVALID_CURSOR" };
+    }
+    const [messages, total] = await this.prisma.$transaction([
+      this.prisma.forumMessage.findMany({
+        where,
+        include: { author: true },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: input.limit + 1,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      }),
+      this.prisma.forumMessage.count({ where }),
+    ]);
+    const hasMore = messages.length > input.limit;
+    const page = hasMore ? messages.slice(0, input.limit) : messages;
+    return {
+      outcome: "OK",
+      items: page.map((message) => this.mapForumMessage(message)),
+      total,
+      nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
+    };
+  }
+
+  async createForumMessage(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    body: string;
+    imageUrls: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateForumMessageResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const channel = await this.prisma.forumChannel.findFirst({
+      where: { id: input.channelId, communityId },
+    });
+    if (!channel || !(await this.canAccessForumChannel(input.auth, channel))) {
+      return { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    const message = await this.prisma.forumMessage.create({
+      data: {
+        communityId,
+        channelId: channel.id,
+        authorUserId: input.auth.userId,
+        body: input.body,
+        imageUrls: input.imageUrls,
+      },
+      include: { author: true },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      action: "forum.message.created",
+      entityType: "ForumMessage",
+      entityId: message.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    // Recipients: everyone who can access this channel, excluding the author.
+    // Community-wide channels notify the whole community; RT channels notify
+    // only residents whose household's house sits in that RT.
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        id: { not: input.auth.userId },
+        residents: {
+          some: {
+            communityId,
+            status: "ACTIVE",
+            ...(channel.rtId
+              ? {
+                  householdMemberships: {
+                    some: { endedAt: null, household: { house: { rtId: channel.rtId } } },
+                  },
+                }
+              : {}),
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    return {
+      outcome: "OK",
+      message: this.mapForumMessage(message),
+      recipientUserIds: recipients.map((user) => user.id),
+    };
+  }
+
+  async deleteForumMessage(input: {
+    auth: AuthSessionRecord;
+    messageId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<DeleteForumMessageResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const message = await transaction.forumMessage.findFirst({
+        where: { id: input.messageId, communityId, deletedAt: null },
+        include: { channel: true },
+      });
+      if (!message) return { outcome: "NOT_FOUND" as const };
+
+      const isOwnMessage = message.authorUserId === input.auth.userId;
+      const canModerate = input.auth.permissions.includes("forum.manage");
+      if (!isOwnMessage && !canModerate) return { outcome: "NOT_FOUND" as const };
+      if (
+        canModerate &&
+        !isOwnMessage &&
+        input.auth.rtScopeId &&
+        message.channel.rtId !== input.auth.rtScopeId
+      ) {
+        return { outcome: "NOT_FOUND" as const };
+      }
+
+      await transaction.forumMessage.update({
+        where: { id: message.id },
+        data: { deletedAt: input.now },
+      });
+
+      await transaction.auditLog.create({
+        data: {
+          communityId,
+          actorUserId: input.auth.userId,
+          sessionId: input.auth.sessionId,
+          action: "forum.message.deleted",
+          entityType: "ForumMessage",
+          entityId: message.id,
+          ipAddress: input.audit.ipAddress,
+          userAgent: input.audit.userAgent,
+          createdAt: input.now,
+        },
+      });
+
+      return { outcome: "DELETED" as const, messageId: message.id, channelId: message.channelId };
+    });
   }
 
   async updateProfile(input: {

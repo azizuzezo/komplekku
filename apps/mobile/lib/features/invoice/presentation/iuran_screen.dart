@@ -178,7 +178,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       InvoiceStatus.paid => KomplekkuColors.success,
-      InvoiceStatus.pendingVerification => KomplekkuColors.terracotta,
+      InvoiceStatus.pendingVerification => KomplekkuColors.accent,
       InvoiceStatus.overdue => KomplekkuColors.danger,
       InvoiceStatus.waived || InvoiceStatus.unpaid => KomplekkuColors.textSecondary,
     };
@@ -432,7 +432,7 @@ class _PaymentStatusChip extends StatelessWidget {
     final color = switch (status) {
       PaymentStatus.verified => KomplekkuColors.success,
       PaymentStatus.rejected => KomplekkuColors.danger,
-      PaymentStatus.pending => KomplekkuColors.terracotta,
+      PaymentStatus.pending => KomplekkuColors.accent,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

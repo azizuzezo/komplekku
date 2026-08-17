@@ -96,4 +96,23 @@ export class PushNotificationProvider {
     const tokenStrings = tokens.map((t) => t.token);
     return this.sendToTokens(tokenStrings, payload);
   }
+
+  /**
+   * Send push notification to several users at once, across all of their
+   * registered devices (one query instead of one per recipient).
+   */
+  async sendToUsers(
+    userIds: string[],
+    payload: PushNotificationPayload,
+  ): Promise<{ successCount: number; failureCount: number }> {
+    if (userIds.length === 0) return { successCount: 0, failureCount: 0 };
+
+    const tokens = await this.prisma.pushToken.findMany({
+      where: { userId: { in: userIds } },
+      select: { token: true },
+    });
+
+    const tokenStrings = tokens.map((t) => t.token);
+    return this.sendToTokens(tokenStrings, payload);
+  }
 }

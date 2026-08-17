@@ -15,6 +15,8 @@ export const roleDefinitions = [
 export const permissionDefinitions = [
   ["home.read", "Melihat beranda sesuai konteks"],
   ["community.read", "Melihat informasi komunitas"],
+  ["community.manage", "Mengelola struktur komunitas, RT, dan RW"],
+  ["platform.community.create", "Membuat komunitas baru di platform"],
   ["household.read", "Melihat rumah tangga sendiri"],
   ["household.manage", "Menambah dan menghapus anggota rumah tangga sendiri"],
   ["announcement.read", "Membaca pengumuman"],
@@ -61,12 +63,33 @@ export const permissionDefinitions = [
   ["cash.manage", "Mencatat transaksi kas lingkungan"],
   ["finance.dashboard.read", "Melihat dasbor ringkas keuangan"],
   ["admin.audit.read", "Membaca audit log"],
+  ["forum.read", "Membaca pesan Forum Warga"],
+  ["forum.post", "Mengirim pesan dan lampiran di Forum Warga"],
+  ["forum.manage", "Menghapus pesan warga lain di Forum Warga"],
 ] as const;
 
+const allPermissionKeys = permissionDefinitions.map(([key]) => key);
+
+// COMMUNITY_ADMIN (Ketua RW) manages everything within their own community,
+// including its RT/RW structure, but — unlike SUPER_ADMIN — cannot create a
+// brand-new community on the platform.
+const communityAdminPermissionKeys = allPermissionKeys.filter(
+  (key) => key !== "platform.community.create",
+);
+
+// RT_ADMIN (Ketua RT) has the same operational breadth as Ketua RW within
+// their own RT (enforced by rtScopeId in the auth session, not here), but
+// must not be able to rename the RW or create/edit RTs — that was the actual
+// bug this permission set fixes (RT_ADMIN previously had SUPER_ADMIN-level
+// access with no scoping at all).
+const rtAdminPermissionKeys = communityAdminPermissionKeys.filter(
+  (key) => key !== "community.manage",
+);
+
 export const rolePermissionKeys: Record<string, readonly string[]> = {
-  SUPER_ADMIN: permissionDefinitions.map(([key]) => key),
-  COMMUNITY_ADMIN: permissionDefinitions.map(([key]) => key),
-  RT_ADMIN: permissionDefinitions.map(([key]) => key),
+  SUPER_ADMIN: allPermissionKeys,
+  COMMUNITY_ADMIN: communityAdminPermissionKeys,
+  RT_ADMIN: rtAdminPermissionKeys,
   SEKRETARIS: [
     "home.read",
     "community.read",
@@ -83,6 +106,9 @@ export const rolePermissionKeys: Record<string, readonly string[]> = {
     "report.read",
     "facility.read",
     "admin.audit.read",
+    "forum.read",
+    "forum.post",
+    "forum.manage",
   ],
   TREASURER: [
     "home.read",
@@ -100,6 +126,8 @@ export const rolePermissionKeys: Record<string, readonly string[]> = {
     "cash.read",
     "cash.manage",
     "finance.dashboard.read",
+    "forum.read",
+    "forum.post",
   ],
   SECURITY: [
     "community.read",
@@ -146,6 +174,8 @@ export const rolePermissionKeys: Record<string, readonly string[]> = {
     "invoice.read",
     "payment.create",
     "cash.read",
+    "forum.read",
+    "forum.post",
   ],
   HOUSEHOLD_MEMBER: [
     "home.read",
@@ -171,6 +201,8 @@ export const rolePermissionKeys: Record<string, readonly string[]> = {
     "invoice.read",
     "payment.create",
     "cash.read",
+    "forum.read",
+    "forum.post",
   ],
   STAFF: [
     "community.read",

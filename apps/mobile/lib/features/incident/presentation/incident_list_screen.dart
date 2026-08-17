@@ -305,7 +305,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       IncidentStatus.open => KomplekkuColors.danger,
-      IncidentStatus.inReview => KomplekkuColors.terracotta,
+      IncidentStatus.inReview => KomplekkuColors.accent,
       IncidentStatus.resolved => KomplekkuColors.success,
       IncidentStatus.closed => KomplekkuColors.textSecondary,
     };

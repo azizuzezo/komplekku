@@ -213,7 +213,7 @@ class _StatusBadge extends StatelessWidget {
       case InvoiceStatus.paid:
         return KomplekkuColors.success;
       case InvoiceStatus.pendingVerification:
-        return KomplekkuColors.terracotta;
+        return KomplekkuColors.accent;
       case InvoiceStatus.overdue:
         return KomplekkuColors.danger;
       case InvoiceStatus.waived:

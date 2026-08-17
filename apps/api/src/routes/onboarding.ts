@@ -72,6 +72,7 @@ export async function registerOnboardingRoutes(
       const result = await repository.createResidencyRequest({
         auth,
         communityId: input.communityId,
+        rtId: input.rtId,
         houseCode: input.houseCode,
         fullName: input.fullName,
         relationship: input.relationship,

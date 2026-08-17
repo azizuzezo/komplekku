@@ -187,6 +187,7 @@ model Community {
   name                  String             @db.VarChar(160)
   address               String?            @db.Text
   timezone              String             @default("Asia/Jakarta") @db.VarChar(64)
+  rwLabel               String?            @map("rw_label") @db.VarChar(60)
   contactPhone          String?            @map("contact_phone") @db.VarChar(24)
   emergencyContactPhone String?            @map("emergency_contact_phone") @db.VarChar(24)
   registrationOpen      Boolean            @default(true) @map("registration_open")
@@ -195,6 +196,7 @@ model Community {
   deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(3)
   sessions              Session[]          @relation("CurrentCommunity")
   userRoles             UserRole[]
+  rts                   Rt[]
   houses                House[]
   households            Household[]
   householdMembers      HouseholdMember[]
@@ -225,6 +227,8 @@ model Community {
   cashTransactions      CashTransaction[]
   pushTokens            PushToken[]
   auditLogs             AuditLog[]
+  forumChannels         ForumChannel[]
+  forumMessages         ForumMessage[]
 
   @@map("communities")
 }
@@ -270,6 +274,7 @@ model User {
   recordedCashTransactions CashTransaction[]  @relation("CashTransactionRecorder")
   pushTokens               PushToken[]
   auditLogs                AuditLog[]         @relation("AuditActor")
+  forumMessages            ForumMessage[]     @relation("ForumMessageAuthor")
 
   @@map("users")
 }
@@ -348,19 +353,74 @@ model UserRole {
   userId      String    @map("user_id") @db.Uuid
   communityId String    @map("community_id") @db.Uuid
   roleId      String    @map("role_id") @db.Uuid
+  rtId        String?   @map("rt_id") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   community   Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
   role        Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  rt          Rt?       @relation(fields: [rtId, communityId], references: [id, communityId], onDelete: Restrict)
 
   @@unique([userId, communityId, roleId])
   @@index([communityId, roleId])
   @@map("user_roles")
 }
 
+model Rt {
+  id            String         @id @default(uuid()) @db.Uuid
+  communityId   String         @map("community_id") @db.Uuid
+  code          String         @db.VarChar(16)
+  name          String         @db.VarChar(120)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  community     Community      @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  houses        House[]
+  userRoles     UserRole[]
+  forumChannels ForumChannel[]
+
+  @@unique([communityId, code])
+  @@unique([id, communityId])
+  @@index([communityId, deletedAt])
+  @@map("rts")
+}
+
+model ForumChannel {
+  id          String         @id @default(uuid()) @db.Uuid
+  communityId String         @map("community_id") @db.Uuid
+  rtId        String?        @map("rt_id") @db.Uuid
+  name        String         @db.VarChar(160)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  community   Community      @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  rt          Rt?            @relation(fields: [rtId, communityId], references: [id, communityId], onDelete: Restrict)
+  messages    ForumMessage[]
+
+  @@unique([id, communityId])
+  @@index([communityId, rtId])
+  @@map("forum_channels")
+}
+
+model ForumMessage {
+  id           String       @id @default(uuid()) @db.Uuid
+  communityId  String       @map("community_id") @db.Uuid
+  channelId    String       @map("channel_id") @db.Uuid
+  authorUserId String       @map("author_user_id") @db.Uuid
+  body         String       @db.Text
+  imageUrls    String[]     @default([]) @map("image_urls")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  community    Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  channel      ForumChannel @relation(fields: [channelId, communityId], references: [id, communityId], onDelete: Restrict)
+  author       User         @relation("ForumMessageAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, communityId])
+  @@index([communityId, channelId, createdAt])
+  @@map("forum_messages")
+}
+
 model House {
   id                 String          @id @default(uuid()) @db.Uuid
   communityId        String          @map("community_id") @db.Uuid
+  rtId               String?         @map("rt_id") @db.Uuid
   code               String          @db.VarChar(24)
   block              String          @db.VarChar(16)
   number             String          @db.VarChar(16)
@@ -369,12 +429,14 @@ model House {
   updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt          DateTime?       @map("deleted_at") @db.Timestamptz(3)
   community          Community       @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  rt                 Rt?             @relation(fields: [rtId, communityId], references: [id, communityId], onDelete: Restrict)
   household          Household?
   requestedResidents Resident[]      @relation("RequestedHouse")
 
   @@unique([communityId, code])
   @@unique([id, communityId])
   @@index([communityId, block, number])
+  @@index([communityId, rtId])
   @@map("houses")
 }
 

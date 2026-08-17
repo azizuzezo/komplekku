@@ -1,52 +1,54 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Ecosystem Index · design-system: design.md · designed-as-app
- * theme: Color Palette -05 (#00ACC1, #4DD0E1, #80DEEA, #B2EBF2, #E0F7FA, #F3FBFC)
+/* genre: quiet premium civic · macrostructure: Ecosystem Index · design-system: design.md · designed-as-app
+ * theme: Komplekku purple/cyan/yellow brand (owner override 2026-08-17, supersedes the civic-green system)
  * display: Plus Jakarta Sans · body: Plus Jakarta Sans
  */
 
 :root {
   color-scheme: light;
 
-  /* Palette -05 hex anchors converted to OKLCH. */
-  --color-primary: oklch(66.5% 0.138 214.3); /* #00ACC1 */
-  --color-primary-dark: oklch(52.2% 0.125 214.3); /* #00838F */
-  --color-background: oklch(98.3% 0.009 210.8); /* #F3FBFC */
-  --color-surface: oklch(100% 0 0); /* #FFFFFF */
-  --color-surface-soft: oklch(96.2% 0.021 211.5); /* #E0F7FA */
-  --color-surface-sage: oklch(91.8% 0.045 212.1); /* #B2EBF2 */
-  --color-text-primary: oklch(24.5% 0.045 214.3); /* #0F2F34 */
-  --color-text-secondary: oklch(48% 0.042 214.3); /* #376E76 */
-  --color-border: oklch(85.8% 0.076 212.8); /* #80DEEA */
-  --color-accent: oklch(79.2% 0.108 213.5); /* #4DD0E1 */
+  /* Hallmark tokens — literal values from design.md, the locked design system. */
+  --color-paper: oklch(100% 0 0);
+  --color-paper-2: oklch(97.4% 0.003 286);
+  --color-paper-3: oklch(93% 0.003 286);
+  --color-ink: oklch(26.2% 0.015 297);
+  --color-ink-2: oklch(38% 0.014 297);
+  --color-rule: oklch(89% 0.006 296);
+  --color-rule-2: oklch(80% 0.01 296);
+  --color-muted: oklch(56.6% 0.019 297);
+  --color-neutral: oklch(46% 0.016 297);
+  --color-brand: oklch(40.9% 0.1753 287.9);
+  --color-brand-deep: oklch(34.1% 0.1783 281.6);
+  --color-brand-wash: oklch(94.4% 0.03 296.2);
+  --color-accent: oklch(74.1% 0.1249 221.9);
+  --color-focus: oklch(48% 0.19 288);
+
+  /* App-facing names alias the hallmark tokens above. */
+  --color-primary: var(--color-brand);
+  --color-primary-dark: var(--color-brand-deep);
+  --color-background: var(--color-paper);
+  --color-surface: var(--color-paper);
+  --color-surface-soft: var(--color-paper-2);
+  --color-surface-sage: var(--color-brand-wash);
+  --color-text-primary: var(--color-ink);
+  --color-text-secondary: var(--color-muted);
+  --color-border: var(--color-rule);
+
+  /* Status colors — warning kept from the prior system (no replacement given); danger/success are the owner's new values. */
   --color-warning: oklch(62.64% 0.1248 70.45);
-  --color-danger: oklch(54.01% 0.1486 23.49);
-  --color-success: oklch(52.32% 0.0954 155.85);
+  --color-danger: oklch(62.6% 0.1933 23);
+  --color-success: oklch(63.6% 0.1453 155.9);
   --color-warning-ink: oklch(43% 0.105 70.45);
   --color-danger-ink: oklch(45% 0.13 23.49);
   --color-success-ink: oklch(42% 0.08 155.85);
 
   /* Supporting semantic colors. */
-  --color-focus: oklch(66.5% 0.138 214.3);
   --color-focus-guard: oklch(100% 0 0);
-  --color-accent-ink: oklch(24.5% 0.045 214.3);
+  --color-accent-ink: var(--color-ink);
   --color-on-primary: oklch(100% 0 0);
   --color-on-danger: oklch(100% 0 0);
-  --color-info: oklch(66.5% 0.138 214.3);
-  --color-disabled: oklch(79.2% 0.035 212.8);
-  --color-loading: oklch(96.2% 0.021 211.5);
-
-  /* Hallmark aliases */
-  --color-paper: var(--color-background);
-  --color-paper-2: var(--color-surface-soft);
-  --color-paper-3: oklch(96.2% 0.021 211.5);
-  --color-ink: var(--color-text-primary);
-  --color-ink-2: oklch(35% 0.045 214.3);
-  --color-rule: var(--color-border);
-  --color-rule-2: oklch(85.8% 0.076 212.8);
-  --color-muted: var(--color-text-secondary);
-  --color-neutral: oklch(48% 0.042 214.3);
-  --color-brand: var(--color-primary);
-  --color-brand-deep: var(--color-primary-dark);
-  --color-brand-wash: var(--color-surface-sage);
+  --color-info: var(--color-brand);
+  --color-disabled: oklch(82% 0.008 296);
+  --color-loading: var(--color-paper-2);
 
   --color-state-error: var(--color-danger);
   --color-state-success: var(--color-success);
@@ -113,7 +115,7 @@
   --opacity-muted: 0.72;
 
   --rule-thin: 1px;
-  --shadow-raised: 0 8px 24px oklch(24.5% 0.045 214.3 / 0.08);
+  --shadow-raised: 0 8px 24px oklch(26.2% 0.015 297 / 0.08);
 
   --z-base: 1;
   --z-raised: 10;
@@ -139,31 +141,31 @@
 }
 
 /* Tailwind v4 @theme — wires :root CSS vars to utility class generation.
-   bg-surface → background: #FFFFFF
-   text-text-primary → color: #0F2F34
-   border-border → border-color: #80DEEA
+   bg-surface → background: true white
+   text-text-primary → color: forest-green ink
+   border-border → border-color: warm rule
    etc. */
 @theme {
-  --color-primary: oklch(66.5% 0.138 214.3);
-  --color-primary-dark: oklch(52.2% 0.125 214.3);
-  --color-background: oklch(98.3% 0.009 210.8);
-  --color-surface: oklch(100% 0 0);
-  --color-surface-soft: oklch(96.2% 0.021 211.5);
-  --color-surface-sage: oklch(91.8% 0.045 212.1);
-  --color-text-primary: oklch(24.5% 0.045 214.3);
-  --color-text-secondary: oklch(48% 0.042 214.3);
-  --color-border: oklch(85.8% 0.076 212.8);
-  --color-accent: oklch(79.2% 0.108 213.5);
+  --color-primary: var(--color-brand);
+  --color-primary-dark: var(--color-brand-deep);
+  --color-background: var(--color-paper);
+  --color-surface: var(--color-paper);
+  --color-surface-soft: var(--color-paper-2);
+  --color-surface-sage: var(--color-brand-wash);
+  --color-text-primary: var(--color-ink);
+  --color-text-secondary: var(--color-muted);
+  --color-border: var(--color-rule);
+  --color-accent: oklch(74.1% 0.1249 221.9);
   --color-warning: oklch(62.64% 0.1248 70.45);
-  --color-danger: oklch(54.01% 0.1486 23.49);
-  --color-success: oklch(52.32% 0.0954 155.85);
+  --color-danger: oklch(62.6% 0.1933 23);
+  --color-success: oklch(63.6% 0.1453 155.9);
   --color-warning-ink: oklch(43% 0.105 70.45);
   --color-danger-ink: oklch(45% 0.13 23.49);
   --color-success-ink: oklch(42% 0.08 155.85);
-  --color-focus: oklch(66.5% 0.138 214.3);
+  --color-focus: oklch(48% 0.19 288);
   --color-on-primary: oklch(100% 0 0);
   --color-on-danger: oklch(100% 0 0);
-  --color-info: oklch(66.5% 0.138 214.3);
-  --color-disabled: oklch(79.2% 0.035 212.8);
-  --color-loading: oklch(96.2% 0.021 211.5);
+  --color-info: var(--color-brand);
+  --color-disabled: oklch(82% 0.008 296);
+  --color-loading: var(--color-paper-2);
 }

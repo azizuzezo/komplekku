@@ -4,6 +4,7 @@ import {
   type CreateHouseInput,
   type HouseListResponse,
   type HouseMutationResponse,
+  type UpdateHouseInput,
 } from "@komplekku/contracts";
 
 import { apiRequest } from "@/lib/api/client";
@@ -20,5 +21,15 @@ export function createHouse(input: CreateHouseInput): Promise<HouseMutationRespo
   return apiRequest("/houses", houseMutationResponseSchema, {
     method: "POST",
     body: input,
+  });
+}
+
+export function updateHouse(input: {
+  houseId: string;
+  changes: UpdateHouseInput;
+}): Promise<HouseMutationResponse> {
+  return apiRequest(`/houses/${input.houseId}`, houseMutationResponseSchema, {
+    method: "PATCH",
+    body: input.changes,
   });
 }

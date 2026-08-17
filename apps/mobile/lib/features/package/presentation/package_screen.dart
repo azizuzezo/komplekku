@@ -16,7 +16,7 @@ const _statusLabels = {
 
 const _statusColors = {
   PackageStatus.received: KomplekkuColors.textSecondary,
-  PackageStatus.notified: KomplekkuColors.terracotta,
+  PackageStatus.notified: KomplekkuColors.accent,
   PackageStatus.collected: KomplekkuColors.success,
 };
 

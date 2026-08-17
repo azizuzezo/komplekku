@@ -32,6 +32,7 @@ export async function registerAdminRoleRoutes(
           displayName: member.displayName,
           phoneMasked: maskPhone(member.phoneE164),
           houseCode: member.houseCode,
+          rtCode: member.rtCode,
           roles: member.roles,
         })),
       },
@@ -47,6 +48,7 @@ export async function registerAdminRoleRoutes(
       auth,
       residentId: id,
       roleCode: input.roleCode,
+      rtId: input.rtId,
       now: new Date(),
       audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
     });
@@ -58,6 +60,23 @@ export async function registerAdminRoleRoutes(
         409,
         "CANNOT_CHANGE_SELF",
         "Kamu tidak dapat mengubah peran akunmu sendiri.",
+      );
+    }
+    if (result.outcome === "RT_REQUIRED") {
+      throw new AppError(
+        422,
+        "RT_REQUIRED",
+        "Pilih RT untuk peran Ketua RT sebelum menyimpan.",
+      );
+    }
+    if (result.outcome === "RT_NOT_FOUND") {
+      throw new AppError(404, "RT_NOT_FOUND", "RT tidak ditemukan di komunitas ini.");
+    }
+    if (result.outcome === "FORBIDDEN") {
+      throw new AppError(
+        403,
+        "FORBIDDEN",
+        "Kamu tidak memiliki izin untuk memberikan peran ini.",
       );
     }
     if (result.outcome !== "OK") {

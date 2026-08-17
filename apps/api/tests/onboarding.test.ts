@@ -48,6 +48,7 @@ describe("onboarding dan persetujuan resident", () => {
       headers: { cookie: applicant.cookie },
       payload: {
         communityId: demoIds.secondCommunity,
+        rtId: demoIds.secondCommunityRt,
         houseCode: "F03",
         fullName: "Nadia Penguji",
         relationship: "HEAD",
@@ -62,6 +63,7 @@ describe("onboarding dan persetujuan resident", () => {
       headers: { cookie: applicant.cookie },
       payload: {
         communityId: demoIds.community,
+        rtId: demoIds.rtOne,
         houseCode: "f03",
         fullName: "Nadia Penguji",
         relationship: "HEAD",
@@ -79,6 +81,7 @@ describe("onboarding dan persetujuan resident", () => {
       headers: { cookie: applicant.cookie },
       payload: {
         communityId: demoIds.community,
+        rtId: demoIds.rtOne,
         houseCode: "F03",
         fullName: "Nadia Penguji",
         relationship: "HEAD",
@@ -164,6 +167,7 @@ describe("onboarding dan persetujuan resident", () => {
       headers: { cookie: applicant.cookie },
       payload: {
         communityId: demoIds.community,
+        rtId: demoIds.rtOne,
         houseCode: "F03",
         fullName: "Bima Penguji",
         relationship: "TENANT",

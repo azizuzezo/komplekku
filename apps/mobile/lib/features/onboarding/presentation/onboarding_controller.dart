@@ -92,6 +92,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
 
   Future<ResidencyRequest?> submit({
     required String fullName,
+    required String rtId,
     required String houseCode,
     required HouseholdRelationship relationship,
   }) async {
@@ -111,6 +112,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
       final request =
           await ref.read(onboardingRepositoryProvider).submitResidencyRequest(
                 communityId: community.id,
+                rtId: rtId,
                 houseCode: houseCode,
                 fullName: fullName,
                 relationship: relationship,

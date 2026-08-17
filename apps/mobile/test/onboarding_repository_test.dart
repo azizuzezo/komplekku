@@ -58,6 +58,7 @@ void main() {
 
     final request = await repository.submitResidencyRequest(
       communityId: '00000000-0000-4000-8000-000000000001',
+      rtId: '00000000-0000-4000-8000-000000000f01',
       houseCode: 'f01',
       fullName: 'Ayu Pratama',
       relationship: HouseholdRelationship.tenant,
@@ -101,6 +102,7 @@ class _FakeOnboardingApiService extends OnboardingApiService {
   @override
   Future<Map<String, dynamic>> createResidencyRequest({
     required String communityId,
+    required String rtId,
     required String houseCode,
     required String fullName,
     required HouseholdRelationship relationship,

@@ -35,6 +35,7 @@ class ApiOnboardingRepository implements OnboardingRepository {
   @override
   Future<ResidencyRequest> submitResidencyRequest({
     required String communityId,
+    required String rtId,
     required String houseCode,
     required String fullName,
     required HouseholdRelationship relationship,
@@ -42,6 +43,7 @@ class ApiOnboardingRepository implements OnboardingRepository {
     try {
       final data = await _service.createResidencyRequest(
         communityId: communityId,
+        rtId: rtId,
         houseCode: houseCode,
         fullName: fullName,
         relationship: relationship,
@@ -73,11 +75,25 @@ class ApiOnboardingRepository implements OnboardingRepository {
   }
 
   CommunityOption _community(Map<String, dynamic> json) {
+    final rts = json['rts'];
     return CommunityOption(
       id: json['id'] as String,
       name: json['name'] as String,
       slug: json['slug'] as String,
       timezone: json['timezone'] as String,
+      rts: rts is List<dynamic>
+          ? rts
+              .map((item) => _rt(item as Map<String, dynamic>))
+              .toList(growable: false)
+          : const [],
+    );
+  }
+
+  RtOption _rt(Map<String, dynamic> json) {
+    return RtOption(
+      id: json['id'] as String,
+      code: json['code'] as String,
+      name: json['name'] as String,
     );
   }
 }

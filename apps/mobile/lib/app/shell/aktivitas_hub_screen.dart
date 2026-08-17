@@ -18,6 +18,13 @@ class AktivitasHubScreen extends StatelessWidget {
       route: '/aktivitas/agenda',
     ),
     HubMenuEntry(
+      icon: Icons.forum_outlined,
+      label: 'Forum Warga',
+      description: 'Obrolan realtime dengan warga RT-mu dan seluruh komunitas.',
+      route: '/aktivitas/forum',
+      permission: 'forum.read',
+    ),
+    HubMenuEntry(
       icon: Icons.notifications_none_outlined,
       label: 'Notifikasi',
       description: 'Pemberitahuan aktivitas akunmu.',

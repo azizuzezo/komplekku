@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BadgeDollarSign,
   Bell,
+  Building,
   Building2,
   CalendarDays,
   ClipboardCheck,
@@ -17,6 +18,7 @@ import {
   ListChecks,
   Megaphone,
   MessageSquareWarning,
+  MessagesSquare,
   Package,
   ShieldCheck,
   Siren,
@@ -155,6 +157,13 @@ const allServices: NavigationItem[] = [
     category: "admin",
   },
   {
+    href: "/admin/komunitas",
+    label: "Kelola Komunitas",
+    icon: Building,
+    permission: "community.manage",
+    category: "admin",
+  },
+  {
     href: "/admin/rumah",
     label: "Kelola Rumah",
     icon: HousePlus,
@@ -183,6 +192,7 @@ export function MobileNavigation() {
   const visibleServices = allServices.filter(
     (item) => !item.permission || permissions.includes(item.permission),
   );
+  const canReadForum = permissions.includes("forum.read");
 
   const residentServices = visibleServices.filter((s) => s.category === "resident");
   const adminServices = visibleServices.filter((s) => s.category === "admin");
@@ -207,6 +217,19 @@ export function MobileNavigation() {
           <Megaphone size={20} strokeWidth={1.9} aria-hidden="true" />
           <span>Pengumuman</span>
         </Link>
+
+        {canReadForum && (
+          <Link
+            className="mobile-navigation__item mobile-navigation__item--bubble"
+            href="/forum"
+            aria-current={isActive(pathname, "/forum") ? "page" : undefined}
+          >
+            <span className="mobile-navigation__bubble-icon">
+              <MessagesSquare size={22} strokeWidth={2} aria-hidden="true" />
+            </span>
+            <span>Forum</span>
+          </Link>
+        )}
 
         <button
           type="button"

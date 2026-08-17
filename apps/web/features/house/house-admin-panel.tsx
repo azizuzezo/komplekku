@@ -10,9 +10,10 @@ import type { input as ZodInput } from "zod";
 import { AdminQueueSkeleton } from "@/components/ui/content-skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { getMe } from "@/features/auth/auth-api";
+import { communityAdminKeys, listRts } from "@/features/community/community-api";
 import { ApiError, getRequestState } from "@/lib/api/client";
 
-import { createHouse, houseKeys, listHouses } from "./house-api";
+import { createHouse, houseKeys, listHouses, updateHouse } from "./house-api";
 
 const occupancyLabels: Record<string, string> = {
   OWNER_OCCUPIED: "Dihuni pemilik",
@@ -29,7 +30,7 @@ function readableError(error: unknown) {
 type HouseFormValues = ZodInput<typeof createHouseInputSchema>;
 
 function emptyHouseValues(): HouseFormValues {
-  return { code: "", block: "", number: "", occupancyStatus: "VACANT" };
+  return { code: "", block: "", number: "", rtId: "", occupancyStatus: "VACANT" };
 }
 
 export function HouseAdminPanel() {
@@ -40,6 +41,11 @@ export function HouseAdminPanel() {
   const housesQuery = useQuery({
     queryKey: houseKeys.all,
     queryFn: listHouses,
+    enabled: canManage,
+  });
+  const rtsQuery = useQuery({
+    queryKey: communityAdminKeys.rts,
+    queryFn: listRts,
     enabled: canManage,
   });
 
@@ -56,7 +62,14 @@ export function HouseAdminPanel() {
     },
   });
 
-  if (meQuery.isPending || (canManage && housesQuery.isPending)) {
+  const reassignMutation = useMutation({
+    mutationFn: updateHouse,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: houseKeys.all });
+    },
+  });
+
+  if (meQuery.isPending || (canManage && (housesQuery.isPending || rtsQuery.isPending))) {
     return <AdminQueueSkeleton />;
   }
 
@@ -178,6 +191,30 @@ export function HouseAdminPanel() {
           </div>
 
           <div className="field">
+            <label htmlFor="house-rt">RT</label>
+            <select
+              className="input"
+              id="house-rt"
+              aria-invalid={Boolean(form.formState.errors.rtId)}
+              {...form.register("rtId")}
+            >
+              <option value="" disabled>
+                Pilih RT
+              </option>
+              {(rtsQuery.data?.data.items ?? []).map((rt) => (
+                <option key={rt.id} value={rt.id}>
+                  {rt.name}
+                </option>
+              ))}
+            </select>
+            {form.formState.errors.rtId && (
+              <p className="field-error" role="alert">
+                Pilih RT untuk rumah ini.
+              </p>
+            )}
+          </div>
+
+          <div className="field">
             <label htmlFor="house-occupancy">Status hunian</label>
             <select className="input" id="house-occupancy" {...form.register("occupancyStatus")}>
               <option value="VACANT">Kosong</option>
@@ -236,6 +273,26 @@ export function HouseAdminPanel() {
                     {house.hasHousehold ? " · Sudah ada rumah tangga" : ""}
                   </p>
                 </div>
+                {(rtsQuery.data?.data.items.length ?? 0) > 1 && (
+                  <select
+                    className="input"
+                    aria-label={`RT untuk ${house.addressLabel}`}
+                    value={house.rtId ?? ""}
+                    disabled={reassignMutation.isPending}
+                    onChange={(e) =>
+                      reassignMutation.mutate({
+                        houseId: house.id,
+                        changes: { rtId: e.target.value },
+                      })
+                    }
+                  >
+                    {(rtsQuery.data?.data.items ?? []).map((rt) => (
+                      <option key={rt.id} value={rt.id}>
+                        {rt.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </li>
             ))}
           </ul>

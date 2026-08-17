@@ -25,6 +25,7 @@ class OnboardingApiService {
 
   Future<Map<String, dynamic>> createResidencyRequest({
     required String communityId,
+    required String rtId,
     required String houseCode,
     required String fullName,
     required HouseholdRelationship relationship,
@@ -34,6 +35,7 @@ class OnboardingApiService {
         '/onboarding/residency-requests',
         data: {
           'communityId': communityId,
+          'rtId': rtId,
           'houseCode': houseCode.trim(),
           'fullName': fullName.trim(),
           'relationship': relationship.apiValue,

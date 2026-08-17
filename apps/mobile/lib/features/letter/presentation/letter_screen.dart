@@ -112,7 +112,7 @@ Color letterStatusToneColor(LetterStatusTone tone) {
     case LetterStatusTone.success:
       return KomplekkuColors.success;
     case LetterStatusTone.warning:
-      return KomplekkuColors.terracotta;
+      return KomplekkuColors.accent;
     case LetterStatusTone.danger:
       return KomplekkuColors.danger;
     case LetterStatusTone.muted:

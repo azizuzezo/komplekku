@@ -38,11 +38,13 @@ class _OnboardingFlowScreenState
 
   Future<void> _submit({
     required String fullName,
+    required String rtId,
     required String houseCode,
     required HouseholdRelationship relationship,
   }) async {
     final request = await ref.read(onboardingControllerProvider.notifier).submit(
           fullName: fullName,
+          rtId: rtId,
           houseCode: houseCode,
           relationship: relationship,
         );

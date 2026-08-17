@@ -203,13 +203,13 @@ export function AccountView() {
 
   const CARD: React.CSSProperties = {
     background: "#ffffff",
-    border: "1px solid #80DEEA",
+    border: "1px solid #DBDADE",
     borderRadius: "1.125rem",
     overflow: "hidden",
-    boxShadow: "0 4px 24px rgba(0,172,193,0.12)",
+    boxShadow: "0 4px 24px rgba(75,45,161,0.12)",
   };
   const HERO: React.CSSProperties = {
-    background: "#0F2F34",
+    background: "#32178F",
     padding: "1.125rem 1.375rem",
     display: "flex",
     alignItems: "center",
@@ -217,7 +217,7 @@ export function AccountView() {
     gap: "1rem",
   };
   const FOOT: React.CSSProperties = {
-    background: "#0a2228",
+    background: "#25232B",
     padding: "0.6rem 1.375rem",
     display: "flex",
     alignItems: "center",
@@ -225,10 +225,10 @@ export function AccountView() {
   };
   const SECTION_CARD: React.CSSProperties = {
     background: "#ffffff",
-    border: "1px solid #B2EBF2",
+    border: "1px solid #DBDADE",
     borderRadius: "1.125rem",
     padding: "1.25rem 1.375rem",
-    boxShadow: "0 1px 8px rgba(0,172,193,0.06)",
+    boxShadow: "0 1px 8px rgba(75,45,161,0.06)",
   };
 
   const statusColors: Record<string, React.CSSProperties> = {
@@ -249,7 +249,7 @@ export function AccountView() {
     },
     muted: {
       background: "rgba(255,255,255,0.12)",
-      color: "#B2EBF2",
+      color: "#EEE9FF",
       border: "1px solid rgba(255,255,255,0.2)",
     },
   };
@@ -282,9 +282,9 @@ export function AccountView() {
         gap: "0.3rem",
         fontSize: "0.7rem",
         fontWeight: 700,
-        color: "#00ACC1",
-        background: "#E0F7FA",
-        border: "1px solid #80DEEA",
+        color: "#4B2DA1",
+        background: "#EEE9FF",
+        border: "1px solid #DBDADE",
         borderRadius: "9999px",
         padding: "0.22rem 0.65rem",
         cursor: "pointer",
@@ -320,7 +320,7 @@ export function AccountView() {
                     fontWeight: 700,
                     letterSpacing: "0.07em",
                     textTransform: "uppercase",
-                    color: "#376E76",
+                    color: "#777480",
                     margin: 0,
                   }}
                 >
@@ -347,7 +347,7 @@ export function AccountView() {
                       className="input"
                       placeholder="Nama baru"
                       autoFocus
-                      style={{ flex: 1, color: "#0F2F34" }}
+                      style={{ flex: 1, color: "#25232B" }}
                     />
                     <button
                       type="submit"
@@ -361,7 +361,7 @@ export function AccountView() {
                         height: "2.25rem",
                         borderRadius: "0.5rem",
                         border: "none",
-                        background: "#00ACC1",
+                        background: "#4B2DA1",
                         color: "#fff",
                         cursor: "pointer",
                         flexShrink: 0,
@@ -380,9 +380,9 @@ export function AccountView() {
                         width: "2.25rem",
                         height: "2.25rem",
                         borderRadius: "0.5rem",
-                        border: "1px solid #80DEEA",
+                        border: "1px solid #DBDADE",
                         background: "#fff",
-                        color: "#376E76",
+                        color: "#777480",
                         cursor: "pointer",
                         flexShrink: 0,
                       }}
@@ -408,7 +408,7 @@ export function AccountView() {
                   style={{
                     fontSize: "1.875rem",
                     fontWeight: 800,
-                    color: "#0F2F34",
+                    color: "#25232B",
                     letterSpacing: "-0.035em",
                     lineHeight: 1.1,
                     margin: 0,
@@ -422,7 +422,7 @@ export function AccountView() {
                 style={{
                   fontSize: "0.73rem",
                   fontFamily: "monospace",
-                  color: "#376E76",
+                  color: "#777480",
                   marginTop: "0.25rem",
                   display: "block",
                 }}
@@ -437,7 +437,7 @@ export function AccountView() {
                 gridTemplateColumns: "repeat(3, 1fr)",
                 borderRadius: "0.75rem",
                 overflow: "hidden",
-                border: "1px solid #80DEEA",
+                border: "1px solid #DBDADE",
               }}
             >
               {[
@@ -449,15 +449,15 @@ export function AccountView() {
                   key={item.label}
                   style={{
                     padding: "0.75rem 0.875rem",
-                    background: "#E0F7FA",
-                    borderLeft: i > 0 ? "1px solid #80DEEA" : undefined,
+                    background: "#EEE9FF",
+                    borderLeft: i > 0 ? "1px solid #DBDADE" : undefined,
                   }}
                 >
                   <p
                     style={{
                       fontSize: "0.6rem",
                       fontWeight: 700,
-                      color: "#376E76",
+                      color: "#777480",
                       textTransform: "uppercase",
                       letterSpacing: "0.06em",
                       margin: "0 0 0.2rem",
@@ -469,7 +469,7 @@ export function AccountView() {
                     style={{
                       fontSize: "0.8rem",
                       fontWeight: 800,
-                      color: "#0F2F34",
+                      color: "#25232B",
                       margin: 0,
                       lineHeight: 1.25,
                     }}
@@ -482,14 +482,14 @@ export function AccountView() {
           </div>
 
           <div style={FOOT}>
-            <span style={{ fontSize: "0.68rem", color: "#4DD0E1", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.68rem", color: "#32BCE3", fontWeight: 600 }}>
               {context.community.name}
             </span>
             <strong
               style={{
                 fontSize: "0.8rem",
                 fontFamily: "monospace",
-                color: "#4DD0E1",
+                color: "#32BCE3",
                 fontWeight: 800,
                 letterSpacing: "0.1em",
               }}
@@ -524,7 +524,7 @@ export function AccountView() {
                   fontWeight: 700,
                   letterSpacing: "0.07em",
                   textTransform: "uppercase",
-                  color: "#376E76",
+                  color: "#777480",
                   margin: 0,
                 }}
               >
@@ -547,7 +547,7 @@ export function AccountView() {
                   onChange={(e) => setNewDisplayName(e.target.value)}
                   className="input"
                   placeholder="Nama baru"
-                  style={{ flex: 1, color: "#0F2F34" }}
+                  style={{ flex: 1, color: "#25232B" }}
                 />
                 <button
                   type="submit"
@@ -559,7 +559,7 @@ export function AccountView() {
                     height: "2.25rem",
                     borderRadius: "0.5rem",
                     border: "none",
-                    background: "#00ACC1",
+                    background: "#4B2DA1",
                     color: "#fff",
                     cursor: "pointer",
                     flexShrink: 0,
@@ -571,7 +571,7 @@ export function AccountView() {
             ) : (
               <h2
                 id="account-name"
-                style={{ fontSize: "1.5rem", fontWeight: 800, color: "#0F2F34", margin: 0 }}
+                style={{ fontSize: "1.5rem", fontWeight: 800, color: "#25232B", margin: 0 }}
               >
                 {displayName}
               </h2>
@@ -580,7 +580,7 @@ export function AccountView() {
               style={{
                 fontSize: "0.73rem",
                 fontFamily: "monospace",
-                color: "#376E76",
+                color: "#777480",
                 marginTop: "0.25rem",
               }}
             >
@@ -606,20 +606,20 @@ export function AccountView() {
                   width: "2.25rem",
                   height: "2.25rem",
                   borderRadius: "0.625rem",
-                  background: "#E0F7FA",
+                  background: "#EEE9FF",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#00ACC1",
+                  color: "#4B2DA1",
                 }}
               >
                 <Users size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: "0.9rem", fontWeight: 800, color: "#0F2F34", margin: 0 }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 800, color: "#25232B", margin: 0 }}>
                   Anggota Keluarga
                 </h3>
-                <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
+                <p style={{ fontSize: "0.7rem", color: "#777480", margin: 0 }}>
                   Penghuni rumah tangga ini
                 </p>
               </div>
@@ -635,7 +635,7 @@ export function AccountView() {
                   fontSize: "0.75rem",
                   fontWeight: 700,
                   color: "#fff",
-                  background: "#00ACC1",
+                  background: "#4B2DA1",
                   border: "none",
                   borderRadius: "0.625rem",
                   padding: "0.45rem 0.875rem",
@@ -650,8 +650,8 @@ export function AccountView() {
           {isAddingFamily && (
             <div
               style={{
-                background: "#F3FBFC",
-                border: "1px solid #80DEEA",
+                background: "#F6F6F8",
+                border: "1px solid #DBDADE",
                 borderRadius: "0.75rem",
                 padding: "1rem",
                 marginBottom: "0.75rem",
@@ -661,7 +661,7 @@ export function AccountView() {
                 style={{
                   fontSize: "0.75rem",
                   fontWeight: 700,
-                  color: "#00ACC1",
+                  color: "#4B2DA1",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.35rem",
@@ -702,7 +702,7 @@ export function AccountView() {
                   <option value="TENANT">Penyewa</option>
                   <option value="OTHER">Lainnya</option>
                 </select>
-                <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
+                <p style={{ fontSize: "0.7rem", color: "#777480", margin: 0 }}>
                   Anggota baru akan mendapatkan akun sendiri dan bisa masuk memakai nomor HP ini.
                 </p>
                 {addMemberError && (
@@ -725,9 +725,9 @@ export function AccountView() {
                       fontWeight: 600,
                       padding: "0.4rem 0.75rem",
                       borderRadius: "0.5rem",
-                      border: "1px solid #80DEEA",
+                      border: "1px solid #DBDADE",
                       background: "#fff",
-                      color: "#376E76",
+                      color: "#777480",
                       cursor: "pointer",
                     }}
                   >
@@ -742,7 +742,7 @@ export function AccountView() {
                       padding: "0.4rem 0.875rem",
                       borderRadius: "0.5rem",
                       border: "none",
-                      background: "#00ACC1",
+                      background: "#4B2DA1",
                       color: "#fff",
                       cursor: "pointer",
                     }}
@@ -755,7 +755,7 @@ export function AccountView() {
           )}
 
           {householdQuery.isPending && (
-            <p style={{ fontSize: "0.75rem", color: "#376E76" }}>Memuat anggota rumah tangga...</p>
+            <p style={{ fontSize: "0.75rem", color: "#777480" }}>Memuat anggota rumah tangga...</p>
           )}
 
           {householdQuery.isError && (
@@ -765,7 +765,7 @@ export function AccountView() {
                 type="button"
                 onClick={() => void householdQuery.refetch()}
                 style={{
-                  color: "#00ACC1",
+                  color: "#4B2DA1",
                   fontWeight: 700,
                   background: "none",
                   border: "none",
@@ -791,8 +791,8 @@ export function AccountView() {
                       gap: "0.75rem",
                       padding: "0.75rem",
                       borderRadius: "0.75rem",
-                      background: isSelf ? "#E0F7FA" : "#fff",
-                      border: isSelf ? "none" : "1px solid #B2EBF2",
+                      background: isSelf ? "#EEE9FF" : "#fff",
+                      border: isSelf ? "none" : "1px solid #DBDADE",
                     }}
                   >
                     <div
@@ -800,14 +800,14 @@ export function AccountView() {
                         width: "2.25rem",
                         height: "2.25rem",
                         borderRadius: "9999px",
-                        background: isSelf ? "#00ACC1" : "#E0F7FA",
-                        color: isSelf ? "#fff" : "#376E76",
+                        background: isSelf ? "#4B2DA1" : "#EEE9FF",
+                        color: isSelf ? "#fff" : "#777480",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontWeight: 800,
                         fontSize: "0.75rem",
-                        border: isSelf ? undefined : "1px solid #80DEEA",
+                        border: isSelf ? undefined : "1px solid #DBDADE",
                         flexShrink: 0,
                       }}
                     >
@@ -826,7 +826,7 @@ export function AccountView() {
                           style={{
                             fontWeight: isSelf ? 800 : 700,
                             fontSize: "0.875rem",
-                            color: "#0F2F34",
+                            color: "#25232B",
                           }}
                         >
                           {member.displayName}
@@ -838,15 +838,15 @@ export function AccountView() {
                               fontWeight: 700,
                               padding: "0.15rem 0.5rem",
                               borderRadius: "9999px",
-                              background: "#0F2F34",
-                              color: "#4DD0E1",
+                              background: "#32178F",
+                              color: "#32BCE3",
                             }}
                           >
                             Saya
                           </span>
                         )}
                       </div>
-                      <p style={{ fontSize: "0.7rem", color: "#376E76", margin: 0 }}>
+                      <p style={{ fontSize: "0.7rem", color: "#777480", margin: 0 }}>
                         {relationshipLabels[member.relationship] ?? member.relationship}
                         {member.phoneMasked ? ` · ${member.phoneMasked}` : ""}
                       </p>
@@ -867,7 +867,7 @@ export function AccountView() {
                           borderRadius: "0.375rem",
                           border: "none",
                           background: "transparent",
-                          color: "#376E76",
+                          color: "#777480",
                           cursor: "pointer",
                           flexShrink: 0,
                         }}
@@ -879,7 +879,7 @@ export function AccountView() {
                         }}
                         onMouseLeave={(e) => {
                           (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                          (e.currentTarget as HTMLButtonElement).style.color = "#376E76";
+                          (e.currentTarget as HTMLButtonElement).style.color = "#777480";
                         }}
                       >
                         <Trash2 size={14} />
@@ -901,11 +901,11 @@ export function AccountView() {
                 width: "2.5rem",
                 height: "2.5rem",
                 borderRadius: "0.75rem",
-                background: "#E0F7FA",
+                background: "#EEE9FF",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#00ACC1",
+                color: "#4B2DA1",
                 flexShrink: 0,
               }}
             >
@@ -914,11 +914,11 @@ export function AccountView() {
             <div style={{ flex: 1 }}>
               <h2
                 id="account-admin-heading"
-                style={{ fontSize: "0.875rem", fontWeight: 700, color: "#0F2F34", margin: 0 }}
+                style={{ fontSize: "0.875rem", fontWeight: 700, color: "#25232B", margin: 0 }}
               >
                 Tugas pengurus
               </h2>
-              <p style={{ fontSize: "0.75rem", color: "#376E76", margin: 0 }}>
+              <p style={{ fontSize: "0.75rem", color: "#777480", margin: 0 }}>
                 Tinjau permohonan tempat tinggal.
               </p>
             </div>
@@ -930,7 +930,7 @@ export function AccountView() {
                 gap: "0.25rem",
                 fontSize: "0.75rem",
                 fontWeight: 700,
-                color: "#00ACC1",
+                color: "#4B2DA1",
                 textDecoration: "none",
               }}
             >
@@ -943,11 +943,11 @@ export function AccountView() {
       <section aria-labelledby="account-session-heading" style={SECTION_CARD}>
         <h2
           id="account-session-heading"
-          style={{ fontSize: "0.875rem", fontWeight: 700, color: "#0F2F34", margin: "0 0 0.25rem" }}
+          style={{ fontSize: "0.875rem", fontWeight: 700, color: "#25232B", margin: "0 0 0.25rem" }}
         >
           Sesi akun
         </h2>
-        <p style={{ fontSize: "0.75rem", color: "#376E76", margin: "0 0 1rem" }}>
+        <p style={{ fontSize: "0.75rem", color: "#777480", margin: "0 0 1rem" }}>
           Keluar jika perangkat ini dipakai bersama orang lain.
         </p>
         {logoutMutation.isError && (

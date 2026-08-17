@@ -21,6 +21,7 @@ import 'package:komplekku/features/cash/presentation/kas_screen.dart';
 import 'package:komplekku/features/emergency/presentation/emergency_screen.dart';
 import 'package:komplekku/features/facility/presentation/facility_screen.dart';
 import 'package:komplekku/features/finance_dashboard/presentation/finance_dashboard_screen.dart';
+import 'package:komplekku/features/forum/presentation/forum_screen.dart';
 import 'package:komplekku/features/home/presentation/home_screen.dart';
 import 'package:komplekku/features/incident/presentation/incident_detail_screen.dart';
 import 'package:komplekku/features/incident/presentation/incident_list_screen.dart';
@@ -207,6 +208,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'notifikasi',
                     builder: (context, state) => const NotificationListScreen(),
+                  ),
+                  GoRoute(
+                    path: 'forum',
+                    builder: (context, state) => const ForumScreen(),
                   ),
                 ],
               ),

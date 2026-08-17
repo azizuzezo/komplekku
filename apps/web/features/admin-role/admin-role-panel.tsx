@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AdminQueueSkeleton } from "@/components/ui/content-skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { getMe } from "@/features/auth/auth-api";
+import { communityAdminKeys, listRts } from "@/features/community/community-api";
 import { ApiError, getRequestState } from "@/lib/api/client";
 
 import { adminRoleKeys, listCommunityMembers, listRoles, setMemberRole } from "./admin-role-api";
@@ -20,6 +21,8 @@ export function AdminRolePanel() {
   const canManage = meQuery.data?.data.permissions.includes("resident.manage") ?? false;
   const [pendingResidentId, setPendingResidentId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ residentId: string; message: string } | null>(null);
+  const [roleDraft, setRoleDraft] = useState<Record<string, string>>({});
+  const [rtDraft, setRtDraft] = useState<Record<string, string>>({});
 
   const rolesQuery = useQuery({
     queryKey: adminRoleKeys.roles,
@@ -31,6 +34,11 @@ export function AdminRolePanel() {
     queryFn: listCommunityMembers,
     enabled: canManage,
   });
+  const rtsQuery = useQuery({
+    queryKey: communityAdminKeys.rts,
+    queryFn: listRts,
+    enabled: canManage,
+  });
 
   const setRoleMutation = useMutation({
     mutationFn: setMemberRole,
@@ -38,8 +46,18 @@ export function AdminRolePanel() {
       setPendingResidentId(variables.residentId);
       setRowError(null);
     },
-    onSuccess() {
+    onSuccess(_data, variables) {
       void queryClient.invalidateQueries({ queryKey: adminRoleKeys.members });
+      setRoleDraft((prev) => {
+        const next = { ...prev };
+        delete next[variables.residentId];
+        return next;
+      });
+      setRtDraft((prev) => {
+        const next = { ...prev };
+        delete next[variables.residentId];
+        return next;
+      });
     },
     onError(error, variables) {
       setRowError({ residentId: variables.residentId, message: readableError(error) });
@@ -49,7 +67,10 @@ export function AdminRolePanel() {
     },
   });
 
-  if (meQuery.isPending || (canManage && (rolesQuery.isPending || membersQuery.isPending))) {
+  if (
+    meQuery.isPending ||
+    (canManage && (rolesQuery.isPending || membersQuery.isPending || rtsQuery.isPending))
+  ) {
     return <AdminQueueSkeleton />;
   }
 
@@ -107,6 +128,7 @@ export function AdminRolePanel() {
   }
 
   const roles = rolesQuery.data?.data.roles ?? [];
+  const rts = rtsQuery.data?.data.items ?? [];
   const members = membersQuery.data?.data.items ?? [];
 
   if (members.length === 0) {
@@ -124,7 +146,12 @@ export function AdminRolePanel() {
       <ul className="admin-role-list">
         {members.map((member) => {
           const currentRoleCode = member.roles[0]?.code ?? "";
+          const draftRole = roleDraft[member.residentId] ?? currentRoleCode;
+          const needsRt = draftRole === "RT_ADMIN";
           const isPending = pendingResidentId === member.residentId;
+          const roleChanged = draftRole !== currentRoleCode;
+          const canApply = roleChanged && (!needsRt || Boolean(rtDraft[member.residentId]));
+
           return (
             <li className="admin-role-row" key={member.residentId}>
               <div className="admin-role-row__info">
@@ -132,19 +159,17 @@ export function AdminRolePanel() {
                 <p className="admin-role-row__meta">
                   {member.phoneMasked}
                   {member.houseCode ? ` · ${member.houseCode}` : ""}
+                  {member.rtCode ? ` · ${member.rtCode}` : ""}
                 </p>
               </div>
               <div className="admin-role-row__control">
                 <select
                   className="input"
                   aria-label={`Peran untuk ${member.displayName}`}
-                  value={currentRoleCode}
+                  value={draftRole}
                   disabled={isPending}
                   onChange={(e) =>
-                    setRoleMutation.mutate({
-                      residentId: member.residentId,
-                      roleCode: e.target.value,
-                    })
+                    setRoleDraft((prev) => ({ ...prev, [member.residentId]: e.target.value }))
                   }
                 >
                   <option value="" disabled>
@@ -156,6 +181,42 @@ export function AdminRolePanel() {
                     </option>
                   ))}
                 </select>
+                {needsRt && (
+                  <select
+                    className="input"
+                    aria-label={`RT untuk ${member.displayName}`}
+                    value={rtDraft[member.residentId] ?? ""}
+                    disabled={isPending}
+                    onChange={(e) =>
+                      setRtDraft((prev) => ({ ...prev, [member.residentId]: e.target.value }))
+                    }
+                  >
+                    <option value="" disabled>
+                      Pilih RT
+                    </option>
+                    {rts.map((rt) => (
+                      <option key={rt.id} value={rt.id}>
+                        {rt.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {roleChanged && (
+                  <button
+                    className="button button--secondary button--compact"
+                    type="button"
+                    disabled={isPending || !canApply}
+                    onClick={() =>
+                      setRoleMutation.mutate({
+                        residentId: member.residentId,
+                        roleCode: draftRole,
+                        rtId: needsRt ? rtDraft[member.residentId] : undefined,
+                      })
+                    }
+                  >
+                    Terapkan
+                  </button>
+                )}
                 {rowError?.residentId === member.residentId && (
                   <p className="field-error" role="alert">
                     {rowError.message}

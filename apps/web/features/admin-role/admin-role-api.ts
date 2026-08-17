@@ -25,9 +25,10 @@ export function listCommunityMembers(): Promise<CommunityMemberListResponse> {
 export function setMemberRole(input: {
   residentId: string;
   roleCode: string;
+  rtId?: string;
 }): Promise<SetMemberRoleResponse> {
   return apiRequest(`/admin/users/${input.residentId}/role`, setMemberRoleResponseSchema, {
     method: "PATCH",
-    body: { roleCode: input.roleCode },
+    body: { roleCode: input.roleCode, rtId: input.rtId },
   });
 }

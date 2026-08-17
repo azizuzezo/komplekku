@@ -13,6 +13,7 @@ import type {
   CreateAnnouncementInput,
   CreateCameraInput,
   CreateCashTransactionInput,
+  CreateCommunityInput,
   CreateDuesTypeInput,
   CreateFacilityBookingInput,
   CreateHouseInput,
@@ -21,6 +22,7 @@ import type {
   CreatePackageInput,
   CreatePaymentInput,
   CreateReportInput,
+  CreateRtInput,
   CreateVehicleInput,
   CreateVisitorInput,
   CreateWalkInVisitorInput,
@@ -36,6 +38,7 @@ import type {
   LetterRequestStatus,
   NotificationPriority,
   OccupancyStatus,
+  OnboardingCommunityOption,
   PackageStatus,
   PatrolSessionStatus,
   PaymentStatus,
@@ -46,8 +49,11 @@ import type {
   SecurityShiftStatus,
   UpdateAgendaEventInput,
   UpdateCameraInput,
+  UpdateCommunityInput,
+  UpdateHouseInput,
   UpdateIncidentInput,
   UpdateProfileInput,
+  UpdateRtInput,
   UpdateVehicleInput,
   VehicleStatus,
   VehicleType,
@@ -77,6 +83,13 @@ export interface AuthSessionRecord {
   currentCommunityId: string | null;
   currentHouseholdId: string | null;
   permissions: string[];
+  /**
+   * Non-null only when the actor's admin capability is limited to one RT
+   * (an RT_ADMIN/Ketua RT with an assigned RT). `null` means unrestricted
+   * within the community — SUPER_ADMIN and COMMUNITY_ADMIN (Ketua RW) alike.
+   * See lib/rt-scope.ts for how this is computed.
+   */
+  rtScopeId: string | null;
 }
 
 export interface RequestAuditContext {
@@ -193,15 +206,47 @@ export interface CurrentCommunityRecord {
   slug: string;
   timezone: string;
   address: string | null;
+  rwLabel: string | null;
   contactPhone: string | null;
   emergencyContactPhone: string | null;
 }
+
+export interface CommunityAdminRecord {
+  id: string;
+  slug: string;
+  name: string;
+  address: string | null;
+  rwLabel: string | null;
+  timezone: string;
+  registrationOpen: boolean;
+}
+
+export type UpdateCommunityResult =
+  { outcome: "OK"; community: CommunityAdminRecord } | { outcome: "NOT_FOUND" };
+
+export type CreateCommunityResult =
+  | { outcome: "OK"; community: CommunityAdminRecord }
+  | { outcome: "SLUG_CONFLICT" };
+
+export interface RtRecord {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export type CreateRtResult =
+  { outcome: "OK"; rt: RtRecord } | { outcome: "CODE_CONFLICT" };
+
+export type UpdateRtResult =
+  { outcome: "OK"; rt: RtRecord } | { outcome: "NOT_FOUND" | "CODE_CONFLICT" };
 
 export interface HouseRecord {
   id: string;
   code: string;
   block: string;
   number: string;
+  rtId: string | null;
+  rtCode: string | null;
   occupancyStatus: OccupancyStatus;
   addressLabel: string;
   hasHousehold: boolean;
@@ -209,7 +254,12 @@ export interface HouseRecord {
 }
 
 export type CreateHouseResult =
-  { outcome: "OK"; house: HouseRecord } | { outcome: "CODE_CONFLICT" };
+  | { outcome: "OK"; house: HouseRecord }
+  | { outcome: "CODE_CONFLICT" | "RT_NOT_FOUND" };
+
+export type UpdateHouseResult =
+  | { outcome: "OK"; house: HouseRecord }
+  | { outcome: "NOT_FOUND" | "RT_NOT_FOUND" };
 
 export interface AnnouncementRecord {
   id: string;
@@ -656,12 +706,45 @@ export interface CommunityMemberRecord {
   displayName: string;
   phoneE164: string;
   houseCode: string | null;
+  rtCode: string | null;
   roles: RoleSummary[];
 }
 
 export type SetMemberRoleResult =
   | { outcome: "OK"; residentId: string; roles: RoleSummary[] }
-  | { outcome: "NOT_FOUND" | "ROLE_NOT_FOUND" | "CANNOT_CHANGE_SELF" };
+  | {
+      outcome:
+        | "NOT_FOUND"
+        | "ROLE_NOT_FOUND"
+        | "CANNOT_CHANGE_SELF"
+        | "RT_NOT_FOUND"
+        | "RT_REQUIRED"
+        | "FORBIDDEN";
+    };
+
+export interface ForumChannelRecord {
+  id: string;
+  rtId: string | null;
+  name: string;
+}
+
+export interface ForumMessageRecord {
+  id: string;
+  channelId: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  imageUrls: string[];
+  createdAt: Date;
+}
+
+export type CreateForumMessageResult =
+  | { outcome: "OK"; message: ForumMessageRecord; recipientUserIds: string[] }
+  | { outcome: "CHANNEL_NOT_FOUND" };
+
+export type DeleteForumMessageResult =
+  | { outcome: "DELETED"; messageId: string; channelId: string }
+  | { outcome: "NOT_FOUND" };
 
 export interface AppRepository {
   healthCheck(): Promise<void>;
@@ -693,6 +776,33 @@ export interface AppRepository {
     audit: RequestAuditContext;
   }): Promise<UpdateProfileResult>;
   getCurrentCommunity(auth: AuthSessionRecord): Promise<CurrentCommunityRecord | null>;
+  updateCommunity(input: {
+    auth: AuthSessionRecord;
+    changes: UpdateCommunityInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateCommunityResult>;
+  createCommunity(input: {
+    auth: AuthSessionRecord;
+    community: CreateCommunityInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateCommunityResult>;
+  listCommunitiesForPlatformAdmin(auth: AuthSessionRecord): Promise<CommunityAdminRecord[]>;
+  listRts(auth: AuthSessionRecord): Promise<RtRecord[]>;
+  createRt(input: {
+    auth: AuthSessionRecord;
+    rt: CreateRtInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateRtResult>;
+  updateRt(input: {
+    auth: AuthSessionRecord;
+    rtId: string;
+    changes: UpdateRtInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateRtResult>;
   listDirectory(input: {
     auth: AuthSessionRecord;
     search?: string;
@@ -715,19 +825,21 @@ export interface AppRepository {
     now: Date;
     audit: RequestAuditContext;
   }): Promise<RemoveHouseholdMemberResult>;
-  listRegistrationCommunities(): Promise<CommunitySummary[]>;
+  listRegistrationCommunities(): Promise<OnboardingCommunityOption[]>;
   listRoles(): Promise<RoleSummary[]>;
   listCommunityMembers(auth: AuthSessionRecord): Promise<CommunityMemberRecord[]>;
   setMemberRole(input: {
     auth: AuthSessionRecord;
     residentId: string;
     roleCode: string;
+    rtId?: string | null;
     now: Date;
     audit: RequestAuditContext;
   }): Promise<SetMemberRoleResult>;
   createResidencyRequest(input: {
     auth: AuthSessionRecord;
     communityId: string;
+    rtId: string;
     houseCode: string;
     fullName: string;
     relationship: HouseholdRelationship;
@@ -1133,11 +1245,40 @@ export interface AppRepository {
     now: Date;
     audit: RequestAuditContext;
   }): Promise<CreateHouseResult>;
+  updateHouse(input: {
+    auth: AuthSessionRecord;
+    houseId: string;
+    changes: UpdateHouseInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateHouseResult>;
 
   updateProfile(input: {
     auth: AuthSessionRecord;
     profile: UpdateProfileInput;
   }): Promise<{ displayName: string | null; allowResidentContact: boolean }>;
+
+  listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]>;
+  listForumMessages(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    cursor?: string;
+    limit: number;
+  }): Promise<CursorPageResult<ForumMessageRecord>>;
+  createForumMessage(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    body: string;
+    imageUrls: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateForumMessageResult>;
+  deleteForumMessage(input: {
+    auth: AuthSessionRecord;
+    messageId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<DeleteForumMessageResult>;
 
   recordAudit(input: AuditInput): Promise<void>;
 }

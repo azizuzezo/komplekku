@@ -41,6 +41,7 @@ export function ResidencyOnboarding() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedCommunityId, setSelectedCommunityId] = useState("");
+  const [selectedRtId, setSelectedRtId] = useState("");
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const optionsQuery = useQuery({
     queryKey: ["onboarding", "options"],
@@ -50,6 +51,7 @@ export function ResidencyOnboarding() {
     resolver: zodResolver(residencyRequestInputSchema),
     defaultValues: {
       communityId: "",
+      rtId: "",
       houseCode: "",
       fullName: "",
       relationship: "HEAD",
@@ -162,20 +164,44 @@ export function ResidencyOnboarding() {
                   name="community"
                   value={community.id}
                   checked={selectedCommunityId === community.id}
-                  onChange={() => setSelectedCommunityId(community.id)}
+                  onChange={() => {
+                    setSelectedCommunityId(community.id);
+                    setSelectedRtId("");
+                  }}
                 />
                 <span>{community.name}</span>
               </label>
             ))}
           </div>
         </fieldset>
+        {selectedCommunity && (
+          <fieldset className="community-selector">
+            <legend>Pilih RT</legend>
+            <p>Pilih RT tempat rumahmu berada.</p>
+            <div className="community-selector__options">
+              {selectedCommunity.rts.map((rt) => (
+                <label className="community-option" key={rt.id}>
+                  <input
+                    type="radio"
+                    name="rt"
+                    value={rt.id}
+                    checked={selectedRtId === rt.id}
+                    onChange={() => setSelectedRtId(rt.id)}
+                  />
+                  <span>{rt.name}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
         <button
           className="button button--primary button--full"
           type="button"
-          disabled={!selectedCommunity}
+          disabled={!selectedCommunity || !selectedRtId}
           onClick={() => {
-            if (!selectedCommunity) return;
+            if (!selectedCommunity || !selectedRtId) return;
             form.setValue("communityId", selectedCommunity.id, { shouldValidate: true });
+            form.setValue("rtId", selectedRtId, { shouldValidate: true });
             setStep(2);
           }}
         >
@@ -203,9 +229,16 @@ export function ResidencyOnboarding() {
         </li>
       </ol>
       <input type="hidden" {...form.register("communityId")} />
+      <input type="hidden" {...form.register("rtId")} />
       <div className="selected-community">
         <span>Lingkungan yang dipilih</span>
         <strong>{selectedCommunity?.name}</strong>
+      </div>
+      <div className="selected-community">
+        <span>RT yang dipilih</span>
+        <strong>
+          {selectedCommunity?.rts.find((rt) => rt.id === selectedRtId)?.name ?? "-"}
+        </strong>
       </div>
       <div className="field">
         <label htmlFor="full-name">Nama lengkap</label>

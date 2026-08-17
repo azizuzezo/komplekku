@@ -186,7 +186,7 @@ h6 {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  box-shadow: 0 1px 4px oklch(24.5% 0.045 214.3 / 0.06);
+  box-shadow: 0 1px 4px oklch(22.5% 0.021 163 / 0.06);
 }
 
 /* ── Button base utility ─────────────────────────────────────── */
@@ -731,7 +731,7 @@ div[data-nextjs-toast] {
   align-items: center;
   justify-content: center;
   padding: var(--space-md);
-  background: oklch(24.5% 0.045 214.3 / 0.5);
+  background: oklch(22.5% 0.021 163 / 0.5);
 }
 
 .modal-card {
@@ -793,10 +793,44 @@ div[data-nextjs-toast] {
   bottom: 0;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-top: var(--rule-thin) solid var(--color-border);
   background: var(--color-surface);
   padding: 0 var(--space-2xs) max(var(--space-3xs), env(safe-area-inset-bottom));
+}
+
+/* Forum Warga is deliberately raised as a purple bubble above the bar rather
+   than folded into the Layanan sheet like the other items — an explicit
+   owner request to make chat the most discoverable action, overriding the
+   app's usual civic-green/terracotta palette for this one control. */
+.mobile-navigation__item--bubble {
+  position: relative;
+}
+
+.mobile-navigation__item--bubble .mobile-navigation__bubble-icon {
+  position: absolute;
+  top: -1.375rem;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+  box-shadow: var(--shadow-raised);
+}
+
+.mobile-navigation__item--bubble span {
+  margin-top: 1.75rem;
+}
+
+.mobile-navigation__item--bubble[aria-current="page"],
+.mobile-navigation__item--bubble:hover {
+  color: #7c3aed;
+}
+
+.mobile-navigation__item--bubble[aria-current="page"]::before {
+  background: transparent;
 }
 
 .mobile-navigation__item {
@@ -4982,7 +5016,7 @@ div[data-nextjs-toast] {
 }
 
 .photo-picker__overlay--uploading {
-  background: oklch(24.5% 0.045 214.3 / 0.5);
+  background: oklch(22.5% 0.021 163 / 0.5);
 }
 
 .photo-picker__overlay--error {
@@ -5015,7 +5049,7 @@ div[data-nextjs-toast] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: oklch(24.5% 0.045 214.3 / 0.75);
+  background: oklch(22.5% 0.021 163 / 0.75);
   color: #fff;
   border: none;
   border-radius: 9999px;

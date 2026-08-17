@@ -67,10 +67,10 @@ export function KomplekMap() {
 
       // Draw Billabong Blok F Perimeter Boundary Ring
       const polygon = L.polygon(BOUNDARY_COORDS, {
-        color: "#28594A",
+        color: "#4B2DA1",
         weight: 3,
         dashArray: "6, 6",
-        fillColor: "#28594A",
+        fillColor: "#4B2DA1",
         fillOpacity: 0.15,
       }).addTo(map);
 

@@ -121,7 +121,7 @@ class _PriorityLabel extends StatelessWidget {
     return Text(
       isUrgent ? 'MENDESAK' : 'PENTING',
       style: TextStyle(
-        color: isUrgent ? KomplekkuColors.danger : KomplekkuColors.terracotta,
+        color: isUrgent ? KomplekkuColors.danger : KomplekkuColors.accent,
         fontWeight: FontWeight.w800,
         fontSize: 12,
         letterSpacing: 0.6,

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { roleDefinitions, rolePermissionKeys } from "../../prisma/rbac-seed-data";
+import { computeRtScopeId } from "../lib/rt-scope";
 
 import type {
   AddReportUpdateInput,
@@ -13,6 +14,7 @@ import type {
   CreateAnnouncementInput,
   CreateCameraInput,
   CreateCashTransactionInput,
+  CreateCommunityInput,
   CreateDuesTypeInput,
   CreateFacilityBookingInput,
   CreateHouseInput,
@@ -21,6 +23,7 @@ import type {
   CreatePackageInput,
   CreatePaymentInput,
   CreateReportInput,
+  CreateRtInput,
   CreateVehicleInput,
   CreateVisitorInput,
   CreateWalkInVisitorInput,
@@ -33,6 +36,7 @@ import type {
   IncidentStatus,
   InvoiceStatus,
   LetterRequestStatus,
+  OnboardingCommunityOption,
   PackageStatus,
   PatrolSessionStatus,
   PaymentStatus,
@@ -42,8 +46,11 @@ import type {
   SecurityShiftStatus,
   UpdateAgendaEventInput,
   UpdateCameraInput,
+  UpdateCommunityInput,
+  UpdateHouseInput,
   UpdateIncidentInput,
   UpdateProfileInput,
+  UpdateRtInput,
   UpdateVehicleInput,
   VehicleStatus,
   VehicleType,
@@ -67,17 +74,23 @@ import type {
   CashLedgerRecord,
   CashTransactionRecord,
   CollectPackageResult,
+  CommunityAdminRecord,
   CommunityMemberRecord,
+  CreateCommunityResult,
   CreateFacilityBookingResult,
+  CreateForumMessageResult,
   CreateHouseResult,
   CreateLetterRequestResult,
   CreatePackageResult,
   CreatePaymentResult,
   CreateReportResult,
   CreateResidencyRequestResult,
+  CreateRtResult,
   CreateVisitorResult,
   CurrentCommunityRecord,
   CurrentHouseholdRecord,
+  CursorPageResult,
+  DeleteForumMessageResult,
   DirectoryRecord,
   DuesTypeRecord,
   EmergencyRecord,
@@ -85,6 +98,8 @@ import type {
   FacilityBookingRecord,
   FacilityRecord,
   FinanceDashboardRecord,
+  ForumChannelRecord,
+  ForumMessageRecord,
   HomeRecord,
   HouseRecord,
   IncidentRecord,
@@ -103,17 +118,22 @@ import type {
   PaymentTransitionResult,
   RemoveHouseholdMemberResult,
   ReportRecord,
+  RequestAuditContext,
   ResidencyRequestRecord,
   ReviewResidencyRequestResult,
   RoleSummary,
+  RtRecord,
   ScanCheckpointResult,
   SecurityDashboardRecord,
   SecurityShiftRecord,
   SessionCreationResult,
   SetMemberRoleResult,
   StreamTicketResult,
+  UpdateCommunityResult,
+  UpdateHouseResult,
   UpdateIncidentResult,
   UpdateProfileResult,
+  UpdateRtResult,
   VehicleMutationResult,
   VehicleRecord,
   VehicleSearchRecord,
@@ -168,6 +188,13 @@ export const demoIds = {
   superAdminHousehold: "00000000-0000-4000-8000-000000000406",
   superAdminUser: "00000000-0000-4000-8000-000000000106",
   superAdminResident: "00000000-0000-4000-8000-000000000206",
+  rtOne: "00000000-0000-4000-8000-000000000f01",
+  rtTwo: "00000000-0000-4000-8000-000000000f02",
+  secondCommunityRt: "00000000-0000-4000-8000-000000000f03",
+  forumChannelCommunity: "00000000-0000-4000-8000-000000000f11",
+  forumChannelRtOne: "00000000-0000-4000-8000-000000000f12",
+  forumChannelRtTwo: "00000000-0000-4000-8000-000000000f13",
+  forumChannelSecondCommunity: "00000000-0000-4000-8000-000000000f14",
 } as const;
 
 interface MemoryUser {
@@ -205,12 +232,41 @@ interface MemoryCommunity {
   name: string;
   slug: string;
   timezone: string;
+  address?: string | null;
+  rwLabel?: string | null;
   registrationOpen: boolean;
+}
+
+interface MemoryRt {
+  id: string;
+  communityId: string;
+  code: string;
+  name: string;
+  deletedAt?: Date | null;
+}
+
+interface MemoryForumChannel {
+  id: string;
+  communityId: string;
+  rtId: string | null;
+  name: string;
+}
+
+interface MemoryForumMessage {
+  id: string;
+  communityId: string;
+  channelId: string;
+  authorUserId: string;
+  body: string;
+  imageUrls: string[];
+  createdAt: Date;
+  deletedAt: Date | null;
 }
 
 interface MemoryHouse {
   id: string;
   communityId: string;
+  rtId: string | null;
   code: string;
   block: string;
   number: string;
@@ -521,6 +577,8 @@ const readPermissions = [
   "invoice.read",
   "payment.create",
   "cash.read",
+  "forum.read",
+  "forum.post",
 ];
 
 const superAdminPermissions = [
@@ -572,6 +630,9 @@ const superAdminPermissions = [
   "cash.manage",
   "finance.dashboard.read",
   "admin.audit.read",
+  "forum.read",
+  "forum.post",
+  "forum.manage",
 ];
 
 const treasurerPermissions = [
@@ -585,6 +646,8 @@ const treasurerPermissions = [
   "cash.read",
   "cash.manage",
   "finance.dashboard.read",
+  "forum.read",
+  "forum.post",
 ];
 
 const securityPermissions = [
@@ -665,10 +728,14 @@ export class MemoryRepository implements AppRepository {
   private readonly users = new Map<string, MemoryUser>();
   private readonly residents = new Map<string, MemoryResident>();
   private readonly communities = new Map<string, MemoryCommunity>();
+  private readonly rts = new Map<string, MemoryRt>();
+  private readonly forumChannels = new Map<string, MemoryForumChannel>();
+  private readonly forumMessages = new Map<string, MemoryForumMessage>();
   private readonly houses = new Map<string, MemoryHouse>();
   private readonly households = new Map<string, MemoryHousehold>();
   private readonly permissions = new Map<string, string[]>();
   private readonly memberRoles = new Map<string, string>();
+  private readonly memberRoleRt = new Map<string, string | null>();
   private readonly reads = new Map<string, Date>();
   private readonly announcements: AnnouncementRecord[];
   private readonly agendaEvents: MemoryAgendaEvent[];
@@ -707,6 +774,7 @@ export class MemoryRepository implements AppRepository {
       name: "Billabong Blok F",
       slug: "billabong-blok-f",
       timezone: "Asia/Jakarta",
+      rwLabel: "RW 13",
       registrationOpen: true,
     });
     this.communities.set(demoIds.secondCommunity, {
@@ -716,9 +784,52 @@ export class MemoryRepository implements AppRepository {
       timezone: "Asia/Jakarta",
       registrationOpen: true,
     });
+    this.rts.set(demoIds.rtOne, {
+      id: demoIds.rtOne,
+      communityId: demoIds.community,
+      code: "RT 01",
+      name: "RT 01",
+    });
+    this.rts.set(demoIds.rtTwo, {
+      id: demoIds.rtTwo,
+      communityId: demoIds.community,
+      code: "RT 02",
+      name: "RT 02",
+    });
+    this.rts.set(demoIds.secondCommunityRt, {
+      id: demoIds.secondCommunityRt,
+      communityId: demoIds.secondCommunity,
+      code: "RT 01",
+      name: "RT 01",
+    });
+    this.forumChannels.set(demoIds.forumChannelCommunity, {
+      id: demoIds.forumChannelCommunity,
+      communityId: demoIds.community,
+      rtId: null,
+      name: "Forum Warga",
+    });
+    this.forumChannels.set(demoIds.forumChannelRtOne, {
+      id: demoIds.forumChannelRtOne,
+      communityId: demoIds.community,
+      rtId: demoIds.rtOne,
+      name: "RT 01",
+    });
+    this.forumChannels.set(demoIds.forumChannelRtTwo, {
+      id: demoIds.forumChannelRtTwo,
+      communityId: demoIds.community,
+      rtId: demoIds.rtTwo,
+      name: "RT 02",
+    });
+    this.forumChannels.set(demoIds.forumChannelSecondCommunity, {
+      id: demoIds.forumChannelSecondCommunity,
+      communityId: demoIds.secondCommunity,
+      rtId: null,
+      name: "Forum Warga",
+    });
     this.houses.set(demoIds.house, {
       id: demoIds.house,
       communityId: demoIds.community,
+      rtId: demoIds.rtOne,
       code: "F01",
       block: "F",
       number: "01",
@@ -727,6 +838,7 @@ export class MemoryRepository implements AppRepository {
     this.houses.set(demoIds.requestedHouse, {
       id: demoIds.requestedHouse,
       communityId: demoIds.community,
+      rtId: demoIds.rtOne,
       code: "F03",
       block: "F",
       number: "03",
@@ -735,6 +847,7 @@ export class MemoryRepository implements AppRepository {
     this.houses.set(demoIds.secondHouse, {
       id: demoIds.secondHouse,
       communityId: demoIds.secondCommunity,
+      rtId: demoIds.secondCommunityRt,
       code: "C01",
       block: "C",
       number: "01",
@@ -743,6 +856,7 @@ export class MemoryRepository implements AppRepository {
     this.houses.set(demoIds.directoryHouse, {
       id: demoIds.directoryHouse,
       communityId: demoIds.community,
+      rtId: demoIds.rtOne,
       code: "F02",
       block: "F",
       number: "02",
@@ -823,6 +937,7 @@ export class MemoryRepository implements AppRepository {
     this.houses.set(demoIds.securityHouse, {
       id: demoIds.securityHouse,
       communityId: demoIds.community,
+      rtId: demoIds.rtOne,
       code: "F03",
       block: "F",
       number: "03",
@@ -855,6 +970,7 @@ export class MemoryRepository implements AppRepository {
     this.houses.set(demoIds.treasurerHouse, {
       id: demoIds.treasurerHouse,
       communityId: demoIds.community,
+      rtId: demoIds.rtTwo,
       code: "F04",
       block: "F",
       number: "04",
@@ -887,6 +1003,7 @@ export class MemoryRepository implements AppRepository {
     this.houses.set(demoIds.superAdminHouse, {
       id: demoIds.superAdminHouse,
       communityId: demoIds.community,
+      rtId: demoIds.rtTwo,
       code: "F2D2-17",
       block: "F2D2",
       number: "17",
@@ -1263,6 +1380,13 @@ export class MemoryRepository implements AppRepository {
     const user = this.users.get(session.userId);
     if (!user?.active) return null;
 
+    const roleCode = session.currentCommunityId
+      ? this.memberRoles.get(`${user.id}:${session.currentCommunityId}`)
+      : undefined;
+    const rtId = session.currentCommunityId
+      ? (this.memberRoleRt.get(`${user.id}:${session.currentCommunityId}`) ?? null)
+      : null;
+
     return {
       sessionId: session.id,
       userId: session.userId,
@@ -1271,6 +1395,7 @@ export class MemoryRepository implements AppRepository {
       permissions: session.currentCommunityId
         ? [...(this.permissions.get(`${user.id}:${session.currentCommunityId}`) ?? [])]
         : [],
+      rtScopeId: computeRtScopeId(roleCode ? [{ roleCode, rtId }] : []),
     };
   }
 
@@ -1608,17 +1733,237 @@ export class MemoryRepository implements AppRepository {
       name: community.name,
       slug: community.slug,
       timezone: community.timezone,
-      address: community.id === demoIds.community ? "Billabong, Bogor" : "Taman Cendana, Bogor",
+      address:
+        community.address ??
+        (community.id === demoIds.community ? "Billabong, Bogor" : "Taman Cendana, Bogor"),
+      rwLabel: community.rwLabel ?? null,
       contactPhone: null,
       emergencyContactPhone: null,
     };
   }
 
-  async listRegistrationCommunities() {
+  async updateCommunity(input: {
+    auth: AuthSessionRecord;
+    changes: UpdateCommunityInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateCommunityResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+    const community = this.communities.get(communityId);
+    if (!community) return { outcome: "NOT_FOUND" };
+
+    if (input.changes.name !== undefined) community.name = input.changes.name;
+    if (input.changes.address !== undefined) community.address = input.changes.address;
+    if (input.changes.rwLabel !== undefined) community.rwLabel = input.changes.rwLabel;
+    if (input.changes.registrationOpen !== undefined) {
+      community.registrationOpen = input.changes.registrationOpen;
+    }
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "community.updated",
+      entityType: "Community",
+      entityId: communityId,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      community: {
+        id: community.id,
+        slug: community.slug,
+        name: community.name,
+        address: community.address ?? null,
+        rwLabel: community.rwLabel ?? null,
+        timezone: community.timezone,
+        registrationOpen: community.registrationOpen,
+      },
+    };
+  }
+
+  async createCommunity(input: {
+    auth: AuthSessionRecord;
+    community: CreateCommunityInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateCommunityResult> {
+    const conflict = [...this.communities.values()].some(
+      (community) => community.slug === input.community.slug,
+    );
+    if (conflict) return { outcome: "SLUG_CONFLICT" };
+
+    const community: MemoryCommunity = {
+      id: randomUUID(),
+      slug: input.community.slug,
+      name: input.community.name,
+      address: input.community.address ?? null,
+      rwLabel: input.community.rwLabel ?? null,
+      timezone: input.community.timezone,
+      registrationOpen: true,
+    };
+    this.communities.set(community.id, community);
+    const forumChannelId = randomUUID();
+    this.forumChannels.set(forumChannelId, {
+      id: forumChannelId,
+      communityId: community.id,
+      rtId: null,
+      name: "Forum Warga",
+    });
+
+    this.audits.push({
+      communityId: community.id,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "community.created",
+      entityType: "Community",
+      entityId: community.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      community: {
+        id: community.id,
+        slug: community.slug,
+        name: community.name,
+        address: community.address ?? null,
+        rwLabel: community.rwLabel ?? null,
+        timezone: community.timezone,
+        registrationOpen: community.registrationOpen,
+      },
+    };
+  }
+
+  async listCommunitiesForPlatformAdmin(): Promise<CommunityAdminRecord[]> {
+    return [...this.communities.values()]
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((community) => ({
+        id: community.id,
+        slug: community.slug,
+        name: community.name,
+        address: community.address ?? null,
+        rwLabel: community.rwLabel ?? null,
+        timezone: community.timezone,
+        registrationOpen: community.registrationOpen,
+      }));
+  }
+
+  async listRts(auth: AuthSessionRecord): Promise<RtRecord[]> {
+    if (!auth.currentCommunityId) return [];
+    return [...this.rts.values()]
+      .filter((rt) => rt.communityId === auth.currentCommunityId && !rt.deletedAt)
+      .sort((left, right) => left.code.localeCompare(right.code))
+      .map((rt) => ({ id: rt.id, code: rt.code, name: rt.name }));
+  }
+
+  async createRt(input: {
+    auth: AuthSessionRecord;
+    rt: CreateRtInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateRtResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CODE_CONFLICT" };
+    const conflict = [...this.rts.values()].some(
+      (rt) => rt.communityId === communityId && rt.code === input.rt.code && !rt.deletedAt,
+    );
+    if (conflict) return { outcome: "CODE_CONFLICT" };
+
+    const rt: MemoryRt = {
+      id: randomUUID(),
+      communityId,
+      code: input.rt.code,
+      name: input.rt.name,
+    };
+    this.rts.set(rt.id, rt);
+    const forumChannelId = randomUUID();
+    this.forumChannels.set(forumChannelId, {
+      id: forumChannelId,
+      communityId,
+      rtId: rt.id,
+      name: rt.name,
+    });
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "rt.created",
+      entityType: "Rt",
+      entityId: rt.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "OK", rt: { id: rt.id, code: rt.code, name: rt.name } };
+  }
+
+  async updateRt(input: {
+    auth: AuthSessionRecord;
+    rtId: string;
+    changes: UpdateRtInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateRtResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+    const rt = this.rts.get(input.rtId);
+    if (!rt || rt.communityId !== communityId || rt.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+    if (input.changes.code) {
+      const conflict = [...this.rts.values()].some(
+        (candidate) =>
+          candidate.id !== rt.id &&
+          candidate.communityId === communityId &&
+          candidate.code === input.changes.code &&
+          !candidate.deletedAt,
+      );
+      if (conflict) return { outcome: "CODE_CONFLICT" };
+      rt.code = input.changes.code;
+    }
+    if (input.changes.name) {
+      rt.name = input.changes.name;
+      for (const channel of this.forumChannels.values()) {
+        if (channel.communityId === communityId && channel.rtId === rt.id) {
+          channel.name = rt.name;
+        }
+      }
+    }
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "rt.updated",
+      entityType: "Rt",
+      entityId: rt.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "OK", rt: { id: rt.id, code: rt.code, name: rt.name } };
+  }
+
+  async listRegistrationCommunities(): Promise<OnboardingCommunityOption[]> {
     return [...this.communities.values()]
       .filter((community) => community.registrationOpen)
       .sort((left, right) => left.name.localeCompare(right.name))
-      .map(({ id, name, slug, timezone }) => ({ id, name, slug, timezone }));
+      .map(({ id, name, slug, timezone }) => ({
+        id,
+        name,
+        slug,
+        timezone,
+        rts: [...this.rts.values()]
+          .filter((rt) => rt.communityId === id && !rt.deletedAt)
+          .sort((left, right) => left.code.localeCompare(right.code))
+          .map((rt) => ({ id: rt.id, code: rt.code, name: rt.name })),
+      }));
   }
 
   async listRoles(): Promise<RoleSummary[]> {
@@ -1627,6 +1972,10 @@ export class MemoryRepository implements AppRepository {
       code,
       name,
     }));
+  }
+
+  private houseRtId(house: MemoryHouse | undefined): string | null {
+    return house?.rtId ?? null;
   }
 
   async listCommunityMembers(auth: AuthSessionRecord): Promise<CommunityMemberRecord[]> {
@@ -1648,23 +1997,45 @@ export class MemoryRepository implements AppRepository {
           displayName: user?.displayName ?? resident.fullName,
           phoneE164: user?.phoneE164 ?? "",
           houseCode: house?.code ?? null,
+          rtCode: house?.rtId ? (this.rts.get(house.rtId)?.code ?? null) : null,
           roles:
             roleCode && roleName
               ? [{ id: roleIdByCode.get(roleCode) ?? roleCode, code: roleCode, name: roleName }]
               : [],
+          houseRtId: this.houseRtId(house),
         };
-      });
+      })
+      .filter((member) => !auth.rtScopeId || member.houseRtId === auth.rtScopeId)
+      .map(({ houseRtId: _houseRtId, ...member }) => member);
   }
 
   async setMemberRole(input: {
     auth: AuthSessionRecord;
     residentId: string;
     roleCode: string;
+    rtId?: string | null;
     now: Date;
     audit: { ipAddress: string | null; userAgent: string | null };
   }): Promise<SetMemberRoleResult> {
     const communityId = input.auth.currentCommunityId;
     if (!communityId) return { outcome: "NOT_FOUND" };
+
+    if (input.auth.rtScopeId) {
+      if (input.roleCode === "SUPER_ADMIN" || input.roleCode === "COMMUNITY_ADMIN") {
+        return { outcome: "FORBIDDEN" };
+      }
+    }
+    const effectiveRtId =
+      input.roleCode === "RT_ADMIN" ? (input.auth.rtScopeId ?? input.rtId ?? null) : null;
+    if (input.roleCode === "RT_ADMIN" && !effectiveRtId) {
+      return { outcome: "RT_REQUIRED" };
+    }
+    if (effectiveRtId) {
+      const rt = this.rts.get(effectiveRtId);
+      if (!rt || rt.communityId !== communityId || rt.deletedAt) {
+        return { outcome: "RT_NOT_FOUND" };
+      }
+    }
 
     const resident = [...this.residents.values()].find(
       (candidate) =>
@@ -1675,10 +2046,21 @@ export class MemoryRepository implements AppRepository {
     if (!resident) return { outcome: "NOT_FOUND" };
     if (resident.userId === input.auth.userId) return { outcome: "CANNOT_CHANGE_SELF" };
 
+    if (input.auth.rtScopeId) {
+      const household = resident.householdId
+        ? this.households.get(resident.householdId)
+        : undefined;
+      const house = household ? this.houses.get(household.houseId) : undefined;
+      if (this.houseRtId(house) !== input.auth.rtScopeId) {
+        return { outcome: "NOT_FOUND" };
+      }
+    }
+
     const roleName = roleNameByCode.get(input.roleCode);
     if (!roleName) return { outcome: "ROLE_NOT_FOUND" };
 
     this.memberRoles.set(`${resident.userId}:${communityId}`, input.roleCode);
+    this.memberRoleRt.set(`${resident.userId}:${communityId}`, effectiveRtId);
     this.permissions.set(`${resident.userId}:${communityId}`, [
       ...(rolePermissionKeys[input.roleCode] ?? []),
     ]);
@@ -1706,6 +2088,7 @@ export class MemoryRepository implements AppRepository {
   async createResidencyRequest(input: {
     auth: AuthSessionRecord;
     communityId: string;
+    rtId: string;
     houseCode: string;
     fullName: string;
     relationship: HouseholdRelationship;
@@ -1729,7 +2112,9 @@ export class MemoryRepository implements AppRepository {
         candidate.communityId === community.id &&
         candidate.code.toUpperCase() === normalizedHouseCode,
     );
-    if (!house) return { outcome: "HOUSE_NOT_FOUND" };
+    // A mismatched RT is reported identically to a missing house, mirroring
+    // prisma-repository.ts's privacy-preserving behavior.
+    if (!house || house.rtId !== input.rtId) return { outcome: "HOUSE_NOT_FOUND" };
 
     const user = this.users.get(input.auth.userId);
     if (!user) return { outcome: "ACCOUNT_RESTRICTED" };
@@ -1764,12 +2149,20 @@ export class MemoryRepository implements AppRepository {
     return { outcome: "CREATED", request: this.residencyRequestRecord(resident) };
   }
 
+  private requestInRtScope(resident: MemoryResident, rtScopeId: string | null): boolean {
+    if (!rtScopeId) return true;
+    const house = resident.requestedHouseId ? this.houses.get(resident.requestedHouseId) : null;
+    return this.houseRtId(house ?? undefined) === rtScopeId;
+  }
+
   async listPendingResidencyRequests(auth: AuthSessionRecord, limit: number) {
     if (!auth.currentCommunityId) return { items: [], total: 0 };
     const items = [...this.residents.values()]
       .filter(
         (resident) =>
-          resident.communityId === auth.currentCommunityId && resident.status === "PENDING",
+          resident.communityId === auth.currentCommunityId &&
+          resident.status === "PENDING" &&
+          this.requestInRtScope(resident, auth.rtScopeId),
       )
       .sort((left, right) => left.requestedAt.getTime() - right.requestedAt.getTime())
       .map((resident) => this.residencyRequestRecord(resident));
@@ -1785,7 +2178,9 @@ export class MemoryRepository implements AppRepository {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const resident = [...this.residents.values()].find(
       (candidate) =>
-        candidate.id === input.requestId && candidate.communityId === input.auth.currentCommunityId,
+        candidate.id === input.requestId &&
+        candidate.communityId === input.auth.currentCommunityId &&
+        this.requestInRtScope(candidate, input.auth.rtScopeId),
     );
     if (!resident) return { outcome: "NOT_FOUND" };
     if (resident.status !== "PENDING") return { outcome: "NOT_PENDING" };
@@ -1848,7 +2243,9 @@ export class MemoryRepository implements AppRepository {
     if (!input.auth.currentCommunityId) return { outcome: "NOT_FOUND" };
     const resident = [...this.residents.values()].find(
       (candidate) =>
-        candidate.id === input.requestId && candidate.communityId === input.auth.currentCommunityId,
+        candidate.id === input.requestId &&
+        candidate.communityId === input.auth.currentCommunityId &&
+        this.requestInRtScope(candidate, input.auth.rtScopeId),
     );
     if (!resident) return { outcome: "NOT_FOUND" };
     if (resident.status !== "PENDING") return { outcome: "NOT_PENDING" };
@@ -4477,6 +4874,8 @@ export class MemoryRepository implements AppRepository {
       code: house.code,
       block: house.block,
       number: house.number,
+      rtId: house.rtId,
+      rtCode: house.rtId ? (this.rts.get(house.rtId)?.code ?? null) : null,
       occupancyStatus: house.occupancyStatus,
       addressLabel: `Blok ${house.block} No. ${house.number}`,
       hasHousehold,
@@ -4487,7 +4886,12 @@ export class MemoryRepository implements AppRepository {
   async listHouses(auth: AuthSessionRecord): Promise<HouseRecord[]> {
     if (!auth.currentCommunityId) return [];
     return [...this.houses.values()]
-      .filter((house) => house.communityId === auth.currentCommunityId && !house.deletedAt)
+      .filter(
+        (house) =>
+          house.communityId === auth.currentCommunityId &&
+          !house.deletedAt &&
+          (!auth.rtScopeId || house.rtId === auth.rtScopeId),
+      )
       .sort((left, right) => left.code.localeCompare(right.code))
       .map((house) => this.houseRecord(house));
   }
@@ -4502,6 +4906,11 @@ export class MemoryRepository implements AppRepository {
       throw new Error("Community context is required to create a house.");
     }
     const communityId = input.auth.currentCommunityId;
+    const rtId = input.auth.rtScopeId ?? input.house.rtId;
+    const rt = this.rts.get(rtId);
+    if (!rt || rt.communityId !== communityId || rt.deletedAt) {
+      return { outcome: "RT_NOT_FOUND" };
+    }
     const exists = [...this.houses.values()].some(
       (house) => house.communityId === communityId && house.code === input.house.code,
     );
@@ -4509,6 +4918,7 @@ export class MemoryRepository implements AppRepository {
     const house: MemoryHouse = {
       id: randomUUID(),
       communityId,
+      rtId,
       code: input.house.code,
       block: input.house.block,
       number: input.house.number,
@@ -4528,6 +4938,245 @@ export class MemoryRepository implements AppRepository {
       metadata: { code: house.code },
     });
     return { outcome: "OK", house: this.houseRecord(house) };
+  }
+
+  async updateHouse(input: {
+    auth: AuthSessionRecord;
+    houseId: string;
+    changes: UpdateHouseInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateHouseResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+    const house = this.houses.get(input.houseId);
+    if (
+      !house ||
+      house.communityId !== communityId ||
+      house.deletedAt ||
+      (input.auth.rtScopeId && house.rtId !== input.auth.rtScopeId)
+    ) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    const nextRtId = input.auth.rtScopeId ?? input.changes.rtId;
+    if (nextRtId) {
+      const rt = this.rts.get(nextRtId);
+      if (!rt || rt.communityId !== communityId || rt.deletedAt) {
+        return { outcome: "RT_NOT_FOUND" };
+      }
+      house.rtId = nextRtId;
+    }
+    if (input.changes.block !== undefined) house.block = input.changes.block;
+    if (input.changes.number !== undefined) house.number = input.changes.number;
+    if (input.changes.occupancyStatus !== undefined) {
+      house.occupancyStatus = input.changes.occupancyStatus;
+    }
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "house.updated",
+      entityType: "House",
+      entityId: house.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "OK", house: this.houseRecord(house) };
+  }
+
+  private viewerHouseRtId(auth: AuthSessionRecord): string | null {
+    if (!auth.currentHouseholdId) return null;
+    const household = this.households.get(auth.currentHouseholdId);
+    if (!household) return null;
+    return this.houses.get(household.houseId)?.rtId ?? null;
+  }
+
+  private canAccessForumChannel(
+    auth: AuthSessionRecord,
+    channel: { rtId: string | null },
+  ): boolean {
+    if (channel.rtId === null) return true;
+    if (auth.permissions.includes("community.manage")) return true;
+    if (auth.rtScopeId === channel.rtId) return true;
+    return this.viewerHouseRtId(auth) === channel.rtId;
+  }
+
+  private mapForumMessage(message: MemoryForumMessage): ForumMessageRecord {
+    const author = this.users.get(message.authorUserId);
+    return {
+      id: message.id,
+      channelId: message.channelId,
+      authorUserId: message.authorUserId,
+      authorName: author?.displayName ?? author?.phoneE164 ?? "Pengguna Komplekku",
+      body: message.body,
+      imageUrls: message.imageUrls,
+      createdAt: message.createdAt,
+    };
+  }
+
+  async listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return [];
+    return [...this.forumChannels.values()]
+      .filter(
+        (channel) => channel.communityId === communityId && this.canAccessForumChannel(auth, channel),
+      )
+      .sort((left, right) => (left.rtId ?? "").localeCompare(right.rtId ?? ""))
+      .map((channel) => ({ id: channel.id, rtId: channel.rtId, name: channel.name }));
+  }
+
+  async listForumMessages(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    cursor?: string;
+    limit: number;
+  }): Promise<CursorPageResult<ForumMessageRecord>> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "OK", items: [], total: 0, nextCursor: null };
+
+    const channel = this.forumChannels.get(input.channelId);
+    if (
+      !channel ||
+      channel.communityId !== communityId ||
+      !this.canAccessForumChannel(input.auth, channel)
+    ) {
+      return { outcome: "OK", items: [], total: 0, nextCursor: null };
+    }
+
+    const all = [...this.forumMessages.values()]
+      .filter(
+        (message) =>
+          message.communityId === communityId &&
+          message.channelId === input.channelId &&
+          !message.deletedAt,
+      )
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+
+    let startIndex = 0;
+    if (input.cursor) {
+      const cursorIndex = all.findIndex((message) => message.id === input.cursor);
+      if (cursorIndex === -1) return { outcome: "INVALID_CURSOR" };
+      startIndex = cursorIndex + 1;
+    }
+    const page = all.slice(startIndex, startIndex + input.limit);
+    const hasMore = startIndex + input.limit < all.length;
+
+    return {
+      outcome: "OK",
+      items: page.map((message) => this.mapForumMessage(message)),
+      total: all.length,
+      nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
+    };
+  }
+
+  async createForumMessage(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    body: string;
+    imageUrls: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateForumMessageResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const channel = this.forumChannels.get(input.channelId);
+    if (
+      !channel ||
+      channel.communityId !== communityId ||
+      !this.canAccessForumChannel(input.auth, channel)
+    ) {
+      return { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    const message: MemoryForumMessage = {
+      id: randomUUID(),
+      communityId,
+      channelId: channel.id,
+      authorUserId: input.auth.userId,
+      body: input.body,
+      imageUrls: input.imageUrls,
+      createdAt: input.now,
+      deletedAt: null,
+    };
+    this.forumMessages.set(message.id, message);
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.message.created",
+      entityType: "ForumMessage",
+      entityId: message.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    // Recipients: active residents whose household's house sits in this RT
+    // (or the whole community for the community-wide channel), minus the
+    // author — mirrors prisma-repository.ts's channel-scoped notification
+    // fan-out.
+    const recipientUserIds = [...this.residents.values()]
+      .filter((resident) => {
+        if (resident.communityId !== communityId || resident.status !== "ACTIVE") return false;
+        if (resident.userId === input.auth.userId) return false;
+        if (!channel.rtId) return true;
+        const household = resident.householdId ? this.households.get(resident.householdId) : null;
+        const house = household ? this.houses.get(household.houseId) : null;
+        return house?.rtId === channel.rtId;
+      })
+      .map((resident) => resident.userId);
+
+    return {
+      outcome: "OK",
+      message: this.mapForumMessage(message),
+      recipientUserIds,
+    };
+  }
+
+  async deleteForumMessage(input: {
+    auth: AuthSessionRecord;
+    messageId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<DeleteForumMessageResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const message = this.forumMessages.get(input.messageId);
+    if (!message || message.communityId !== communityId || message.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+    const channel = this.forumChannels.get(message.channelId);
+    const isOwnMessage = message.authorUserId === input.auth.userId;
+    const canModerate = input.auth.permissions.includes("forum.manage");
+    if (!isOwnMessage && !canModerate) return { outcome: "NOT_FOUND" };
+    if (
+      canModerate &&
+      !isOwnMessage &&
+      input.auth.rtScopeId &&
+      channel?.rtId !== input.auth.rtScopeId
+    ) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    message.deletedAt = input.now;
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.message.deleted",
+      entityType: "ForumMessage",
+      entityId: message.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "DELETED", messageId: message.id, channelId: message.channelId };
   }
 
   async recordAudit(input: AuditInput): Promise<void> {

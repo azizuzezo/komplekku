@@ -166,6 +166,12 @@ describe.skipIf(!testDatabaseUrl)("isolasi tenant dengan PostgreSQL nyata", () =
     const tenantB = communities.find((community) => community.slug === "demo-taman-cendana");
     if (!billabong || !tenantB) throw new Error("Fixture dua komunitas tidak lengkap.");
 
+    const targetHouse = await prisma.house.findFirst({
+      where: { communityId: billabong.id, code: "F05" },
+      select: { rtId: true },
+    });
+    if (!targetHouse?.rtId) throw new Error("Fixture RT untuk rumah F05 tidak ditemukan.");
+
     const applicant = await loginWeb(app, applicantPhoneInput);
     const submitted = await app.inject({
       method: "POST",
@@ -173,6 +179,7 @@ describe.skipIf(!testDatabaseUrl)("isolasi tenant dengan PostgreSQL nyata", () =
       headers: { cookie: applicant.cookie },
       payload: {
         communityId: billabong.id,
+        rtId: targetHouse.rtId,
         houseCode: "F05",
         fullName: "Nadia Isolasi",
         relationship: "HEAD",

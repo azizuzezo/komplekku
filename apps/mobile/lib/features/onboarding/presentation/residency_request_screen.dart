@@ -8,6 +8,7 @@ import 'package:komplekku/features/onboarding/presentation/widgets/onboarding_sc
 
 typedef ResidencySubmitCallback = Future<void> Function({
   required String fullName,
+  required String rtId,
   required String houseCode,
   required HouseholdRelationship relationship,
 });
@@ -42,6 +43,7 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
   final _nameController = TextEditingController();
   final _houseCodeController = TextEditingController();
   HouseholdRelationship? _relationship;
+  RtOption? _rt;
 
   @override
   void dispose() {
@@ -53,9 +55,11 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
   Future<void> _submit() async {
     if (widget.isSubmitting || !_formKey.currentState!.validate()) return;
     final relationship = _relationship;
-    if (relationship == null) return;
+    final rt = _rt;
+    if (relationship == null || rt == null) return;
     await widget.onSubmit(
       fullName: _nameController.text,
+      rtId: rt.id,
       houseCode: _houseCodeController.text,
       relationship: relationship,
     );
@@ -126,6 +130,25 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<RtOption>(
+                key: const ValueKey('rt'),
+                initialValue: _rt,
+                decoration: const InputDecoration(labelText: 'RT'),
+                items: widget.community.rts
+                    .map(
+                      (rt) => DropdownMenuItem(
+                        value: rt,
+                        child: Text(rt.name),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: widget.isSubmitting
+                    ? null
+                    : (value) => setState(() => _rt = value),
+                validator: (value) =>
+                    value == null ? 'Pilih RT tempat rumahmu berada.' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(

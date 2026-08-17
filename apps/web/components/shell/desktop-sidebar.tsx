@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BadgeDollarSign,
   Bell,
+  Building,
   Building2,
   CalendarDays,
   ClipboardCheck,
@@ -15,6 +16,7 @@ import {
   ListChecks,
   Megaphone,
   MessageSquareWarning,
+  MessagesSquare,
   Package,
   ShieldCheck,
   Siren,
@@ -51,6 +53,7 @@ const navigation: NavigationItem[] = [
     permission: "announcement.read",
   },
   { href: "/agenda", label: "Agenda", icon: CalendarDays, permission: "agenda.read" },
+  { href: "/forum", label: "Forum Warga", icon: MessagesSquare, permission: "forum.read" },
   {
     href: "/notifikasi",
     label: "Notifikasi",
@@ -106,6 +109,12 @@ const navigation: NavigationItem[] = [
     label: "Keuangan",
     icon: BadgeDollarSign,
     permission: "finance.dashboard.read",
+  },
+  {
+    href: "/admin/komunitas",
+    label: "Kelola Komunitas",
+    icon: Building,
+    permission: "community.manage",
   },
   {
     href: "/admin/rumah",

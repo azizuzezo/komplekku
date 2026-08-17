@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { communitySummarySchema } from "./community";
+import { communitySummarySchema, rtSummarySchema } from "./community";
 import { dataEnvelopeSchema } from "./envelope";
 import { houseSummarySchema } from "./me";
 
@@ -16,9 +16,15 @@ export const householdRelationshipSchema = z.enum([
 
 export type HouseholdRelationship = z.infer<typeof householdRelationshipSchema>;
 
+export const onboardingCommunityOptionSchema = communitySummarySchema.extend({
+  rts: z.array(rtSummarySchema),
+});
+
+export type OnboardingCommunityOption = z.infer<typeof onboardingCommunityOptionSchema>;
+
 export const onboardingOptionsResponseSchema = dataEnvelopeSchema(
   z.object({
-    communities: z.array(communitySummarySchema),
+    communities: z.array(onboardingCommunityOptionSchema),
   }),
 );
 
@@ -26,6 +32,7 @@ export type OnboardingOptionsResponse = z.infer<typeof onboardingOptionsResponse
 
 export const residencyRequestInputSchema = z.object({
   communityId: z.string().uuid(),
+  rtId: z.string().uuid(),
   houseCode: z.string().trim().min(1).max(24),
   fullName: z.string().trim().min(3).max(160),
   relationship: householdRelationshipSchema,

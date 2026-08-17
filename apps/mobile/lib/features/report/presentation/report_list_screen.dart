@@ -217,7 +217,7 @@ Color statusToneColor(ReportStatusTone tone) {
     case ReportStatusTone.success:
       return KomplekkuColors.success;
     case ReportStatusTone.warning:
-      return KomplekkuColors.terracotta;
+      return KomplekkuColors.accent;
     case ReportStatusTone.muted:
       return KomplekkuColors.textSecondary;
   }

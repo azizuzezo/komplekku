@@ -1,32 +1,32 @@
 export const colors = {
-  primary: "oklch(66.5% 0.138 214.3)", // #00ACC1
-  primaryDark: "oklch(52.2% 0.125 214.3)", // #00838F
-  background: "oklch(98.3% 0.009 210.8)", // #F3FBFC
-  surface: "oklch(100% 0 0)", // #FFFFFF
-  surfaceSoft: "oklch(96.2% 0.021 211.5)", // #E0F7FA
-  surfaceSage: "oklch(91.8% 0.045 212.1)", // #B2EBF2
-  textPrimary: "oklch(24.5% 0.045 214.3)", // #0F2F34
-  textSecondary: "oklch(48% 0.042 214.3)", // #376E76
-  border: "oklch(85.8% 0.076 212.8)", // #80DEEA
-  accent: "oklch(79.2% 0.108 213.5)", // #4DD0E1
+  primary: "oklch(40.9% 0.1753 287.9)", // #4B2DA1
+  primaryDark: "oklch(34.1% 0.1783 281.6)", // #32178F
+  background: "oklch(100% 0 0)",
+  surface: "oklch(100% 0 0)",
+  surfaceSoft: "oklch(97.4% 0.003 286)", // #F6F6F8
+  surfaceSage: "oklch(94.4% 0.03 296.2)", // #EEE9FF soft purple
+  textPrimary: "oklch(26.2% 0.015 297)", // #25232B
+  textSecondary: "oklch(56.6% 0.019 297)", // #777480
+  border: "oklch(89% 0.006 296)",
+  accent: "oklch(74.1% 0.1249 221.9)", // #32BCE3 cyan
   warning: "oklch(62.64% 0.1248 70.45)",
-  danger: "oklch(54.01% 0.1486 23.49)",
-  success: "oklch(52.32% 0.0954 155.85)",
+  danger: "oklch(62.6% 0.1933 23)", // #E5484D
+  success: "oklch(63.6% 0.1453 155.9)", // #20A464
   warningInk: "oklch(43% 0.105 70.45)",
   dangerInk: "oklch(45% 0.13 23.49)",
   successInk: "oklch(42% 0.08 155.85)",
-  focus: "oklch(66.5% 0.138 214.3)",
+  focus: "oklch(48% 0.19 288)",
   focusGuard: "oklch(100% 0 0)",
-  accentInk: "oklch(24.5% 0.045 214.3)",
+  accentInk: "oklch(26.2% 0.015 297)",
   onPrimary: "oklch(100% 0 0)",
   onDanger: "oklch(100% 0 0)",
-  info: "oklch(66.5% 0.138 214.3)",
-  disabled: "oklch(79.2% 0.035 212.8)",
-  loading: "oklch(96.2% 0.021 211.5)",
-  neutral: "oklch(48% 0.042 214.3)",
-  paper3: "oklch(96.2% 0.021 211.5)",
-  ink2: "oklch(35% 0.045 214.3)",
-  rule2: "oklch(85.8% 0.076 212.8)",
+  info: "oklch(40.9% 0.1753 287.9)",
+  disabled: "oklch(82% 0.008 296)",
+  loading: "oklch(97.4% 0.003 286)",
+  neutral: "oklch(46% 0.016 297)",
+  paper3: "oklch(93% 0.003 286)",
+  ink2: "oklch(38% 0.014 297)",
+  rule2: "oklch(80% 0.01 296)",
 } as const;
 
 export const fonts = {

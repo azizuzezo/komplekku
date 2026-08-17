@@ -6,6 +6,7 @@ abstract interface class OnboardingRepository {
 
   Future<ResidencyRequest> submitResidencyRequest({
     required String communityId,
+    required String rtId,
     required String houseCode,
     required String fullName,
     required HouseholdRelationship relationship,

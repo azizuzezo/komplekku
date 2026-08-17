@@ -82,6 +82,16 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.20:3001
 
 For this local-only workflow, the API must listen on a LAN interface (for example `HOST=0.0.0.0`), the phone and computer must be on the same trusted network, and the computer firewall must allow the local API port. Never expose this development API directly to the internet.
 
+## Forum Warga image uploads
+
+Forum message attachments upload directly to Cloudinary, the same unsigned-upload flow as `apps/web/lib/cloudinary-upload.ts`. Configure it with the same values as the web `.env.local`:
+
+```powershell
+flutter run --dart-define=CLOUDINARY_CLOUD_NAME=your-cloud-name --dart-define=CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
+```
+
+Without these defines, the image picker in Forum Warga surfaces a config error instead of silently failing.
+
 ## Local HTTP platform policy
 
 The local API uses HTTP. After platform generation, configure local/debug wrappers to permit cleartext development traffic:

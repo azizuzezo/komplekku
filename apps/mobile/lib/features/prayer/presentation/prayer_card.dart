@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/notifications/push_notification_service.dart';
+import 'package:komplekku/features/prayer/data/prayer_scheduler_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 
 const _weekdayNames = [
@@ -83,6 +84,20 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
         });
       }
     });
+
+    ref.read(prayerSchedulerServiceProvider).isAutoAdzanEnabled().then((enabled) {
+      if (mounted) {
+        setState(() => _isMuted = !enabled);
+      }
+    });
+  }
+
+  Future<void> _toggleAutoAdzan() async {
+    final nextMuted = !_isMuted;
+    setState(() => _isMuted = nextMuted);
+    await ref
+        .read(prayerSchedulerServiceProvider)
+        .setAutoAdzanEnabled(!nextMuted);
   }
 
   @override
@@ -272,7 +287,7 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
                         onPressed: _stopAudio,
                       ),
                     IconButton(
-                      onPressed: () => setState(() => _isMuted = !_isMuted),
+                      onPressed: _toggleAutoAdzan,
                       tooltip: _isMuted
                           ? 'Auto-adzan mati'
                           : 'Auto-adzan aktif',

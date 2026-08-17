@@ -309,7 +309,7 @@ class _PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUrgent = priority == AnnouncementPriority.urgent;
-    final color = isUrgent ? KomplekkuColors.danger : KomplekkuColors.terracotta;
+    final color = isUrgent ? KomplekkuColors.danger : KomplekkuColors.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

@@ -176,23 +176,23 @@ export function PrayerCard() {
 
   return (
     <div className="prayer-card card p-0 mb-5 overflow-hidden border-border shadow-xs bg-surface rounded-2xl">
-      {/* Responsive Hero Banner in Dark Cyan Slate (#0F2F34) */}
-      <div className="p-4 sm:p-5 bg-[#0F2F34] text-white space-y-3.5">
+      {/* Hero banner on the brand-dark identity plane */}
+      <div className="p-4 sm:p-5 bg-primary-dark text-white space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-none">
                 {timeString}
               </span>
-              <span className="text-xs font-extrabold tracking-wider text-[#4DD0E1] uppercase">
+              <span className="text-xs font-extrabold tracking-wider text-accent uppercase">
                 WIB
               </span>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#00ACC1]/25 text-[#80DEEA] font-semibold border border-[#00ACC1]/40 inline-flex items-center gap-1">
-                <Navigation size={11} className="text-[#4DD0E1]" />
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/15 text-white font-semibold border border-white/25 inline-flex items-center gap-1">
+                <Navigation size={11} className="text-accent" />
                 {usingGps ? "GPS Presisi" : "Billabong Blok F"}
               </span>
             </div>
-            <p className="text-xs text-[#B2EBF2] font-medium">{dateString}</p>
+            <p className="text-xs text-white/70 font-medium">{dateString}</p>
           </div>
 
           {/* ── Audio Controls ── */}
@@ -211,7 +211,7 @@ export function PrayerCard() {
                 padding: "0.375rem 0.75rem",
                 borderRadius: "0.625rem",
                 border: "none",
-                background: isPlayingAudio ? "rgba(255,255,255,0.15)" : "#00ACC1",
+                background: isPlayingAudio ? "rgba(255,255,255,0.15)" : "#32BCE3",
                 color: "#fff",
                 fontSize: "0.75rem",
                 fontWeight: 700,
@@ -239,8 +239,8 @@ export function PrayerCard() {
                 padding: "0.375rem 0.75rem",
                 borderRadius: "0.625rem",
                 border: "none",
-                background: isPlayingAudio ? "rgba(255,255,255,0.15)" : "#4DD0E1",
-                color: isPlayingAudio ? "#fff" : "#0F2F34",
+                background: isPlayingAudio ? "rgba(255,255,255,0.15)" : "#FFFFFF",
+                color: isPlayingAudio ? "#fff" : "#32178F",
                 fontSize: "0.75rem",
                 fontWeight: 800,
                 cursor: isPlayingAudio ? "not-allowed" : "pointer",
@@ -317,8 +317,8 @@ export function PrayerCard() {
                   padding: "0.375rem 0.625rem",
                   borderRadius: "0.625rem",
                   border: "none",
-                  background: "#80DEEA",
-                  color: "#0F2F34",
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#fff",
                   fontSize: "0.75rem",
                   fontWeight: 800,
                   cursor: "pointer",
