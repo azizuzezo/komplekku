@@ -14,9 +14,13 @@ export function TestPushNotificationButton() {
     onSuccess: (res) => {
       const { successCount, failureCount } = res.data;
       if (successCount === 0) {
-        setMessage("Tidak ada perangkat terdaftar. Buka aplikasi mobile dan masuk untuk mendaftarkan perangkatmu.");
+        setMessage(
+          "Tidak ada perangkat terdaftar. Buka aplikasi mobile dan masuk untuk mendaftarkan perangkatmu.",
+        );
       } else {
-        setMessage(`Terkirim ke ${successCount} perangkat${failureCount > 0 ? `, gagal ke ${failureCount} perangkat` : ""}.`);
+        setMessage(
+          `Terkirim ke ${successCount} perangkat${failureCount > 0 ? `, gagal ke ${failureCount} perangkat` : ""}.`,
+        );
       }
     },
     onError: (err: Error) => {

@@ -6,6 +6,8 @@ import {
 import { ArrowRight, CalendarDays, Info, Megaphone } from "lucide-react";
 import Link from "next/link";
 
+import { EntityActions } from "@/components/ui/entity-actions";
+
 import { formatAnnouncementDate } from "./format-announcement";
 
 /** Stands in for a cover photo the author never uploaded, so every row keeps
@@ -19,9 +21,17 @@ const BADGE_ICONS = {
 export function AnnouncementRow({
   announcement,
   featured = false,
+  canManage = false,
+  onEdit,
+  onDelete,
+  isBusy = false,
 }: {
   announcement: AnnouncementSummary;
   featured?: boolean;
+  canManage?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isBusy?: boolean;
 }) {
   const badge = announcementBadge(announcement);
   const BadgeIcon = BADGE_ICONS[badge];
@@ -70,6 +80,18 @@ export function AnnouncementRow({
           </div>
         </div>
       </Link>
+      {canManage && (
+        <div className="announcement-row__actions">
+          <EntityActions
+            onEdit={onEdit}
+            onDelete={onDelete}
+            isBusy={isBusy}
+            deleteTitle="Hapus pengumuman?"
+            deleteMessage={`"${announcement.title}" tidak akan terlihat lagi di papan warga.`}
+            label={`Kelola pengumuman ${announcement.title}`}
+          />
+        </div>
+      )}
     </article>
   );
 }

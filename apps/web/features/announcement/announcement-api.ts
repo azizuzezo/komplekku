@@ -5,8 +5,11 @@ import {
   type AnnouncementDetailResponse,
   type AnnouncementListResponse,
   type CreateAnnouncementInput,
+  archiveAnnouncementResponseSchema,
   type AnnouncementFilter,
+  type ArchiveAnnouncementResponse,
   type MarkAnnouncementReadResponse,
+  type UpdateAnnouncementInput,
 } from "@komplekku/contracts";
 
 import { apiRequest } from "@/lib/api/client";
@@ -43,5 +46,24 @@ export function createAnnouncement(
   return apiRequest("/announcements", announcementDetailResponseSchema, {
     method: "POST",
     body: data,
+  });
+}
+
+export function updateAnnouncement(input: {
+  id: string;
+  changes: UpdateAnnouncementInput;
+}): Promise<AnnouncementDetailResponse> {
+  return apiRequest(
+    `/announcements/${encodeURIComponent(input.id)}`,
+    announcementDetailResponseSchema,
+    { method: "PATCH", body: input.changes },
+  );
+}
+
+/** Archives rather than erases — the notice leaves the board but its row and
+ * audit trail survive. */
+export function archiveAnnouncement(id: string): Promise<ArchiveAnnouncementResponse> {
+  return apiRequest(`/announcements/${encodeURIComponent(id)}`, archiveAnnouncementResponseSchema, {
+    method: "DELETE",
   });
 }

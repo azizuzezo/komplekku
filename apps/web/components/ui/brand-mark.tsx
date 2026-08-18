@@ -59,12 +59,7 @@ export function BrandMark({
     );
   } else {
     content = (
-      <Image
-        className="brand-lockup__image"
-        src={lockupSrc}
-        alt="Komplekku"
-        priority={priority}
-      />
+      <Image className="brand-lockup__image" src={lockupSrc} alt="Komplekku" priority={priority} />
     );
   }
 

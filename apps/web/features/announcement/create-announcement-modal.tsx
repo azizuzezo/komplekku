@@ -1,14 +1,19 @@
 "use client";
 
 import type { AnnouncementCategory, AnnouncementPriority } from "@komplekku/contracts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { PhotoPicker } from "@/components/ui/photo-picker";
 
-import { announcementKeys, createAnnouncement } from "./announcement-api";
+import {
+  announcementKeys,
+  createAnnouncement,
+  getAnnouncement,
+  updateAnnouncement,
+} from "./announcement-api";
 
 export function CreateAnnouncementModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -188,5 +193,180 @@ export function CreateAnnouncementModal() {
           )
         : null}
     </>
+  );
+}
+
+/**
+ * Edit uses its own modal rather than a mode flag on the create one: it loads
+ * the current values first, and it sends a partial PATCH, so sharing state
+ * with the create form would mean two half-populated code paths.
+ */
+export function EditAnnouncementModal({
+  announcementId,
+  onClose,
+}: {
+  announcementId: string;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const detailQuery = useQuery({
+    queryKey: ["announcement", announcementId],
+    queryFn: () => getAnnouncement(announcementId),
+  });
+
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [body, setBody] = useState("");
+  const [priority, setPriority] = useState<AnnouncementPriority>("NORMAL");
+  const [category, setCategory] = useState<AnnouncementCategory>("INFO");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Populate once; re-running on every refetch would discard what the pengurus
+  // has typed so far.
+  useEffect(() => {
+    if (isLoaded || !detailQuery.data) return;
+    const announcement = detailQuery.data.data.announcement;
+    setTitle(announcement.title);
+    setSummary(announcement.summary);
+    setBody(announcement.body);
+    setPriority(announcement.priority);
+    setCategory(announcement.category);
+    setIsLoaded(true);
+  }, [detailQuery.data, isLoaded]);
+
+  const mutation = useMutation({
+    mutationFn: updateAnnouncement,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: announcementKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["announcement", announcementId] });
+      void queryClient.invalidateQueries({ queryKey: ["home"] });
+      onClose();
+    },
+    onError: (err: Error) => setErrorMsg(err.message || "Gagal menyimpan perubahan."),
+  });
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit pengumuman"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2 className="modal-title">Edit Pengumuman</h2>
+          <button type="button" className="icon-button" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {detailQuery.isPending ? (
+          <p className="field-hint">Memuat pengumuman…</p>
+        ) : detailQuery.isError ? (
+          <p className="form-message" role="alert">
+            Pengumuman ini belum bisa dimuat.
+          </p>
+        ) : (
+          <form
+            className="form-stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!title.trim() || !summary.trim() || !body.trim()) {
+                setErrorMsg("Semua kolom wajib diisi.");
+                return;
+              }
+              setErrorMsg("");
+              mutation.mutate({
+                id: announcementId,
+                changes: { title, summary, body, priority, category },
+              });
+            }}
+          >
+            {errorMsg && <div className="form-message">{errorMsg}</div>}
+
+            <div className="field">
+              <label htmlFor="edit-announcement-title">Judul Pengumuman</label>
+              <input
+                id="edit-announcement-title"
+                type="text"
+                className="input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="edit-announcement-summary">Ringkasan Singkat</label>
+              <input
+                id="edit-announcement-summary"
+                type="text"
+                className="input"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="edit-announcement-category">Kategori</label>
+              <select
+                id="edit-announcement-category"
+                className="input"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as AnnouncementCategory)}
+              >
+                <option value="INFO">Info</option>
+                <option value="EVENT">Acara</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="edit-announcement-priority">Prioritas</label>
+              <select
+                id="edit-announcement-priority"
+                className="input"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as AnnouncementPriority)}
+              >
+                <option value="NORMAL">Biasa (Normal)</option>
+                <option value="IMPORTANT">Penting</option>
+                <option value="URGENT">Mendesak (Darurat)</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="edit-announcement-body">Isi Lengkap Pengumuman</label>
+              <textarea
+                id="edit-announcement-body"
+                className="input textarea"
+                rows={5}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="button button--secondary" onClick={onClose}>
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="button button--primary"
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>,
+    document.body,
   );
 }

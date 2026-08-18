@@ -8,11 +8,7 @@ export const metadata: Metadata = {
   description: "Diskusi warga beserta balasannya.",
 };
 
-export default async function ForumPostPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function ForumPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (

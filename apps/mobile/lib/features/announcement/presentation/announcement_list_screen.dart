@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
+import 'package:komplekku/core/widgets/entity_actions.dart';
 import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/data/announcement_repository.dart';
@@ -55,16 +56,38 @@ class _AnnouncementListScreenState
               filter: _filter,
               onChanged: (filter) => setState(() => _filter = filter),
             ),
-            Expanded(child: _buildList(context, announcements)),
+            Expanded(child: _buildList(context, announcements, canManage)),
           ],
         ),
       ),
     );
   }
 
+  Future<void> _editAnnouncement(AnnouncementSummary announcement) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) =>
+          _CreateAnnouncementDialog(existingId: announcement.id),
+    );
+    if (saved == true) ref.invalidate(announcementListProvider);
+  }
+
+  Future<void> _archiveAnnouncement(AnnouncementSummary announcement) async {
+    try {
+      await ref.read(announcementRepositoryProvider).archive(announcement.id);
+      ref.invalidate(announcementListProvider);
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
   Widget _buildList(
     BuildContext context,
     AsyncValue<List<AnnouncementSummary>> announcements,
+    bool canManage,
   ) {
     return announcements.when(
           loading: () => const _AnnouncementListSkeleton(),
@@ -121,7 +144,10 @@ class _AnnouncementListScreenState
                   final item = items[index];
                   return _AnnouncementCard(
                     announcement: item,
+                    canManage: canManage,
                     onTap: () => context.push('/pengumuman/${item.id}'),
+                    onEdit: () => _editAnnouncement(item),
+                    onDelete: () => _archiveAnnouncement(item),
                   );
                 },
               ),
@@ -248,8 +274,12 @@ class _CoverThumbnail extends StatelessWidget {
   }
 }
 
+/// Create and edit share one dialog: editing loads the current values first
+/// and switches the call, so the two never drift apart in validation.
 class _CreateAnnouncementDialog extends ConsumerStatefulWidget {
-  const _CreateAnnouncementDialog();
+  const _CreateAnnouncementDialog({this.existingId});
+
+  final String? existingId;
 
   @override
   ConsumerState<_CreateAnnouncementDialog> createState() =>
@@ -264,6 +294,7 @@ class __CreateAnnouncementDialogState
   final _bodyController = TextEditingController();
   String _priority = 'NORMAL';
   AnnouncementCategory _category = AnnouncementCategory.info;
+  bool _loadingExisting = false;
   String? _coverImageUrl;
   bool _uploadingCover = false;
   bool _submitting = false;
@@ -275,6 +306,43 @@ class __CreateAnnouncementDialogState
     _summaryController.dispose();
     _bodyController.dispose();
     super.dispose();
+  }
+
+  bool get _isEditing => widget.existingId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existingId = widget.existingId;
+    if (existingId == null) return;
+    _loadingExisting = true;
+    ref
+        .read(announcementRepositoryProvider)
+        .detail(existingId)
+        .then((announcement) {
+      if (!mounted) return;
+      setState(() {
+        _titleController.text = announcement.title;
+        _summaryController.text = announcement.summary;
+        _bodyController.text = announcement.body;
+        _priority = switch (announcement.priority) {
+          AnnouncementPriority.urgent => 'URGENT',
+          AnnouncementPriority.important => 'IMPORTANT',
+          AnnouncementPriority.normal => 'NORMAL',
+        };
+        _category = announcement.category;
+        _coverImageUrl = announcement.coverImageUrl;
+        _loadingExisting = false;
+      });
+    }).catchError((Object error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingExisting = false;
+        _errorMessage = error is ApiException
+            ? error.message
+            : 'Pengumuman belum bisa dimuat.';
+      });
+    });
   }
 
   Future<void> _pickCover() async {
@@ -312,14 +380,27 @@ class __CreateAnnouncementDialogState
     });
 
     try {
-      await ref.read(announcementRepositoryProvider).create(
-            title: _titleController.text.trim(),
-            summary: _summaryController.text.trim(),
-            body: _bodyController.text.trim(),
-            priority: _priority,
-            category: _category,
-            coverImageUrl: _coverImageUrl,
-          );
+      final repository = ref.read(announcementRepositoryProvider);
+      final existingId = widget.existingId;
+      if (existingId != null) {
+        await repository.update(
+          id: existingId,
+          title: _titleController.text.trim(),
+          summary: _summaryController.text.trim(),
+          body: _bodyController.text.trim(),
+          priority: _priority,
+          category: _category,
+        );
+      } else {
+        await repository.create(
+          title: _titleController.text.trim(),
+          summary: _summaryController.text.trim(),
+          body: _bodyController.text.trim(),
+          priority: _priority,
+          category: _category,
+          coverImageUrl: _coverImageUrl,
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
@@ -336,8 +417,13 @@ class __CreateAnnouncementDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Buat Pengumuman Baru'),
-      content: SingleChildScrollView(
+      title: Text(_isEditing ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'),
+      content: _loadingExisting
+          ? const SizedBox(
+              height: 80,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
@@ -437,8 +523,14 @@ class __CreateAnnouncementDialogState
           child: const Text('Batal'),
         ),
         ElevatedButton(
-          onPressed: _submitting ? null : _submit,
-          child: Text(_submitting ? 'Menerbitkan...' : 'Terbitkan'),
+          onPressed: _submitting || _loadingExisting ? null : _submit,
+          child: Text(
+            _submitting
+                ? 'Menyimpan...'
+                : _isEditing
+                    ? 'Simpan Perubahan'
+                    : 'Terbitkan',
+          ),
         ),
       ],
     );
@@ -446,10 +538,19 @@ class __CreateAnnouncementDialogState
 }
 
 class _AnnouncementCard extends StatelessWidget {
-  const _AnnouncementCard({required this.announcement, required this.onTap});
+  const _AnnouncementCard({
+    required this.announcement,
+    required this.canManage,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final AnnouncementSummary announcement;
+  final bool canManage;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -485,6 +586,16 @@ class _AnnouncementCard extends StatelessWidget {
                               semanticLabel: 'Belum dibaca',
                             ),
                           ],
+                          const Spacer(),
+                          if (canManage)
+                            EntityActions(
+                              onEdit: onEdit,
+                              onDelete: onDelete,
+                              deleteTitle: 'Hapus pengumuman?',
+                              deleteMessage:
+                                  '"${announcement.title}" tidak akan terlihat lagi di papan warga.',
+                              tooltip: 'Kelola pengumuman',
+                            ),
                         ],
                       ),
                     ),

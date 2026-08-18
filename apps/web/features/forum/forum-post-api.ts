@@ -41,9 +41,7 @@ export function getForumPost(postId: string): Promise<ForumPostDetailResponse> {
   return apiRequest(`/forum/posts/${postId}`, forumPostDetailResponseSchema);
 }
 
-export function createForumPost(
-  input: CreateForumPostInput,
-): Promise<ForumPostMutationResponse> {
+export function createForumPost(input: CreateForumPostInput): Promise<ForumPostMutationResponse> {
   return apiRequest("/forum/posts", forumPostMutationResponseSchema, {
     method: "POST",
     body: input,
@@ -76,22 +74,20 @@ export function createForumPostReply(input: {
   postId: string;
   reply: CreateForumPostReplyInput;
 }): Promise<ForumPostReplyMutationResponse> {
-  return apiRequest(
-    `/forum/posts/${input.postId}/replies`,
-    forumPostReplyMutationResponseSchema,
-    { method: "POST", body: input.reply },
-  );
+  return apiRequest(`/forum/posts/${input.postId}/replies`, forumPostReplyMutationResponseSchema, {
+    method: "POST",
+    body: input.reply,
+  });
 }
 
 export function updateForumPostReply(input: {
   replyId: string;
   reply: UpdateForumPostReplyInput;
 }): Promise<ForumPostReplyMutationResponse> {
-  return apiRequest(
-    `/forum/replies/${input.replyId}`,
-    forumPostReplyMutationResponseSchema,
-    { method: "PATCH", body: input.reply },
-  );
+  return apiRequest(`/forum/replies/${input.replyId}`, forumPostReplyMutationResponseSchema, {
+    method: "PATCH",
+    body: input.reply,
+  });
 }
 
 export async function deleteForumPostReply(replyId: string): Promise<void> {

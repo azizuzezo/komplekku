@@ -236,9 +236,7 @@ export function ResidencyOnboarding() {
       </div>
       <div className="selected-community">
         <span>RT yang dipilih</span>
-        <strong>
-          {selectedCommunity?.rts.find((rt) => rt.id === selectedRtId)?.name ?? "-"}
-        </strong>
+        <strong>{selectedCommunity?.rts.find((rt) => rt.id === selectedRtId)?.name ?? "-"}</strong>
       </div>
       <div className="field">
         <label htmlFor="full-name">Nama lengkap</label>

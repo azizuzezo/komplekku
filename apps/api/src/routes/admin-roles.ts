@@ -63,21 +63,13 @@ export async function registerAdminRoleRoutes(
       );
     }
     if (result.outcome === "RT_REQUIRED") {
-      throw new AppError(
-        422,
-        "RT_REQUIRED",
-        "Pilih RT untuk peran Ketua RT sebelum menyimpan.",
-      );
+      throw new AppError(422, "RT_REQUIRED", "Pilih RT untuk peran Ketua RT sebelum menyimpan.");
     }
     if (result.outcome === "RT_NOT_FOUND") {
       throw new AppError(404, "RT_NOT_FOUND", "RT tidak ditemukan di komunitas ini.");
     }
     if (result.outcome === "FORBIDDEN") {
-      throw new AppError(
-        403,
-        "FORBIDDEN",
-        "Kamu tidak memiliki izin untuk memberikan peran ini.",
-      );
+      throw new AppError(403, "FORBIDDEN", "Kamu tidak memiliki izin untuk memberikan peran ini.");
     }
     if (result.outcome !== "OK") {
       throw new AppError(404, "MEMBER_NOT_FOUND", "Warga tidak ditemukan di komunitas ini.");

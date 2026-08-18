@@ -114,9 +114,7 @@ export const forumPostReplyMutationResponseSchema = dataEnvelopeSchema(
   z.object({ reply: forumPostReplySchema }),
 );
 
-export type ForumPostReplyMutationResponse = z.infer<
-  typeof forumPostReplyMutationResponseSchema
->;
+export type ForumPostReplyMutationResponse = z.infer<typeof forumPostReplyMutationResponseSchema>;
 
 export const createForumPostInputSchema = z
   .object({

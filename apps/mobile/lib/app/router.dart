@@ -24,6 +24,7 @@ import 'package:komplekku/features/emergency/presentation/emergency_screen.dart'
 import 'package:komplekku/features/emergency/presentation/emergency_triage_screen.dart';
 import 'package:komplekku/features/facility/presentation/facility_screen.dart';
 import 'package:komplekku/features/finance_dashboard/presentation/finance_dashboard_screen.dart';
+import 'package:komplekku/features/forum/presentation/forum_post_detail_screen.dart';
 import 'package:komplekku/features/forum/presentation/forum_screen.dart';
 import 'package:komplekku/features/home/presentation/home_screen.dart';
 import 'package:komplekku/features/house_admin/presentation/house_admin_screen.dart';
@@ -133,6 +134,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/forum',
                 builder: (context, state) => const ForumScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => ForumPostDetailScreen(
+                      postId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -94,6 +94,7 @@ class AnnouncementDetail {
   const AnnouncementDetail({
     required this.id,
     required this.title,
+    required this.summary,
     required this.body,
     required this.priority,
     required this.category,
@@ -104,6 +105,10 @@ class AnnouncementDetail {
 
   final String id;
   final String title;
+
+  /// The one-or-two sentence blurb shown on the board; the edit form needs it
+  /// so saving never silently blanks it.
+  final String summary;
   final String body;
   final AnnouncementPriority priority;
   final AnnouncementCategory category;
@@ -117,6 +122,7 @@ class AnnouncementDetail {
     return AnnouncementDetail(
       id: json['id'] as String,
       title: json['title'] as String,
+      summary: json['summary'] as String? ?? '',
       body: json['body'] as String,
       priority: _priorityFromApi(json['priority']),
       category: _categoryFromApi(json['category']),

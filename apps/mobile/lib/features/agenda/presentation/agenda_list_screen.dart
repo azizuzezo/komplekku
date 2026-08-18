@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
+import 'package:komplekku/core/widgets/entity_actions.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/agenda/data/agenda_repository.dart';
 import 'package:komplekku/features/agenda/domain/agenda_event.dart';
@@ -18,6 +19,27 @@ class AgendaListScreen extends ConsumerStatefulWidget {
 
 class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
   AgendaView _view = AgendaView.upcoming;
+
+  Future<void> _editEvent(AgendaEvent event) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => _CreateAgendaDialog(existing: event),
+    );
+    if (saved == true) ref.invalidate(agendaListProvider(_view));
+  }
+
+  Future<void> _archiveEvent(AgendaEvent event) async {
+    try {
+      await ref.read(agendaRepositoryProvider).archive(event.id);
+      ref.invalidate(agendaListProvider(_view));
+      ref.invalidate(agendaByDateProvider);
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +154,10 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
                         final event = items[index];
                         return _AgendaCard(
                           event: event,
+                          canManage: canManage,
                           onTap: () => context.push('/agenda/${event.id}'),
+                          onEdit: () => _editEvent(event),
+                          onDelete: () => _archiveEvent(event),
                         );
                       },
                     ),
@@ -147,8 +172,12 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
   }
 }
 
+/// Create and edit share one dialog: editing pre-fills it from the event and
+/// switches the call, so validation never drifts between the two.
 class _CreateAgendaDialog extends ConsumerStatefulWidget {
-  const _CreateAgendaDialog();
+  const _CreateAgendaDialog({this.existing});
+
+  final AgendaEvent? existing;
 
   @override
   ConsumerState<_CreateAgendaDialog> createState() =>
@@ -166,6 +195,32 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
   TimeOfDay? _endTime;
   bool _submitting = false;
   String? _errorMessage;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    if (existing == null) return;
+    _titleController.text = existing.title;
+    _locationController.text = existing.location;
+    _organizerController.text = existing.organizer;
+    _descriptionController.text = existing.description;
+    _date = DateTime.tryParse(existing.date);
+    _startTime = _parseTimeOfDay(existing.startTime);
+    _endTime = _parseTimeOfDay(existing.endTime);
+  }
+
+  /// Parses the API's `HH:mm` wall-clock strings.
+  TimeOfDay? _parseTimeOfDay(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
 
   @override
   void dispose() {
@@ -228,22 +283,38 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
       _errorMessage = null;
     });
     try {
-      await ref.read(agendaRepositoryProvider).create(
-            title: _titleController.text.trim(),
-            date: _formatDate(date),
-            startTime: _formatTime(startTime),
-            endTime: _formatTime(endTime),
-            location: _locationController.text.trim(),
-            organizer: _organizerController.text.trim(),
-            description: _descriptionController.text.trim(),
-          );
+      final repository = ref.read(agendaRepositoryProvider);
+      final existing = widget.existing;
+      if (existing != null) {
+        await repository.update(
+          id: existing.id,
+          title: _titleController.text.trim(),
+          date: _formatDate(date),
+          startTime: _formatTime(startTime),
+          endTime: _formatTime(endTime),
+          location: _locationController.text.trim(),
+          organizer: _organizerController.text.trim(),
+          description: _descriptionController.text.trim(),
+        );
+      } else {
+        await repository.create(
+          title: _titleController.text.trim(),
+          date: _formatDate(date),
+          startTime: _formatTime(startTime),
+          endTime: _formatTime(endTime),
+          location: _locationController.text.trim(),
+          organizer: _organizerController.text.trim(),
+          description: _descriptionController.text.trim(),
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
         setState(() {
           _submitting = false;
-          _errorMessage =
-              error is ApiException ? error.message : 'Gagal membuat agenda.';
+          _errorMessage = error is ApiException
+              ? error.message
+              : 'Gagal menyimpan agenda.';
         });
       }
     }
@@ -252,7 +323,7 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Buat Agenda Baru'),
+      title: Text(_isEditing ? 'Edit Agenda' : 'Buat Agenda Baru'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -357,7 +428,13 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
         ),
         ElevatedButton(
           onPressed: _submitting ? null : _submit,
-          child: Text(_submitting ? 'Menerbitkan...' : 'Terbitkan'),
+          child: Text(
+            _submitting
+                ? 'Menyimpan...'
+                : _isEditing
+                    ? 'Simpan Perubahan'
+                    : 'Terbitkan',
+          ),
         ),
       ],
     );
@@ -365,10 +442,19 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
 }
 
 class _AgendaCard extends StatelessWidget {
-  const _AgendaCard({required this.event, required this.onTap});
+  const _AgendaCard({
+    required this.event,
+    required this.canManage,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final AgendaEvent event;
+  final bool canManage;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -410,6 +496,15 @@ class _AgendaCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (canManage)
+                EntityActions(
+                  onEdit: onEdit,
+                  onDelete: onDelete,
+                  deleteTitle: 'Hapus agenda?',
+                  deleteMessage:
+                      '"${event.title}" tidak akan terlihat lagi di kalender warga.',
+                  tooltip: 'Kelola agenda',
+                ),
             ],
           ),
         ),

@@ -45,7 +45,10 @@ export function createRt(input: CreateRtInput): Promise<RtMutationResponse> {
   });
 }
 
-export function updateRt(input: { rtId: string; changes: UpdateRtInput }): Promise<RtMutationResponse> {
+export function updateRt(input: {
+  rtId: string;
+  changes: UpdateRtInput;
+}): Promise<RtMutationResponse> {
   return apiRequest(`/admin/rts/${input.rtId}`, rtMutationResponseSchema, {
     method: "PATCH",
     body: input.changes,

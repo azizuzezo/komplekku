@@ -2,9 +2,23 @@ import type { AgendaEvent } from "@komplekku/contracts";
 import { ArrowRight, Clock3, MapPin } from "lucide-react";
 import Link from "next/link";
 
+import { EntityActions } from "@/components/ui/entity-actions";
+
 import { formatAgendaDate, formatAgendaTimeRange, getAgendaDateParts } from "./format-agenda";
 
-export function AgendaRow({ event }: { event: AgendaEvent }) {
+export function AgendaRow({
+  event,
+  canManage = false,
+  onEdit,
+  onDelete,
+  isBusy = false,
+}: {
+  event: AgendaEvent;
+  canManage?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isBusy?: boolean;
+}) {
   const dateParts = getAgendaDateParts(event.date);
 
   return (
@@ -35,6 +49,18 @@ export function AgendaRow({ event }: { event: AgendaEvent }) {
           </div>
         </div>
       </Link>
+      {canManage && (
+        <div className="agenda-row__actions">
+          <EntityActions
+            onEdit={onEdit}
+            onDelete={onDelete}
+            isBusy={isBusy}
+            deleteTitle="Hapus agenda?"
+            deleteMessage={`"${event.title}" tidak akan terlihat lagi di kalender warga.`}
+            label={`Kelola agenda ${event.title}`}
+          />
+        </div>
+      )}
     </article>
   );
 }

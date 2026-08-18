@@ -1,4 +1,8 @@
-import { announcementListQuerySchema, createAnnouncementSchema } from "@komplekku/contracts";
+import {
+  announcementListQuerySchema,
+  createAnnouncementSchema,
+  updateAnnouncementSchema,
+} from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 
@@ -82,6 +86,60 @@ export async function registerAnnouncementRoutes(
         },
         meta: responseMeta(request),
       });
+    },
+  );
+
+  app.patch(
+    "/api/v1/announcements/:id",
+    { preHandler: [authenticate, requirePermission("announcement.manage")] },
+    async (request) => {
+      const { id } = idParamsSchema.parse(request.params);
+      const changes = updateAnnouncementSchema.parse(request.body);
+      const result = await repository.updateAnnouncement({
+        auth: getAuthContext(request),
+        announcementId: id,
+        changes,
+        now: new Date(),
+        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+      });
+      if (result.outcome !== "OK") {
+        throw new AppError(404, "ANNOUNCEMENT_NOT_FOUND", "Pengumuman tidak ditemukan.");
+      }
+      return {
+        data: {
+          announcement: {
+            ...announcementSummary(result.announcement),
+            body: result.announcement.body,
+          },
+        },
+        meta: responseMeta(request),
+      };
+    },
+  );
+
+  /** Archives rather than erases: notifications already sent reference this
+   * id, and the audit trail should still resolve it. */
+  app.delete(
+    "/api/v1/announcements/:id",
+    { preHandler: [authenticate, requirePermission("announcement.manage")] },
+    async (request) => {
+      const { id } = idParamsSchema.parse(request.params);
+      const result = await repository.archiveAnnouncement({
+        auth: getAuthContext(request),
+        announcementId: id,
+        now: new Date(),
+        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+      });
+      if (result.outcome !== "OK") {
+        throw new AppError(404, "ANNOUNCEMENT_NOT_FOUND", "Pengumuman tidak ditemukan.");
+      }
+      return {
+        data: {
+          announcementId: result.announcementId,
+          archivedAt: result.archivedAt.toISOString(),
+        },
+        meta: responseMeta(request),
+      };
     },
   );
 

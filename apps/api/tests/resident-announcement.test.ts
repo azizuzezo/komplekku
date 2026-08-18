@@ -1,5 +1,6 @@
 import {
   announcementDetailResponseSchema,
+  archiveAnnouncementResponseSchema,
   announcementListResponseSchema,
   currentCommunityResponseSchema,
   homeResponseSchema,
@@ -170,5 +171,83 @@ describe("slice resident dan pengumuman", () => {
     });
     const titles = events.json().data.items.map((item: { title: string }) => item.title);
     expect(titles).toContain("Rapat Warga Bulanan");
+  });
+
+  it("mengizinkan pengurus mengedit lalu mengarsipkan pengumuman", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+
+    const admin = await loginWeb(app);
+    repository.setPermissions(demoIds.user, ["announcement.read", "announcement.manage"]);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/announcements",
+      headers: { cookie: admin.cookie },
+      payload: {
+        title: "Kerja Bakti Lingkungan",
+        summary: "Yuk, bersama-sama jaga kebersihan lingkungan kita.",
+        body: "Kerja bakti dimulai pukul 07.00 WIB di balai warga.",
+        category: "EVENT",
+      },
+    });
+    const announcementId = created.json().data.announcement.id as string;
+
+    const edited = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/announcements/${announcementId}`,
+      headers: { cookie: admin.cookie },
+      payload: { title: "Kerja Bakti Lingkungan (diundur)", priority: "IMPORTANT" },
+    });
+    expect(edited.statusCode).toBe(200);
+    expect(edited.json().data.announcement.title).toBe("Kerja Bakti Lingkungan (diundur)");
+    expect(edited.json().data.announcement.priority).toBe("IMPORTANT");
+    // Untouched fields survive a partial edit.
+    expect(edited.json().data.announcement.category).toBe("EVENT");
+
+    const archived = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/announcements/${announcementId}`,
+      headers: { cookie: admin.cookie },
+    });
+    expect(archived.statusCode).toBe(200);
+    expect(archiveAnnouncementResponseSchema.safeParse(archived.json()).success).toBe(true);
+
+    // Archived notices drop off the board and can no longer be opened.
+    const board = await app.inject({
+      method: "GET",
+      url: "/api/v1/announcements",
+      headers: { cookie: admin.cookie },
+    });
+    const ids = board.json().data.items.map((item: { id: string }) => item.id);
+    expect(ids).not.toContain(announcementId);
+
+    const gone = await app.inject({
+      method: "GET",
+      url: `/api/v1/announcements/${announcementId}`,
+      headers: { cookie: admin.cookie },
+    });
+    expect(gone.statusCode).toBe(404);
+  });
+
+  it("menolak warga biasa mengedit atau menghapus pengumuman", async () => {
+    const { app } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+    const resident = await loginWeb(app);
+
+    const edit = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/announcements/${demoIds.announcementOne}`,
+      headers: { cookie: resident.cookie },
+      payload: { title: "Diubah warga biasa" },
+    });
+    expect(edit.statusCode).toBe(403);
+
+    const remove = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/announcements/${demoIds.announcementOne}`,
+      headers: { cookie: resident.cookie },
+    });
+    expect(remove.statusCode).toBe(403);
   });
 });

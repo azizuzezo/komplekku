@@ -48,6 +48,7 @@ import type {
   ResidentStatus,
   SecurityShiftStatus,
   UpdateAgendaEventInput,
+  UpdateAnnouncementInput,
   UpdateCameraInput,
   UpdateCommunityInput,
   UpdateHouseInput,
@@ -271,6 +272,12 @@ export interface AnnouncementRecord {
   publishedAt: Date;
   isRead: boolean;
 }
+
+export type AnnouncementMutationResult =
+  { outcome: "OK"; announcement: AnnouncementRecord } | { outcome: "NOT_FOUND" };
+
+export type ArchiveAnnouncementResult =
+  { outcome: "OK"; announcementId: string; archivedAt: Date } | { outcome: "NOT_FOUND" };
 
 export interface HomeRecord {
   viewerName: string;
@@ -796,11 +803,7 @@ export type DeleteForumMessageResult =
   { outcome: "DELETED"; messageId: string; channelId: string } | { outcome: "NOT_FOUND" };
 
 export type ForumPostCategory =
-  | "QUESTION"
-  | "SUGGESTION"
-  | "INFORMATION"
-  | "ENVIRONMENT"
-  | "ACTIVITY";
+  "QUESTION" | "SUGGESTION" | "INFORMATION" | "ENVIRONMENT" | "ACTIVITY";
 
 export type ForumPostSort = "latest" | "popular" | "answered";
 
@@ -851,8 +854,7 @@ export type ForumPostReplyMutationResult =
 export type ForumDeleteResult = { outcome: "DELETED" } | { outcome: "NOT_FOUND" };
 
 export type ForumLikeResult =
-  | { outcome: "OK"; likeCount: number; likedByMe: boolean }
-  | { outcome: "NOT_FOUND" };
+  { outcome: "OK"; likeCount: number; likedByMe: boolean } | { outcome: "NOT_FOUND" };
 
 export interface AppRepository {
   healthCheck(): Promise<void>;
@@ -990,6 +992,19 @@ export interface AppRepository {
     now: Date;
     audit: RequestAuditContext;
   }): Promise<AnnouncementRecord>;
+  updateAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcementId: string;
+    changes: UpdateAnnouncementInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<AnnouncementMutationResult>;
+  archiveAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcementId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ArchiveAnnouncementResult>;
   listAgenda(input: {
     auth: AuthSessionRecord;
     now: Date;

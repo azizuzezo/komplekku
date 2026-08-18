@@ -1,20 +1,23 @@
 "use client";
 
 import type { AgendaView } from "@komplekku/contracts";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { AgendaListSkeleton } from "@/components/ui/content-skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { getMe } from "@/features/auth/auth-api";
 import { getRequestState } from "@/lib/api/client";
 
-import { agendaKeys, getAgendaPage } from "./agenda-api";
+import { agendaKeys, archiveAgendaEvent, getAgendaPage } from "./agenda-api";
 import { AgendaRow } from "./agenda-row";
-import { CreateAgendaModal } from "./create-agenda-modal";
+import { CreateAgendaModal, EditAgendaModal } from "./create-agenda-modal";
 
 export function AgendaList({ view }: { view: AgendaView }) {
+  const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const agendaQuery = useInfiniteQuery({
     queryKey: agendaKeys.list(view),
@@ -24,6 +27,14 @@ export function AgendaList({ view }: { view: AgendaView }) {
   });
 
   const canManage = meQuery.data?.data.permissions.includes("agenda.manage") ?? false;
+
+  const archiveMutation = useMutation({
+    mutationFn: archiveAgendaEvent,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: agendaKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["home"] });
+    },
+  });
 
   if (agendaQuery.isPending) return <AgendaListSkeleton />;
 
@@ -78,6 +89,7 @@ export function AgendaList({ view }: { view: AgendaView }) {
 
   return (
     <div className="agenda-index">
+      {editingId && <EditAgendaModal eventId={editingId} onClose={() => setEditingId(null)} />}
       {canManage && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
           <CreateAgendaModal />
@@ -107,7 +119,14 @@ export function AgendaList({ view }: { view: AgendaView }) {
       ) : (
         <div className="agenda-list">
           {events.map((event) => (
-            <AgendaRow event={event} key={event.id} />
+            <AgendaRow
+              event={event}
+              key={event.id}
+              canManage={canManage}
+              onEdit={() => setEditingId(event.id)}
+              onDelete={() => archiveMutation.mutate(event.id)}
+              isBusy={archiveMutation.isPending}
+            />
           ))}
         </div>
       )}

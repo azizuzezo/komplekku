@@ -12,10 +12,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Heart, LoaderCircle, MessageCircle, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { AdminQueueSkeleton } from "@/components/ui/content-skeleton";
+import { EntityActions } from "@/components/ui/entity-actions";
 import { PhotoGrid, PhotoPicker } from "@/components/ui/photo-picker";
 import { StatePanel } from "@/components/ui/state-panel";
 import { getMe } from "@/features/auth/auth-api";
@@ -23,9 +24,12 @@ import { ApiError, getRequestState } from "@/lib/api/client";
 
 import {
   createForumPost,
+  deleteForumPost,
   forumPostKeys,
+  getForumPost,
   listForumPosts,
   toggleForumPostLike,
+  updateForumPost,
 } from "./forum-post-api";
 
 const SORTS = forumPostSortSchema.options;
@@ -53,6 +57,9 @@ export function ForumBoard() {
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const canPost = meQuery.data?.data.permissions.includes("forum.post") ?? false;
+  const canModerate = meQuery.data?.data.permissions.includes("forum.manage") ?? false;
+  const currentUserId = meQuery.data?.data.id;
+  const [editing, setEditing] = useState<ForumPostSummary | null>(null);
 
   const [sort, setSort] = useState<ForumPostSort>("latest");
   const [category, setCategory] = useState<ForumPostCategory | "all">("all");
@@ -64,6 +71,13 @@ export function ForumBoard() {
 
   const likeMutation = useMutation({
     mutationFn: toggleForumPostLike,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: forumPostKeys.all });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteForumPost,
     onSuccess() {
       void queryClient.invalidateQueries({ queryKey: forumPostKeys.all });
     },
@@ -156,6 +170,7 @@ export function ForumBoard() {
 
   return (
     <div className="forum-board">
+      {editing && <EditForumPostModal post={editing} onClose={() => setEditing(null)} />}
       <div className="forum-board__header">
         {controls}
         {canPost && <CreateForumPostModal />}
@@ -179,6 +194,11 @@ export function ForumBoard() {
               key={post.id}
               onToggleLike={() => likeMutation.mutate(post.id)}
               isLikePending={likeMutation.isPending}
+              canEdit={post.authorUserId === currentUserId && canPost}
+              canDelete={post.authorUserId === currentUserId || canModerate}
+              onEdit={() => setEditing(post)}
+              onDelete={() => deleteMutation.mutate(post.id)}
+              isBusy={deleteMutation.isPending}
             />
           ))}
         </div>
@@ -191,10 +211,20 @@ function ForumPostCard({
   post,
   onToggleLike,
   isLikePending,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  isBusy,
 }: {
   post: ForumPostSummary;
   onToggleLike: () => void;
   isLikePending: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  isBusy: boolean;
 }) {
   return (
     <article className="forum-post-card">
@@ -206,9 +236,19 @@ function ForumPostCard({
             {post.editedAt && " · diedit"}
           </p>
         </div>
-        <span className="announcement-badge announcement-badge--event">
-          {FORUM_POST_CATEGORY_LABELS[post.category]}
-        </span>
+        <div className="forum-post-card__header-end">
+          <span className="announcement-badge announcement-badge--event">
+            {FORUM_POST_CATEGORY_LABELS[post.category]}
+          </span>
+          <EntityActions
+            onEdit={canEdit ? onEdit : undefined}
+            onDelete={canDelete ? onDelete : undefined}
+            isBusy={isBusy}
+            deleteTitle="Hapus diskusi?"
+            deleteMessage={`"${post.title}" beserta balasannya tidak akan terlihat lagi oleh warga.`}
+            label={`Kelola diskusi ${post.title}`}
+          />
+        </div>
       </header>
 
       <Link href={`/forum/${post.id}`} className="forum-post-card__body">
@@ -310,9 +350,7 @@ function CreateForumPostModal() {
                     id="forum-post-category"
                     className="input"
                     value={category}
-                    onChange={(event) =>
-                      setCategory(event.target.value as ForumPostCategory)
-                    }
+                    onChange={(event) => setCategory(event.target.value as ForumPostCategory)}
                   >
                     {CATEGORIES.map((value) => (
                       <option key={value} value={value}>
@@ -391,5 +429,149 @@ function CreateForumPostModal() {
           document.body,
         )}
     </>
+  );
+}
+
+/** Edit reuses the create form's fields but sends a partial PATCH, so it gets
+ * its own component rather than a mode flag threaded through the other one. */
+function EditForumPostModal({
+  post,
+  onClose,
+}: {
+  post: ForumPostSummary;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [category, setCategory] = useState<ForumPostCategory>(post.category);
+  const [title, setTitle] = useState(post.title);
+  // The board only carries an excerpt, so the full body is fetched for editing.
+  const detailQuery = useQuery({
+    queryKey: forumPostKeys.detail(post.id),
+    queryFn: () => getForumPost(post.id),
+  });
+  const [body, setBody] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (isLoaded || !detailQuery.data) return;
+    setBody(detailQuery.data.data.post.body);
+    setIsLoaded(true);
+  }, [detailQuery.data, isLoaded]);
+
+  const mutation = useMutation({
+    mutationFn: updateForumPost,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: forumPostKeys.all });
+      onClose();
+    },
+  });
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit diskusi"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2 className="modal-title">Edit diskusi</h2>
+          <button className="icon-button" type="button" aria-label="Tutup" onClick={onClose}>
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+
+        {detailQuery.isPending ? (
+          <p className="field-hint">Memuat diskusi…</p>
+        ) : (
+          <form
+            className="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (title.trim().length < 5 || body.trim().length < 10) return;
+              mutation.mutate({
+                postId: post.id,
+                changes: { category, title: title.trim(), body: body.trim() },
+              });
+            }}
+          >
+            <div className="field">
+              <label htmlFor="edit-forum-category">Kategori</label>
+              <select
+                id="edit-forum-category"
+                className="input"
+                value={category}
+                onChange={(event) => setCategory(event.target.value as ForumPostCategory)}
+              >
+                {CATEGORIES.map((value) => (
+                  <option key={value} value={value}>
+                    {FORUM_POST_CATEGORY_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="edit-forum-title">Judul</label>
+              <input
+                id="edit-forum-title"
+                className="input"
+                value={title}
+                minLength={5}
+                maxLength={240}
+                required
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="edit-forum-body">Isi</label>
+              <textarea
+                id="edit-forum-body"
+                className="input"
+                rows={6}
+                value={body}
+                minLength={10}
+                maxLength={5000}
+                required
+                onChange={(event) => setBody(event.target.value)}
+              />
+            </div>
+
+            {mutation.isError && (
+              <p className="form-message" role="alert">
+                {mutation.error instanceof ApiError
+                  ? mutation.error.message
+                  : "Perubahan belum dapat disimpan."}
+              </p>
+            )}
+
+            <div className="modal-actions">
+              <button className="button button--secondary" type="button" onClick={onClose}>
+                Batal
+              </button>
+              <button
+                className="button button--primary"
+                type="submit"
+                disabled={mutation.isPending || title.trim().length < 5 || body.trim().length < 10}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <LoaderCircle className="loading-icon" size={17} aria-hidden="true" />
+                    Menyimpan…
+                  </>
+                ) : (
+                  "Simpan perubahan"
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>,
+    document.body,
   );
 }

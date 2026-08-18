@@ -30,6 +30,7 @@ import type {
   PaymentStatus,
   ReportStatus,
   UpdateAgendaEventInput,
+  UpdateAnnouncementInput,
   UpdateCameraInput,
   UpdateCommunityInput,
   UpdateHouseInput,
@@ -47,7 +48,9 @@ import type {
   ArchiveAgendaResult,
   ArchiveVehicleResult,
   AnnouncementFilter,
+  AnnouncementMutationResult,
   AnnouncementRecord,
+  ArchiveAnnouncementResult,
   AppRepository,
   AuditInput,
   AuthSessionRecord,
@@ -2000,6 +2003,101 @@ export class PrismaRepository implements AppRepository {
         isRead: false,
       };
     });
+  }
+
+  async updateAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcementId: string;
+    changes: UpdateAnnouncementInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<AnnouncementMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.announcement.findFirst({
+      where: { id: input.announcementId, communityId, archivedAt: null, deletedAt: null },
+      select: { id: true },
+    });
+    if (!existing) return { outcome: "NOT_FOUND" };
+
+    const announcement = await this.prisma.announcement.update({
+      where: { id: existing.id },
+      data: {
+        ...(input.changes.title !== undefined ? { title: input.changes.title } : {}),
+        ...(input.changes.summary !== undefined ? { summary: input.changes.summary } : {}),
+        ...(input.changes.body !== undefined ? { body: input.changes.body } : {}),
+        ...(input.changes.priority !== undefined ? { priority: input.changes.priority } : {}),
+        ...(input.changes.category !== undefined ? { category: input.changes.category } : {}),
+        // `null` clears the cover; `undefined` leaves it untouched.
+        ...(input.changes.coverImageUrl !== undefined
+          ? { coverImageUrl: input.changes.coverImageUrl }
+          : {}),
+      },
+      include: { reads: { where: { userId: input.auth.userId }, take: 1 } },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "announcement.updated",
+      entityType: "Announcement",
+      entityId: announcement.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      announcement: {
+        id: announcement.id,
+        title: announcement.title,
+        summary: announcement.summary,
+        body: announcement.body,
+        priority: announcement.priority,
+        category: announcement.category,
+        coverImageUrl: announcement.coverImageUrl,
+        publishedAt: announcement.publishedAt,
+        isRead: announcement.reads.length > 0,
+      },
+    };
+  }
+
+  async archiveAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcementId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ArchiveAnnouncementResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.announcement.findFirst({
+      where: { id: input.announcementId, communityId, archivedAt: null, deletedAt: null },
+      select: { id: true },
+    });
+    if (!existing) return { outcome: "NOT_FOUND" };
+
+    // Archived rather than deleted: the notifications that already went out
+    // reference this id, and the audit trail should still resolve it.
+    await this.prisma.announcement.update({
+      where: { id: existing.id },
+      data: { archivedAt: input.now },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "announcement.archived",
+      entityType: "Announcement",
+      entityId: existing.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "OK", announcementId: existing.id, archivedAt: input.now };
   }
 
   async listAgenda(input: {
@@ -6050,9 +6148,7 @@ export class PrismaRepository implements AppRepository {
     return {
       ...this.mapForumPostSummary(post, post.likes.length > 0),
       body: post.body,
-      replies: post.replies.map((reply) =>
-        this.mapForumPostReply(reply, reply.likes.length > 0),
-      ),
+      replies: post.replies.map((reply) => this.mapForumPostReply(reply, reply.likes.length > 0)),
     };
   }
 

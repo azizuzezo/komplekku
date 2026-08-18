@@ -12,6 +12,7 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_channel.dart';
 import 'package:komplekku/features/forum/domain/forum_message.dart';
+import 'package:komplekku/features/forum/presentation/forum_board_screen.dart';
 import 'package:komplekku/features/forum/presentation/forum_channel_sheets.dart';
 
 const _maxAttachments = 5;
@@ -23,14 +24,101 @@ const _maxAttachments = 5;
 /// mobile app rather than introducing a new realtime transport.
 const _pollInterval = Duration(seconds: 5);
 
-class ForumScreen extends ConsumerStatefulWidget {
+/// The Forum tab holds two different things under one name: a threaded
+/// discussion board (titles, categories, likes, replies) and the realtime chat
+/// channels, including the invitation-only private forums. They are not two
+/// views of the same data, so the switch is explicit rather than a filter.
+class ForumScreen extends StatefulWidget {
   const ForumScreen({super.key});
 
   @override
-  ConsumerState<ForumScreen> createState() => _ForumScreenState();
+  State<ForumScreen> createState() => _ForumTabsState();
 }
 
-class _ForumScreenState extends ConsumerState<ForumScreen> {
+class _ForumTabsState extends State<ForumScreen> {
+  bool _showBoard = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: KomplekkuColors.background,
+      appBar: AppBar(
+        title: const Text('Forum Warga'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: KomplekkuColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: KomplekkuColors.border),
+              ),
+              child: Row(
+                children: [
+                  for (final entry in const [
+                    (true, 'Diskusi', Icons.article_outlined),
+                    (false, 'Obrolan', Icons.chat_bubble_outline),
+                  ])
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showBoard = entry.$1),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOut,
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            color: _showBoard == entry.$1
+                                ? KomplekkuColors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                entry.$3,
+                                size: 16,
+                                color: _showBoard == entry.$1
+                                    ? Colors.white
+                                    : KomplekkuColors.textSecondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                entry.$2,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  color: _showBoard == entry.$1
+                                      ? Colors.white
+                                      : KomplekkuColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: _showBoard ? const ForumBoardView() : const ForumChatView(),
+    );
+  }
+}
+
+class ForumChatView extends ConsumerStatefulWidget {
+  const ForumChatView({super.key});
+
+  @override
+  ConsumerState<ForumChatView> createState() => _ForumScreenState();
+}
+
+class _ForumScreenState extends ConsumerState<ForumChatView> {
   String? _activeChannelId;
   final _bodyController = TextEditingController();
   Timer? _pollTimer;
@@ -194,17 +282,16 @@ class _ForumScreenState extends ConsumerState<ForumScreen> {
         );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Forum Warga'),
-        actions: [
-          if (canPost)
-            IconButton(
-              tooltip: 'Buat forum',
-              icon: const Icon(Icons.add_comment_outlined),
+      backgroundColor: KomplekkuColors.background,
+      floatingActionButton: canPost
+          ? FloatingActionButton.extended(
               onPressed: _createChannel,
-            ),
-        ],
-      ),
+              icon: const Icon(Icons.add_comment_outlined),
+              label: const Text('Buat Forum'),
+              backgroundColor: KomplekkuColors.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
       body: SafeArea(
         child: channels.when(
           loading: () => const Center(child: CircularProgressIndicator()),

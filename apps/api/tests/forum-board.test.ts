@@ -246,11 +246,7 @@ describe("Papan diskusi Forum Warga", () => {
     expect(edited.json().data.post.editedAt).toBeTruthy();
 
     const moderator = await loginWeb(app, "0812 0000 0003");
-    repository.setPermissions(demoIds.securityUser, [
-      "forum.read",
-      "forum.post",
-      "forum.manage",
-    ]);
+    repository.setPermissions(demoIds.securityUser, ["forum.read", "forum.post", "forum.manage"]);
 
     // `forum.manage` takes a post down; it never rewrites someone else's words.
     const foreignEdit = await app.inject({

@@ -45,6 +45,7 @@ import type {
   ResidentStatus,
   SecurityShiftStatus,
   UpdateAgendaEventInput,
+  UpdateAnnouncementInput,
   UpdateCameraInput,
   UpdateCommunityInput,
   UpdateHouseInput,
@@ -65,7 +66,9 @@ import type {
   ArchiveAgendaResult,
   ArchiveVehicleResult,
   AnnouncementFilter,
+  AnnouncementMutationResult,
   AnnouncementRecord,
+  ArchiveAnnouncementResult,
   AppRepository,
   AuditInput,
   AuthSessionRecord,
@@ -802,21 +805,15 @@ export class MemoryRepository implements AppRepository {
   private readonly forumMessages = new Map<string, MemoryForumMessage>();
   private readonly forumPosts = new Map<string, MemoryForumPost>();
   private readonly forumPostReplies = new Map<string, MemoryForumPostReply>();
-  private readonly forumPostLikes = new Map<
-    string,
-    MemoryForumLike & { postId: string }
-  >();
-  private readonly forumReplyLikes = new Map<
-    string,
-    MemoryForumLike & { replyId: string }
-  >();
+  private readonly forumPostLikes = new Map<string, MemoryForumLike & { postId: string }>();
+  private readonly forumReplyLikes = new Map<string, MemoryForumLike & { replyId: string }>();
   private readonly houses = new Map<string, MemoryHouse>();
   private readonly households = new Map<string, MemoryHousehold>();
   private readonly permissions = new Map<string, string[]>();
   private readonly memberRoles = new Map<string, string>();
   private readonly memberRoleRt = new Map<string, string | null>();
   private readonly reads = new Map<string, Date>();
-  private readonly announcements: AnnouncementRecord[];
+  private readonly announcements: MemoryAnnouncement[];
   private readonly agendaEvents: MemoryAgendaEvent[];
   private readonly notifications: MemoryNotification[];
   private readonly vehicles: MemoryVehicle[];
@@ -1248,6 +1245,8 @@ export class MemoryRepository implements AppRepository {
         coverImageUrl: null,
         publishedAt: new Date(now - 60 * 60 * 1000),
         isRead: false,
+        communityId: demoIds.community,
+        archivedAt: null,
       },
       {
         id: demoIds.announcementTwo,
@@ -1259,6 +1258,8 @@ export class MemoryRepository implements AppRepository {
         coverImageUrl: null,
         publishedAt: new Date(now - 2 * 60 * 60 * 1000),
         isRead: false,
+        communityId: demoIds.community,
+        archivedAt: null,
       },
     ];
     this.agendaEvents = [
@@ -2490,6 +2491,75 @@ export class MemoryRepository implements AppRepository {
       publishedAt: item.publishedAt,
       isRead: false,
     };
+  }
+
+  async updateAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcementId: string;
+    changes: UpdateAnnouncementInput;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<AnnouncementMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const announcement = this.announcements.find(
+      (item) => item.id === input.announcementId && !item.archivedAt,
+    );
+    if (!announcement) return { outcome: "NOT_FOUND" };
+
+    if (input.changes.title !== undefined) announcement.title = input.changes.title;
+    if (input.changes.summary !== undefined) announcement.summary = input.changes.summary;
+    if (input.changes.body !== undefined) announcement.body = input.changes.body;
+    if (input.changes.priority !== undefined) announcement.priority = input.changes.priority;
+    if (input.changes.category !== undefined) announcement.category = input.changes.category;
+    // `null` clears the cover; `undefined` leaves it untouched.
+    if (input.changes.coverImageUrl !== undefined) {
+      announcement.coverImageUrl = input.changes.coverImageUrl;
+    }
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "announcement.updated",
+      entityType: "Announcement",
+      entityId: announcement.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "OK", announcement };
+  }
+
+  async archiveAnnouncement(input: {
+    auth: AuthSessionRecord;
+    announcementId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ArchiveAnnouncementResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const announcement = this.announcements.find(
+      (item) => item.id === input.announcementId && !item.archivedAt,
+    );
+    if (!announcement) return { outcome: "NOT_FOUND" };
+
+    announcement.archivedAt = input.now;
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "announcement.archived",
+      entityType: "Announcement",
+      entityId: announcement.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "OK", announcementId: announcement.id, archivedAt: input.now };
   }
 
   async listAgenda(input: {
@@ -5761,10 +5831,7 @@ export class MemoryRepository implements AppRepository {
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
   }
 
-  private mapForumPostSummary(
-    post: MemoryForumPost,
-    viewerUserId: string,
-  ): ForumPostSummaryRecord {
+  private mapForumPostSummary(post: MemoryForumPost, viewerUserId: string): ForumPostSummaryRecord {
     return {
       id: post.id,
       category: post.category,
@@ -5787,9 +5854,7 @@ export class MemoryRepository implements AppRepository {
     reply: MemoryForumPostReply,
     viewerUserId: string,
   ): ForumPostReplyRecord {
-    const parent = reply.replyToReplyId
-      ? this.forumPostReplies.get(reply.replyToReplyId)
-      : null;
+    const parent = reply.replyToReplyId ? this.forumPostReplies.get(reply.replyToReplyId) : null;
     const visibleParent = parent && !parent.deletedAt ? parent : null;
     return {
       id: reply.id,
@@ -5824,9 +5889,7 @@ export class MemoryRepository implements AppRepository {
       .filter((post) => post.communityId === communityId && !post.deletedAt)
       .filter((post) => !input.category || post.category === input.category)
       // "Terjawab" hides the questions nobody has picked up yet.
-      .filter(
-        (post) => input.sort !== "answered" || this.visibleRepliesFor(post.id).length > 0,
-      )
+      .filter((post) => input.sort !== "answered" || this.visibleRepliesFor(post.id).length > 0)
       .map((post) => this.mapForumPostSummary(post, input.auth.userId));
 
     posts.sort((left, right) => {
@@ -6337,13 +6400,17 @@ export class MemoryRepository implements AppRepository {
 
   private visibleAnnouncements(auth: AuthSessionRecord, now: Date): AnnouncementRecord[] {
     if (auth.currentCommunityId !== demoIds.community) return [];
-    return this.announcements
-      .filter((announcement) => announcement.publishedAt <= now)
-      .sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime())
-      .map((announcement) => ({
-        ...announcement,
-        isRead: this.reads.has(`${auth.userId}:${announcement.id}`),
-      }));
+    return (
+      this.announcements
+        // Mirrors prisma-repository's `archivedAt: null` guard — an archived
+        // notice drops off the board but keeps its row.
+        .filter((announcement) => announcement.publishedAt <= now && !announcement.archivedAt)
+        .sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime())
+        .map((announcement) => ({
+          ...announcement,
+          isRead: this.reads.has(`${auth.userId}:${announcement.id}`),
+        }))
+    );
   }
 
   private visibleAgenda(auth: AuthSessionRecord, now: Date, view: AgendaView): MemoryAgendaEvent[] {

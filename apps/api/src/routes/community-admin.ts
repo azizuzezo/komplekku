@@ -43,26 +43,22 @@ export async function registerCommunityAdminRoutes(
     meta: responseMeta(request),
   }));
 
-  app.post(
-    "/api/v1/admin/communities",
-    { preHandler: platformGuards },
-    async (request, reply) => {
-      const auth = getAuthContext(request);
-      const input = createCommunityInputSchema.parse(request.body);
-      const result = await repository.createCommunity({
-        auth,
-        community: input,
-        now: new Date(),
-        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
-      });
-      if (result.outcome !== "OK") {
-        throw new AppError(409, "COMMUNITY_SLUG_CONFLICT", "Slug komunitas ini sudah digunakan.");
-      }
-      return reply
-        .status(201)
-        .send({ data: { community: result.community }, meta: responseMeta(request) });
-    },
-  );
+  app.post("/api/v1/admin/communities", { preHandler: platformGuards }, async (request, reply) => {
+    const auth = getAuthContext(request);
+    const input = createCommunityInputSchema.parse(request.body);
+    const result = await repository.createCommunity({
+      auth,
+      community: input,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+    });
+    if (result.outcome !== "OK") {
+      throw new AppError(409, "COMMUNITY_SLUG_CONFLICT", "Slug komunitas ini sudah digunakan.");
+    }
+    return reply
+      .status(201)
+      .send({ data: { community: result.community }, meta: responseMeta(request) });
+  });
 
   app.get("/api/v1/admin/rts", { preHandler: readRtGuards }, async (request) => ({
     data: { items: await repository.listRts(getAuthContext(request)) },
@@ -84,27 +80,23 @@ export async function registerCommunityAdminRoutes(
     return reply.status(201).send({ data: { rt: result.rt }, meta: responseMeta(request) });
   });
 
-  app.patch(
-    "/api/v1/admin/rts/:id",
-    { preHandler: manageCommunityGuards },
-    async (request) => {
-      const auth = getAuthContext(request);
-      const { id } = idParamsSchema.parse(request.params);
-      const input = updateRtInputSchema.parse(request.body);
-      const result = await repository.updateRt({
-        auth,
-        rtId: id,
-        changes: input,
-        now: new Date(),
-        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
-      });
-      if (result.outcome === "CODE_CONFLICT") {
-        throw new AppError(409, "RT_CODE_CONFLICT", "Kode RT ini sudah digunakan.");
-      }
-      if (result.outcome !== "OK") {
-        throw new AppError(404, "RT_NOT_FOUND", "RT tidak ditemukan di komunitas ini.");
-      }
-      return { data: { rt: result.rt }, meta: responseMeta(request) };
-    },
-  );
+  app.patch("/api/v1/admin/rts/:id", { preHandler: manageCommunityGuards }, async (request) => {
+    const auth = getAuthContext(request);
+    const { id } = idParamsSchema.parse(request.params);
+    const input = updateRtInputSchema.parse(request.body);
+    const result = await repository.updateRt({
+      auth,
+      rtId: id,
+      changes: input,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+    });
+    if (result.outcome === "CODE_CONFLICT") {
+      throw new AppError(409, "RT_CODE_CONFLICT", "Kode RT ini sudah digunakan.");
+    }
+    if (result.outcome !== "OK") {
+      throw new AppError(404, "RT_NOT_FOUND", "RT tidak ditemukan di komunitas ini.");
+    }
+    return { data: { rt: result.rt }, meta: responseMeta(request) };
+  });
 }

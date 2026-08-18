@@ -5,7 +5,7 @@ import {
   announcementFilterSchema,
   type AnnouncementFilter,
 } from "@komplekku/contracts";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { AnnouncementListSkeleton } from "@/components/ui/content-skeleton";
@@ -14,14 +14,16 @@ import { getMe } from "@/features/auth/auth-api";
 import { TestPushNotificationButton } from "@/features/notification/test-push-notification-button";
 import { getRequestState } from "@/lib/api/client";
 
-import { announcementKeys, getAnnouncements } from "./announcement-api";
+import { announcementKeys, archiveAnnouncement, getAnnouncements } from "./announcement-api";
 import { AnnouncementRow } from "./announcement-row";
-import { CreateAnnouncementModal } from "./create-announcement-modal";
+import { CreateAnnouncementModal, EditAnnouncementModal } from "./create-announcement-modal";
 
 const FILTERS = announcementFilterSchema.options;
 
 export function AnnouncementList() {
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<AnnouncementFilter>("all");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
   const announcementsQuery = useQuery({
     queryKey: announcementKeys.list(filter),
@@ -29,6 +31,14 @@ export function AnnouncementList() {
   });
 
   const canManage = meQuery.data?.data.permissions.includes("announcement.manage") ?? false;
+
+  const archiveMutation = useMutation({
+    mutationFn: archiveAnnouncement,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: announcementKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["home"] });
+    },
+  });
 
   const filterChips = (
     <div className="announcement-filters" role="group" aria-label="Saring pengumuman">
@@ -105,6 +115,9 @@ export function AnnouncementList() {
 
   return (
     <div className="announcement-page-wrapper">
+      {editingId && (
+        <EditAnnouncementModal announcementId={editingId} onClose={() => setEditingId(null)} />
+      )}
       {canManage && (
         <div
           style={{
@@ -134,7 +147,14 @@ export function AnnouncementList() {
       ) : (
         <div className="announcement-list">
           {announcements.map((announcement) => (
-            <AnnouncementRow announcement={announcement} key={announcement.id} />
+            <AnnouncementRow
+              announcement={announcement}
+              key={announcement.id}
+              canManage={canManage}
+              onEdit={() => setEditingId(announcement.id)}
+              onDelete={() => archiveMutation.mutate(announcement.id)}
+              isBusy={archiveMutation.isPending}
+            />
           ))}
         </div>
       )}

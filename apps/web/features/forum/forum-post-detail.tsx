@@ -279,9 +279,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
           {(replyTo || editing) && (
             <div className="forum-composer__context">
               <div>
-                <strong>
-                  {editing ? "Mengedit balasan" : `Membalas ${replyTo!.authorName}`}
-                </strong>
+                <strong>{editing ? "Mengedit balasan" : `Membalas ${replyTo!.authorName}`}</strong>
                 <span>{(editing ?? replyTo)!.body}</span>
               </div>
               <button type="button" aria-label="Batalkan" onClick={resetComposer}>

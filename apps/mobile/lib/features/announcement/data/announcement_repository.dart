@@ -107,4 +107,51 @@ class AnnouncementRepository {
       throw ApiException.malformedResponse();
     }
   }
+
+  Future<AnnouncementDetail> update({
+    required String id,
+    String? title,
+    String? summary,
+    String? body,
+    String? priority,
+    AnnouncementCategory? category,
+  }) async {
+    try {
+      final response = await _client.patch<Map<String, dynamic>>(
+        '/announcements/${Uri.encodeComponent(id)}',
+        data: {
+          'title': ?title,
+          'summary': ?summary,
+          'body': ?body,
+          'priority': ?priority,
+          'category': ?(category == null
+              ? null
+              : category == AnnouncementCategory.event
+                  ? 'EVENT'
+                  : 'INFO'),
+        },
+      );
+      final announcement = response.data?['data']?['announcement'];
+      if (announcement is! Map<String, dynamic>) {
+        throw ApiException.malformedResponse();
+      }
+      return AnnouncementDetail.fromJson(announcement);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  /// Archives rather than erases — the notice leaves the board but its row and
+  /// audit trail survive, matching the API.
+  Future<void> archive(String id) async {
+    try {
+      await _client.delete<void>('/announcements/${Uri.encodeComponent(id)}');
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
 }

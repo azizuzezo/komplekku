@@ -125,4 +125,52 @@ class AgendaRepository {
       throw ApiException.malformedResponse();
     }
   }
+
+  Future<AgendaEvent> update({
+    required String id,
+    String? title,
+    String? date,
+    String? startTime,
+    String? endTime,
+    String? location,
+    String? organizer,
+    String? description,
+  }) async {
+    try {
+      final response = await _client.patch<Map<String, dynamic>>(
+        '/admin/agenda/${Uri.encodeComponent(id)}',
+        data: {
+          'title': ?title,
+          'date': ?date,
+          'startTime': ?startTime,
+          'endTime': ?endTime,
+          'location': ?location,
+          'organizer': ?organizer,
+          'description': ?description,
+        },
+      );
+      final event = response.data?['data']?['event'];
+      if (event is! Map<String, dynamic>) {
+        throw ApiException.malformedResponse();
+      }
+      return AgendaEvent.fromJson(event);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  /// Archives rather than erases, matching the API.
+  Future<void> archive(String id) async {
+    try {
+      await _client.post<void>(
+        '/admin/agenda/${Uri.encodeComponent(id)}/archive',
+      );
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
 }

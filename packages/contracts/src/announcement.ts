@@ -109,3 +109,30 @@ export const createAnnouncementSchema = z.object({
 });
 
 export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>;
+
+export const updateAnnouncementSchema = z
+  .object({
+    title: z.string().trim().min(3, "Judul minimal 3 karakter").max(240),
+    summary: z.string().trim().min(5, "Ringkasan minimal 5 karakter").max(500),
+    body: z.string().trim().min(10, "Isi pengumuman minimal 10 karakter"),
+    priority: announcementPrioritySchema,
+    category: announcementCategorySchema,
+    coverImageUrl: z.string().url().nullable(),
+  })
+  .partial()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "Kirim setidaknya satu perubahan pengumuman.",
+  });
+
+export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>;
+
+/** Taking a notice off the board archives it rather than erasing the row, so
+ * the audit trail and any notification that referenced it stay intact. */
+export const archiveAnnouncementResponseSchema = dataEnvelopeSchema(
+  z.object({
+    announcementId: z.string().uuid(),
+    archivedAt: z.string().datetime({ offset: true }),
+  }),
+);
+
+export type ArchiveAnnouncementResponse = z.infer<typeof archiveAnnouncementResponseSchema>;
