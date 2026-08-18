@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/komplekku_logo.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -108,6 +109,22 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     route: '/akun/komunitas',
                   ),
                 ],
+                const SizedBox(height: 20),
+                // Keamanan and Layanan lost their bottom-bar tabs when the
+                // nav shrank to five slots, so this is now the way in to every
+                // operational feature the account has access to.
+                const _MenuGroup(
+                  title: 'Keamanan',
+                  entries: _keamananEntries,
+                ),
+                const _MenuGroup(
+                  title: 'Layanan',
+                  entries: _layananEntries,
+                ),
+                const _MenuGroup(
+                  title: 'Aktivitas',
+                  entries: _aktivitasEntries,
+                ),
                 const SizedBox(height: 16),
                 _SessionCard(isLoggingOut: _isLoggingOut, onLogout: _logout),
               ],
@@ -131,6 +148,118 @@ Color _statusTone(AccountResidentStatus? status) {
     case AccountResidentStatus.movedOut:
     case null:
       return KomplekkuColors.textSecondary;
+  }
+}
+
+const _keamananEntries = [
+  (Icons.videocam_outlined, 'CCTV', '/keamanan/cctv', 'camera.public.read'),
+  (Icons.person_add_alt_outlined, 'Tamu', '/keamanan/tamu', 'visitor.create'),
+  (Icons.inventory_2_outlined, 'Paket', '/keamanan/paket', 'package.read'),
+  (Icons.sos_outlined, 'Darurat', '/keamanan/darurat', 'emergency.create'),
+  (
+    Icons.notifications_active_outlined,
+    'Darurat Masuk',
+    '/keamanan/darurat-masuk',
+    'emergency.read',
+  ),
+  (
+    Icons.report_gmailerrorred_outlined,
+    'Kejadian',
+    '/keamanan/kejadian',
+    'incident.create',
+  ),
+  (Icons.route_outlined, 'Patroli', '/keamanan/patroli', 'patrol.execute'),
+  (
+    Icons.dashboard_outlined,
+    'Dashboard Keamanan',
+    '/keamanan/dashboard',
+    'security.dashboard.read',
+  ),
+];
+
+const _layananEntries = [
+  (Icons.report_outlined, 'Laporan Warga', '/layanan/laporan', 'report.create'),
+  (Icons.mail_outline, 'Surat', '/layanan/surat', 'letter.create'),
+  (
+    Icons.meeting_room_outlined,
+    'Fasilitas',
+    '/layanan/fasilitas',
+    'facility.read',
+  ),
+  (Icons.receipt_long_outlined, 'Iuran', '/layanan/iuran', 'invoice.read'),
+  (Icons.savings_outlined, 'Transparansi Kas', '/layanan/kas', 'cash.read'),
+  (
+    Icons.query_stats_outlined,
+    'Dashboard Keuangan',
+    '/layanan/keuangan',
+    'finance.dashboard.read',
+  ),
+];
+
+const _aktivitasEntries = [
+  (Icons.event_outlined, 'Agenda', '/agenda', null),
+  (Icons.calendar_month_outlined, 'Kalender Agenda', '/kalender', null),
+  (Icons.notifications_none_outlined, 'Notifikasi', '/notifikasi', null),
+];
+
+/// A titled block of permission-filtered shortcuts. The whole block hides when
+/// the account can reach none of its entries, so a warga never sees an empty
+/// "Keamanan" heading.
+class _MenuGroup extends ConsumerWidget {
+  const _MenuGroup({required this.title, required this.entries});
+
+  final String title;
+  final List<(IconData, String, String, String?)> entries;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final permissions = ref.watch(currentPermissionsProvider);
+    final visible = entries
+        .where((entry) => hasPermission(permissions, entry.$4))
+        .toList(growable: false);
+    if (visible.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .titleSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: KomplekkuColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: KomplekkuColors.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (final entry in visible) ...[
+                ListTile(
+                  leading: Icon(entry.$1, color: KomplekkuColors.primary),
+                  title: Text(
+                    entry.$2,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(entry.$3),
+                ),
+                if (entry != visible.last)
+                  const Divider(height: 1, color: KomplekkuColors.border),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 }
 

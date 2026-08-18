@@ -34,18 +34,26 @@ void main() {
   });
 
   test('a ready resident can reach every bottom-navigation destination', () {
+    expect(AuthState.ready.allowsPath('/beranda'), isTrue);
+    expect(AuthState.ready.allowsPath('/shalat'), isTrue);
+    expect(AuthState.ready.allowsPath('/pengumuman'), isTrue);
+    expect(AuthState.ready.allowsPath('/pengumuman/abc-123'), isTrue);
+    expect(AuthState.ready.allowsPath('/forum'), isTrue);
+    expect(AuthState.ready.allowsPath('/akun'), isTrue);
+    expect(AuthState.pendingApproval.allowsPath('/pengumuman'), isFalse);
+  });
+
+  test('Keamanan and Layanan stay reachable from the Profil tab', () {
+    // These lost their own bottom-bar tab but kept their paths, so existing
+    // deep links and notification payloads must still resolve.
     expect(AuthState.ready.allowsPath('/keamanan'), isTrue);
     expect(AuthState.ready.allowsPath('/keamanan/cctv'), isTrue);
     expect(AuthState.ready.allowsPath('/layanan'), isTrue);
     expect(AuthState.ready.allowsPath('/layanan/iuran'), isTrue);
-    expect(AuthState.ready.allowsPath('/aktivitas'), isTrue);
-    expect(AuthState.ready.allowsPath('/aktivitas/pengumuman'), isTrue);
-    expect(AuthState.ready.allowsPath('/aktivitas/pengumuman/abc-123'), isTrue);
-    expect(AuthState.ready.allowsPath('/aktivitas/agenda'), isTrue);
-    expect(AuthState.ready.allowsPath('/aktivitas/agenda/abc-123'), isTrue);
-    expect(AuthState.ready.allowsPath('/aktivitas/notifikasi'), isTrue);
-    expect(AuthState.ready.allowsPath('/akun'), isTrue);
-    expect(AuthState.pendingApproval.allowsPath('/aktivitas/pengumuman'), isFalse);
+    expect(AuthState.ready.allowsPath('/agenda'), isTrue);
+    expect(AuthState.ready.allowsPath('/agenda/abc-123'), isTrue);
+    expect(AuthState.ready.allowsPath('/kalender'), isTrue);
+    expect(AuthState.ready.allowsPath('/notifikasi'), isTrue);
   });
 
   test('rejects unknown server auth states', () {

@@ -24,6 +24,7 @@ import { registerEmergencyRoutes } from "./routes/emergencies";
 import { registerFacilityRoutes } from "./routes/facilities";
 import { registerFinanceDashboardRoutes } from "./routes/finance-dashboard";
 import { registerForumRoutes } from "./routes/forum";
+import { registerForumPostRoutes } from "./routes/forum-posts";
 import { registerHealthRoutes } from "./routes/health";
 import { registerHouseholdRoutes } from "./routes/household";
 import { registerHouseRoutes } from "./routes/houses";
@@ -106,6 +107,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   await registerCommunityAdminRoutes(app, repository, authenticate);
   await registerAnnouncementRoutes(app, repository, authenticate, pushNotificationProvider);
   await registerForumRoutes(app, repository, authenticate, pushNotificationProvider);
+  await registerForumPostRoutes(app, repository, authenticate, pushNotificationProvider);
   await registerAgendaRoutes(app, repository, authenticate);
   await registerNotificationRoutes(app, repository, authenticate, pushNotificationProvider);
   await registerOnboardingRoutes(app, repository, authenticate);

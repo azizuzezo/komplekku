@@ -1,36 +1,15 @@
-import { createAnnouncementSchema } from "@komplekku/contracts";
+import { announcementListQuerySchema, createAnnouncementSchema } from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 
 import type { AppRepository } from "../domain/repository";
+import { announcementSummary } from "../lib/announcement-view";
 import { getAuthContext, requirePermission } from "../lib/authentication";
 import { AppError } from "../lib/errors";
 import { requestUserAgent, responseMeta } from "../lib/http";
 import type { PushNotificationProvider } from "../lib/push-notification-provider";
 
-const listQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-});
-
 const idParamsSchema = z.object({ id: z.string().uuid() });
-
-function announcementSummary(announcement: {
-  id: string;
-  title: string;
-  summary: string;
-  priority: "NORMAL" | "IMPORTANT" | "URGENT";
-  publishedAt: Date;
-  isRead: boolean;
-}) {
-  return {
-    id: announcement.id,
-    title: announcement.title,
-    summary: announcement.summary,
-    priority: announcement.priority,
-    publishedAt: announcement.publishedAt.toISOString(),
-    isRead: announcement.isRead,
-  };
-}
 
 export async function registerAnnouncementRoutes(
   app: FastifyInstance,
@@ -41,11 +20,12 @@ export async function registerAnnouncementRoutes(
   const guards = [authenticate, requirePermission("announcement.read")];
 
   app.get("/api/v1/announcements", { preHandler: guards }, async (request) => {
-    const query = listQuerySchema.parse(request.query);
+    const query = announcementListQuerySchema.parse(request.query);
     const result = await repository.listAnnouncements(
       getAuthContext(request),
       new Date(),
       query.limit,
+      query.filter,
     );
     return {
       data: { items: result.items.map(announcementSummary) },

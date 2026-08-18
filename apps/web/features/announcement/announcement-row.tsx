@@ -1,12 +1,20 @@
-import type { AnnouncementSummary } from "@komplekku/contracts";
-import { ArrowRight } from "lucide-react";
+import {
+  ANNOUNCEMENT_BADGE_LABELS,
+  announcementBadge,
+  type AnnouncementSummary,
+} from "@komplekku/contracts";
+import { ArrowRight, CalendarDays, Info, Megaphone } from "lucide-react";
 import Link from "next/link";
 
-import {
-  formatAnnouncementDate,
-  getAnnouncementDateParts,
-  getPriorityLabel,
-} from "./format-announcement";
+import { formatAnnouncementDate } from "./format-announcement";
+
+/** Stands in for a cover photo the author never uploaded, so every row keeps
+ * the same shape instead of collapsing into a bare text list. */
+const BADGE_ICONS = {
+  important: Megaphone,
+  event: CalendarDays,
+  info: Info,
+} as const;
 
 export function AnnouncementRow({
   announcement,
@@ -15,7 +23,8 @@ export function AnnouncementRow({
   announcement: AnnouncementSummary;
   featured?: boolean;
 }) {
-  const dateParts = getAnnouncementDateParts(announcement.publishedAt);
+  const badge = announcementBadge(announcement);
+  const BadgeIcon = BADGE_ICONS[badge];
 
   return (
     <article
@@ -27,19 +36,26 @@ export function AnnouncementRow({
         href={`/pengumuman/${announcement.id}`}
         aria-label={`Baca pengumuman: ${announcement.title}`}
       >
-        <div className="announcement-row__date" aria-hidden="true">
-          <span>{dateParts.day}</span>
-          <span>{dateParts.month}</span>
-        </div>
+        {announcement.coverImageUrl ? (
+          <img
+            className="announcement-row__cover"
+            src={announcement.coverImageUrl}
+            alt=""
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className={`announcement-row__cover announcement-row__cover--fallback announcement-row__cover--${badge}`}
+            aria-hidden="true"
+          >
+            <BadgeIcon size={22} />
+          </div>
+        )}
         <div className="announcement-row__content">
           <div className="announcement-row__meta">
-            {announcement.priority !== "NORMAL" && (
-              <span
-                className={`priority-label priority-label--${announcement.priority.toLowerCase()}`}
-              >
-                {getPriorityLabel(announcement.priority)}
-              </span>
-            )}
+            <span className={`announcement-badge announcement-badge--${badge}`}>
+              {ANNOUNCEMENT_BADGE_LABELS[badge]}
+            </span>
             {!announcement.isRead && <span className="unread-label">Belum dibaca</span>}
             <time dateTime={announcement.publishedAt}>
               {formatAnnouncementDate(announcement.publishedAt)}

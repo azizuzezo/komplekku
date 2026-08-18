@@ -1,30 +1,12 @@
+import { updateProfileInputSchema } from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 
 import type { AppRepository } from "../domain/repository";
+import { announcementSummary } from "../lib/announcement-view";
 import { getAuthContext, requirePermission } from "../lib/authentication";
 import { AppError } from "../lib/errors";
 import { responseMeta } from "../lib/http";
 import { firstName, maskPhone } from "../lib/security";
-
-function announcementSummary(announcement: {
-  id: string;
-  title: string;
-  summary: string;
-  priority: "NORMAL" | "IMPORTANT" | "URGENT";
-  publishedAt: Date;
-  isRead: boolean;
-}) {
-  return {
-    id: announcement.id,
-    title: announcement.title,
-    summary: announcement.summary,
-    priority: announcement.priority,
-    publishedAt: announcement.publishedAt.toISOString(),
-    isRead: announcement.isRead,
-  };
-}
-
-import { updateProfileInputSchema } from "@komplekku/contracts";
 
 export async function registerResidentRoutes(
   app: FastifyInstance,

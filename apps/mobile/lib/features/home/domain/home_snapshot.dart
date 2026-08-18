@@ -1,3 +1,5 @@
+import 'package:komplekku/features/announcement/domain/announcement.dart';
+
 class HomeSnapshot {
   const HomeSnapshot({
     required this.firstName,
@@ -41,6 +43,8 @@ class HomeAnnouncement {
     required this.id,
     required this.title,
     required this.summary,
+    required this.badge,
+    required this.coverImageUrl,
     required this.publishedAt,
     required this.isRead,
   });
@@ -48,16 +52,24 @@ class HomeAnnouncement {
   final String id;
   final String title;
   final String summary;
+
+  /// Derived on the announcement model so the home tile and the noticeboard
+  /// row can never disagree about what an announcement is labelled.
+  final AnnouncementBadge badge;
+  final String? coverImageUrl;
   final DateTime publishedAt;
   final bool isRead;
 
   factory HomeAnnouncement.fromJson(Map<String, dynamic> json) {
+    final summary = AnnouncementSummary.fromJson(json);
     return HomeAnnouncement(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      summary: json['summary'] as String,
-      publishedAt: DateTime.parse(json['publishedAt'] as String),
-      isRead: json['isRead'] as bool? ?? false,
+      id: summary.id,
+      title: summary.title,
+      summary: summary.summary,
+      badge: summary.badge,
+      coverImageUrl: summary.coverImageUrl,
+      publishedAt: summary.publishedAt,
+      isRead: summary.isRead,
     );
   }
 }

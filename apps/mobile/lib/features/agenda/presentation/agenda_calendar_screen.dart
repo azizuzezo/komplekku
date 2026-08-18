@@ -87,7 +87,7 @@ class _AgendaCalendarScreenState extends ConsumerState<AgendaCalendarScreen> {
           IconButton(
             tooltip: 'Tampilan daftar',
             icon: const Icon(Icons.view_list_outlined),
-            onPressed: () => context.push('/aktivitas/agenda'),
+            onPressed: () => context.push('/agenda'),
           ),
         ],
       ),
@@ -416,7 +416,7 @@ class _SelectedDaySection extends StatelessWidget {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () =>
-                      context.push('/aktivitas/agenda/${event.id}'),
+                      context.push('/agenda/${event.id}'),
                 ),
               ),
             ),

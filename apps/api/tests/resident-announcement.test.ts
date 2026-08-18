@@ -96,4 +96,79 @@ describe("slice resident dan pengumuman", () => {
     expect(response.statusCode).toBe(404);
     expect(response.json().error.code).toBe("ANNOUNCEMENT_NOT_FOUND");
   });
+
+  it("menyaring papan pengumuman per kategori, dengan Penting mengikuti prioritas", async () => {
+    const { app } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+    const resident = await loginWeb(app);
+
+    const all = await app.inject({
+      method: "GET",
+      url: "/api/v1/announcements",
+      headers: { cookie: resident.cookie },
+    });
+    expect(all.statusCode).toBe(200);
+    expect(announcementListResponseSchema.safeParse(all.json()).success).toBe(true);
+    expect(all.json().data.items).toHaveLength(2);
+
+    // The demo board holds one IMPORTANT/INFO item and one NORMAL/EVENT item.
+    const important = await app.inject({
+      method: "GET",
+      url: "/api/v1/announcements?filter=important",
+      headers: { cookie: resident.cookie },
+    });
+    expect(important.json().data.items).toHaveLength(1);
+    expect(important.json().data.items[0].priority).not.toBe("NORMAL");
+
+    const events = await app.inject({
+      method: "GET",
+      url: "/api/v1/announcements?filter=event",
+      headers: { cookie: resident.cookie },
+    });
+    expect(events.json().data.items).toHaveLength(1);
+    expect(events.json().data.items[0].category).toBe("EVENT");
+
+    // "Info" selects on the stored category, so the IMPORTANT/INFO item is
+    // still filed under Info even though its badge reads "Penting".
+    const info = await app.inject({
+      method: "GET",
+      url: "/api/v1/announcements?filter=info",
+      headers: { cookie: resident.cookie },
+    });
+    expect(info.json().data.items).toHaveLength(1);
+    expect(info.json().data.items[0].category).toBe("INFO");
+  });
+
+  it("menyimpan kategori dan gambar sampul saat pengurus membuat pengumuman", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+
+    const admin = await loginWeb(app);
+    repository.setPermissions(demoIds.user, ["announcement.read", "announcement.manage"]);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/announcements",
+      headers: { cookie: admin.cookie },
+      payload: {
+        title: "Rapat Warga Bulanan",
+        summary: "Evaluasi kegiatan RT dan rencana bulan depan.",
+        body: "Mohon kehadiran Bapak/Ibu di balai warga pukul 19.30 WIB.",
+        priority: "NORMAL",
+        category: "EVENT",
+        coverImageUrl: "https://example.test/rapat.jpg",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().data.announcement.category).toBe("EVENT");
+    expect(created.json().data.announcement.coverImageUrl).toBe("https://example.test/rapat.jpg");
+
+    const events = await app.inject({
+      method: "GET",
+      url: "/api/v1/announcements?filter=event",
+      headers: { cookie: admin.cookie },
+    });
+    const titles = events.json().data.items.map((item: { title: string }) => item.title);
+    expect(titles).toContain("Rapat Warga Bulanan");
+  });
 });

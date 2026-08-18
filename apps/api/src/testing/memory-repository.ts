@@ -64,6 +64,7 @@ import type {
   AgendaRecord,
   ArchiveAgendaResult,
   ArchiveVehicleResult,
+  AnnouncementFilter,
   AnnouncementRecord,
   AppRepository,
   AuditInput,
@@ -102,6 +103,15 @@ import type {
   ForumChannelKind,
   ForumChannelMemberRecord,
   ForumChannelRecord,
+  ForumDeleteResult,
+  ForumLikeResult,
+  ForumPostCategory,
+  ForumPostDetailRecord,
+  ForumPostMutationResult,
+  ForumPostReplyMutationResult,
+  ForumPostReplyRecord,
+  ForumPostSort,
+  ForumPostSummaryRecord,
   ForumMemberCandidateRecord,
   ForumMemberStatus,
   ForumMessageRecord,
@@ -274,6 +284,38 @@ interface MemoryForumChannelMember {
   invitedByUserId: string | null;
   invitedAt: Date;
   respondedAt: Date | null;
+}
+
+interface MemoryForumPost {
+  id: string;
+  communityId: string;
+  authorUserId: string;
+  category: ForumPostCategory;
+  title: string;
+  body: string;
+  imageUrls: string[];
+  createdAt: Date;
+  editedAt: Date | null;
+  deletedAt: Date | null;
+}
+
+interface MemoryForumPostReply {
+  id: string;
+  communityId: string;
+  postId: string;
+  authorUserId: string;
+  replyToReplyId: string | null;
+  body: string;
+  createdAt: Date;
+  editedAt: Date | null;
+  deletedAt: Date | null;
+}
+
+interface MemoryForumLike {
+  id: string;
+  communityId: string;
+  userId: string;
+  createdAt: Date;
 }
 
 interface MemoryForumMessage {
@@ -758,6 +800,16 @@ export class MemoryRepository implements AppRepository {
   private readonly forumChannels = new Map<string, MemoryForumChannel>();
   private readonly forumChannelMembers = new Map<string, MemoryForumChannelMember>();
   private readonly forumMessages = new Map<string, MemoryForumMessage>();
+  private readonly forumPosts = new Map<string, MemoryForumPost>();
+  private readonly forumPostReplies = new Map<string, MemoryForumPostReply>();
+  private readonly forumPostLikes = new Map<
+    string,
+    MemoryForumLike & { postId: string }
+  >();
+  private readonly forumReplyLikes = new Map<
+    string,
+    MemoryForumLike & { replyId: string }
+  >();
   private readonly houses = new Map<string, MemoryHouse>();
   private readonly households = new Map<string, MemoryHousehold>();
   private readonly permissions = new Map<string, string[]>();
@@ -1192,6 +1244,8 @@ export class MemoryRepository implements AppRepository {
         summary: "Simulasi informasi pemadaman untuk pengembangan lokal.",
         body: "Data contoh pemadaman untuk pengembangan lokal.",
         priority: "IMPORTANT",
+        category: "INFO",
+        coverImageUrl: null,
         publishedAt: new Date(now - 60 * 60 * 1000),
         isRead: false,
       },
@@ -1201,6 +1255,8 @@ export class MemoryRepository implements AppRepository {
         summary: "Simulasi agenda warga untuk pengembangan lokal.",
         body: "Data contoh kerja bakti untuk pengembangan lokal.",
         priority: "NORMAL",
+        category: "EVENT",
+        coverImageUrl: null,
         publishedAt: new Date(now - 2 * 60 * 60 * 1000),
         isRead: false,
       },
@@ -1301,6 +1357,13 @@ export class MemoryRepository implements AppRepository {
 
   setPermissions(userId: string, permissions: string[], communityId = demoIds.community) {
     this.permissions.set(`${userId}:${communityId}`, [...permissions]);
+  }
+
+  /// Simulates an account that signed up but never chose a display name — the
+  /// case where a phone number used to leak out as the person's name.
+  clearDisplayName(userId: string) {
+    const user = this.users.get(userId);
+    if (user) user.displayName = null;
   }
 
   setResidentStatus(userId: string, status: ResidentStatus) {
@@ -2329,8 +2392,22 @@ export class MemoryRepository implements AppRepository {
     auth: AuthSessionRecord,
     now: Date,
     limit: number,
+    filter: AnnouncementFilter = "all",
   ): Promise<{ items: AnnouncementRecord[]; total: number }> {
-    const items = this.visibleAnnouncements(auth, now);
+    // Same rule as `announcementBadge`: "Penting" is about priority, the other
+    // two chips are about the stored category.
+    const items = this.visibleAnnouncements(auth, now).filter((item) => {
+      switch (filter) {
+        case "important":
+          return item.priority !== "NORMAL";
+        case "event":
+          return item.category === "EVENT";
+        case "info":
+          return item.category === "INFO";
+        case "all":
+          return true;
+      }
+    });
     return { items: items.slice(0, limit), total: items.length };
   }
 
@@ -2370,6 +2447,8 @@ export class MemoryRepository implements AppRepository {
       summary: input.announcement.summary,
       body: input.announcement.body,
       priority: input.announcement.priority,
+      category: input.announcement.category,
+      coverImageUrl: input.announcement.coverImageUrl ?? null,
       publishedAt: input.now,
       isRead: false,
       archivedAt: null,
@@ -2406,6 +2485,8 @@ export class MemoryRepository implements AppRepository {
       summary: item.summary,
       body: item.body,
       priority: item.priority,
+      category: item.category,
+      coverImageUrl: item.coverImageUrl,
       publishedAt: item.publishedAt,
       isRead: false,
     };
@@ -5087,26 +5168,24 @@ export class MemoryRepository implements AppRepository {
   }
 
   private mapForumMessage(message: MemoryForumMessage): ForumMessageRecord {
-    const author = this.users.get(message.authorUserId);
     const parent = message.replyToMessageId
       ? this.forumMessages.get(message.replyToMessageId)
       : null;
     // A reply whose parent was deleted keeps its own text but loses the quote,
     // so the thread never resurrects removed content.
     const visibleParent = parent && !parent.deletedAt ? parent : null;
-    const parentAuthor = visibleParent ? this.users.get(visibleParent.authorUserId) : null;
     return {
       id: message.id,
       channelId: message.channelId,
       authorUserId: message.authorUserId,
-      authorName: author?.displayName ?? author?.phoneE164 ?? "Pengguna Komplekku",
+      authorName: this.forumNameForUser(message.authorUserId, message.communityId),
       body: message.body,
       imageUrls: message.imageUrls,
       createdAt: message.createdAt,
       editedAt: message.editedAt,
       replyToMessageId: message.replyToMessageId,
       replyToAuthorName: visibleParent
-        ? (parentAuthor?.displayName ?? parentAuthor?.phoneE164 ?? "Pengguna Komplekku")
+        ? this.forumNameForUser(visibleParent.authorUserId, visibleParent.communityId)
         : null,
       replyToBody: visibleParent ? visibleParent.body : null,
     };
@@ -5119,6 +5198,21 @@ export class MemoryRepository implements AppRepository {
     const household = resident?.householdId ? this.households.get(resident.householdId) : null;
     const house = household ? this.houses.get(household.houseId) : null;
     return house ? `Blok ${house.block} No. ${house.number}` : null;
+  }
+
+  /// A person's name for a screen every warga can see: the account's display
+  /// name, then the `fullName` on their resident record — never the phone
+  /// number, which only pengurus may see. Mirrors prisma-repository's
+  /// `residentNameOf`.
+  private forumNameForUser(userId: string, communityId?: string | null): string {
+    const user = this.users.get(userId);
+    if (user?.displayName) return user.displayName;
+    const resident = [...this.residents.values()].find(
+      (candidate) =>
+        candidate.userId === userId &&
+        (communityId == null || candidate.communityId === communityId),
+    );
+    return resident?.fullName ?? "Warga Komplekku";
   }
 
   async listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]> {
@@ -5170,10 +5264,11 @@ export class MemoryRepository implements AppRepository {
       if (resident.status !== "ACTIVE") continue;
       if (resident.userId === auth.userId) continue;
       if (byUserId.has(resident.userId)) continue;
-      const user = this.users.get(resident.userId);
       byUserId.set(resident.userId, {
         userId: resident.userId,
-        displayName: user?.displayName ?? user?.phoneE164 ?? "Pengguna Komplekku",
+        // Name + house only: the invite picker is visible to every warga, so
+        // it must never fall back to showing someone's phone number.
+        displayName: this.forumNameForUser(resident.userId, communityId),
         houseLabel: this.houseLabelForUser(communityId, resident.userId),
       });
     }
@@ -5279,16 +5374,13 @@ export class MemoryRepository implements AppRepository {
 
     const items: ForumChannelMemberRecord[] = [...this.forumChannelMembers.values()]
       .filter((member) => member.channelId === channel.id && member.status !== "DECLINED")
-      .map((member) => {
-        const user = this.users.get(member.userId);
-        return {
-          userId: member.userId,
-          displayName: user?.displayName ?? user?.phoneE164 ?? "Pengguna Komplekku",
-          houseLabel: this.houseLabelForUser(communityId, member.userId),
-          status: member.status,
-          isOwner: member.isOwner,
-        };
-      })
+      .map((member) => ({
+        userId: member.userId,
+        displayName: this.forumNameForUser(member.userId, communityId),
+        houseLabel: this.houseLabelForUser(communityId, member.userId),
+        status: member.status,
+        isOwner: member.isOwner,
+      }))
       .sort((left, right) => {
         if (left.isOwner !== right.isOwner) return left.isOwner ? -1 : 1;
         return left.displayName.localeCompare(right.displayName);
@@ -5425,6 +5517,9 @@ export class MemoryRepository implements AppRepository {
       return { outcome: "OK", items: [], total: 0, nextCursor: null };
     }
 
+    // Two messages posted in the same millisecond must still have a stable
+    // order — prisma-repository tiebreaks with `{ id: "desc" }`, and here the
+    // Map's insertion order is the equivalent "which arrived last".
     const all = [...this.forumMessages.values()]
       .filter(
         (message) =>
@@ -5432,7 +5527,12 @@ export class MemoryRepository implements AppRepository {
           message.channelId === input.channelId &&
           !message.deletedAt,
       )
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+      .map((message, arrivalIndex) => ({ message, arrivalIndex }))
+      .sort((left, right) => {
+        const byRecency = right.message.createdAt.getTime() - left.message.createdAt.getTime();
+        return byRecency !== 0 ? byRecency : right.arrivalIndex - left.arrivalIndex;
+      })
+      .map((entry) => entry.message);
 
     let startIndex = 0;
     if (input.cursor) {
@@ -5636,6 +5736,473 @@ export class MemoryRepository implements AppRepository {
     });
 
     return { outcome: "DELETED", messageId: message.id, channelId: message.channelId };
+  }
+
+  /* ── Forum Warga discussion board ───────────────────────────────────── */
+
+  /** Enough of the body to fill a card on the board. Mirrors
+   * prisma-repository's `forumPostExcerpt`. */
+  private forumPostExcerpt(body: string): string {
+    const collapsed = body.replace(/\s+/g, " ").trim();
+    return collapsed.length > 180 ? `${collapsed.slice(0, 179)}…` : collapsed;
+  }
+
+  private forumPostLikeCount(postId: string): number {
+    return [...this.forumPostLikes.values()].filter((like) => like.postId === postId).length;
+  }
+
+  private forumReplyLikeCount(replyId: string): number {
+    return [...this.forumReplyLikes.values()].filter((like) => like.replyId === replyId).length;
+  }
+
+  private visibleRepliesFor(postId: string): MemoryForumPostReply[] {
+    return [...this.forumPostReplies.values()]
+      .filter((reply) => reply.postId === postId && !reply.deletedAt)
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+  }
+
+  private mapForumPostSummary(
+    post: MemoryForumPost,
+    viewerUserId: string,
+  ): ForumPostSummaryRecord {
+    return {
+      id: post.id,
+      category: post.category,
+      title: post.title,
+      excerpt: this.forumPostExcerpt(post.body),
+      imageUrls: post.imageUrls,
+      replyCount: this.visibleRepliesFor(post.id).length,
+      authorUserId: post.authorUserId,
+      authorName: this.forumNameForUser(post.authorUserId, post.communityId),
+      createdAt: post.createdAt,
+      editedAt: post.editedAt,
+      likeCount: this.forumPostLikeCount(post.id),
+      likedByMe: [...this.forumPostLikes.values()].some(
+        (like) => like.postId === post.id && like.userId === viewerUserId,
+      ),
+    };
+  }
+
+  private mapForumPostReply(
+    reply: MemoryForumPostReply,
+    viewerUserId: string,
+  ): ForumPostReplyRecord {
+    const parent = reply.replyToReplyId
+      ? this.forumPostReplies.get(reply.replyToReplyId)
+      : null;
+    const visibleParent = parent && !parent.deletedAt ? parent : null;
+    return {
+      id: reply.id,
+      postId: reply.postId,
+      body: reply.body,
+      replyToReplyId: reply.replyToReplyId,
+      replyToAuthorName: visibleParent
+        ? this.forumNameForUser(visibleParent.authorUserId, visibleParent.communityId)
+        : null,
+      replyToBody: visibleParent ? visibleParent.body : null,
+      authorUserId: reply.authorUserId,
+      authorName: this.forumNameForUser(reply.authorUserId, reply.communityId),
+      createdAt: reply.createdAt,
+      editedAt: reply.editedAt,
+      likeCount: this.forumReplyLikeCount(reply.id),
+      likedByMe: [...this.forumReplyLikes.values()].some(
+        (like) => like.replyId === reply.id && like.userId === viewerUserId,
+      ),
+    };
+  }
+
+  async listForumPosts(input: {
+    auth: AuthSessionRecord;
+    sort: ForumPostSort;
+    category?: ForumPostCategory;
+    limit: number;
+  }): Promise<ForumPostSummaryRecord[]> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return [];
+
+    const posts = [...this.forumPosts.values()]
+      .filter((post) => post.communityId === communityId && !post.deletedAt)
+      .filter((post) => !input.category || post.category === input.category)
+      // "Terjawab" hides the questions nobody has picked up yet.
+      .filter(
+        (post) => input.sort !== "answered" || this.visibleRepliesFor(post.id).length > 0,
+      )
+      .map((post) => this.mapForumPostSummary(post, input.auth.userId));
+
+    posts.sort((left, right) => {
+      if (input.sort === "popular" && left.likeCount !== right.likeCount) {
+        return right.likeCount - left.likeCount;
+      }
+      return right.createdAt.getTime() - left.createdAt.getTime();
+    });
+
+    return posts.slice(0, input.limit);
+  }
+
+  async getForumPost(
+    auth: AuthSessionRecord,
+    postId: string,
+  ): Promise<ForumPostDetailRecord | null> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return null;
+
+    const post = this.forumPosts.get(postId);
+    if (!post || post.communityId !== communityId || post.deletedAt) return null;
+
+    return {
+      ...this.mapForumPostSummary(post, auth.userId),
+      body: post.body,
+      replies: this.visibleRepliesFor(post.id).map((reply) =>
+        this.mapForumPostReply(reply, auth.userId),
+      ),
+    };
+  }
+
+  private forumBoardRecipients(communityId: string, excludeUserId: string): string[] {
+    return [
+      ...new Set(
+        [...this.residents.values()]
+          .filter(
+            (resident) =>
+              resident.communityId === communityId &&
+              resident.status === "ACTIVE" &&
+              resident.userId !== excludeUserId,
+          )
+          .map((resident) => resident.userId),
+      ),
+    ];
+  }
+
+  async createForumPost(input: {
+    auth: AuthSessionRecord;
+    category: ForumPostCategory;
+    title: string;
+    body: string;
+    imageUrls: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post: MemoryForumPost = {
+      id: randomUUID(),
+      communityId,
+      authorUserId: input.auth.userId,
+      category: input.category,
+      title: input.title,
+      body: input.body,
+      imageUrls: input.imageUrls,
+      createdAt: input.now,
+      editedAt: null,
+      deletedAt: null,
+    };
+    this.forumPosts.set(post.id, post);
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.post.created",
+      entityType: "ForumPost",
+      entityId: post.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      post: this.mapForumPostSummary(post, input.auth.userId),
+      recipientUserIds: this.forumBoardRecipients(communityId, input.auth.userId),
+    };
+  }
+
+  async updateForumPost(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    changes: {
+      category?: ForumPostCategory;
+      title?: string;
+      body?: string;
+      imageUrls?: string[];
+    };
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post = this.forumPosts.get(input.postId);
+    if (!post || post.communityId !== communityId || post.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+    // Author-only: `forum.manage` takes a post down, never rewrites it.
+    if (post.authorUserId !== input.auth.userId) return { outcome: "NOT_FOUND" };
+
+    if (input.changes.category) post.category = input.changes.category;
+    if (input.changes.title) post.title = input.changes.title;
+    if (input.changes.body) post.body = input.changes.body;
+    if (input.changes.imageUrls) post.imageUrls = input.changes.imageUrls;
+    post.editedAt = input.now;
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.post.edited",
+      entityType: "ForumPost",
+      entityId: post.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      post: this.mapForumPostSummary(post, input.auth.userId),
+      recipientUserIds: [],
+    };
+  }
+
+  async deleteForumPost(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumDeleteResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post = this.forumPosts.get(input.postId);
+    if (!post || post.communityId !== communityId || post.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+    const canModerate = input.auth.permissions.includes("forum.manage");
+    if (post.authorUserId !== input.auth.userId && !canModerate) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    post.deletedAt = input.now;
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.post.deleted",
+      entityType: "ForumPost",
+      entityId: post.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+    return { outcome: "DELETED" };
+  }
+
+  async toggleForumPostLike(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    now: Date;
+  }): Promise<ForumLikeResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post = this.forumPosts.get(input.postId);
+    if (!post || post.communityId !== communityId || post.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    const existing = [...this.forumPostLikes.values()].find(
+      (like) => like.postId === post.id && like.userId === input.auth.userId,
+    );
+    if (existing) {
+      this.forumPostLikes.delete(existing.id);
+    } else {
+      const id = randomUUID();
+      this.forumPostLikes.set(id, {
+        id,
+        communityId,
+        postId: post.id,
+        userId: input.auth.userId,
+        createdAt: input.now,
+      });
+    }
+
+    return {
+      outcome: "OK",
+      likeCount: this.forumPostLikeCount(post.id),
+      likedByMe: !existing,
+    };
+  }
+
+  async createForumPostReply(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    body: string;
+    replyToReplyId?: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostReplyMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "POST_NOT_FOUND" };
+
+    const post = this.forumPosts.get(input.postId);
+    if (!post || post.communityId !== communityId || post.deletedAt) {
+      return { outcome: "POST_NOT_FOUND" };
+    }
+
+    if (input.replyToReplyId) {
+      // The quoted reply must live on this very post, otherwise a crafted id
+      // could pull text out of a discussion the author is not reading.
+      const parent = this.forumPostReplies.get(input.replyToReplyId);
+      if (
+        !parent ||
+        parent.communityId !== communityId ||
+        parent.postId !== post.id ||
+        parent.deletedAt
+      ) {
+        return { outcome: "REPLY_NOT_FOUND" };
+      }
+    }
+
+    const reply: MemoryForumPostReply = {
+      id: randomUUID(),
+      communityId,
+      postId: post.id,
+      authorUserId: input.auth.userId,
+      replyToReplyId: input.replyToReplyId ?? null,
+      body: input.body,
+      createdAt: input.now,
+      editedAt: null,
+      deletedAt: null,
+    };
+    this.forumPostReplies.set(reply.id, reply);
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.reply.created",
+      entityType: "ForumPostReply",
+      entityId: reply.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    // Only the people in the conversation, not the whole community.
+    const recipientUserIds = [
+      ...new Set([
+        post.authorUserId,
+        ...this.visibleRepliesFor(post.id).map((item) => item.authorUserId),
+      ]),
+    ].filter((userId) => userId !== input.auth.userId);
+
+    return {
+      outcome: "OK",
+      reply: this.mapForumPostReply(reply, input.auth.userId),
+      recipientUserIds,
+    };
+  }
+
+  async updateForumPostReply(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    body: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostReplyMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "REPLY_NOT_FOUND" };
+
+    const reply = this.forumPostReplies.get(input.replyId);
+    if (!reply || reply.communityId !== communityId || reply.deletedAt) {
+      return { outcome: "REPLY_NOT_FOUND" };
+    }
+    if (reply.authorUserId !== input.auth.userId) return { outcome: "REPLY_NOT_FOUND" };
+
+    reply.body = input.body;
+    reply.editedAt = input.now;
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.reply.edited",
+      entityType: "ForumPostReply",
+      entityId: reply.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      reply: this.mapForumPostReply(reply, input.auth.userId),
+      recipientUserIds: [],
+    };
+  }
+
+  async deleteForumPostReply(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumDeleteResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const reply = this.forumPostReplies.get(input.replyId);
+    if (!reply || reply.communityId !== communityId || reply.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+    const canModerate = input.auth.permissions.includes("forum.manage");
+    if (reply.authorUserId !== input.auth.userId && !canModerate) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    reply.deletedAt = input.now;
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.reply.deleted",
+      entityType: "ForumPostReply",
+      entityId: reply.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+    return { outcome: "DELETED" };
+  }
+
+  async toggleForumReplyLike(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    now: Date;
+  }): Promise<ForumLikeResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const reply = this.forumPostReplies.get(input.replyId);
+    if (!reply || reply.communityId !== communityId || reply.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    const existing = [...this.forumReplyLikes.values()].find(
+      (like) => like.replyId === reply.id && like.userId === input.auth.userId,
+    );
+    if (existing) {
+      this.forumReplyLikes.delete(existing.id);
+    } else {
+      const id = randomUUID();
+      this.forumReplyLikes.set(id, {
+        id,
+        communityId,
+        replyId: reply.id,
+        userId: input.auth.userId,
+        createdAt: input.now,
+      });
+    }
+
+    return {
+      outcome: "OK",
+      likeCount: this.forumReplyLikeCount(reply.id),
+      likedByMe: !existing,
+    };
   }
 
   async recordAudit(input: AuditInput): Promise<void> {

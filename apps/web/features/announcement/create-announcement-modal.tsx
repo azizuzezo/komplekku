@@ -1,18 +1,23 @@
 "use client";
 
+import type { AnnouncementCategory, AnnouncementPriority } from "@komplekku/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 
-import { createAnnouncement } from "./announcement-api";
+import { PhotoPicker } from "@/components/ui/photo-picker";
+
+import { announcementKeys, createAnnouncement } from "./announcement-api";
 
 export function CreateAnnouncementModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
-  const [priority, setPriority] = useState<"NORMAL" | "IMPORTANT" | "URGENT">("NORMAL");
+  const [priority, setPriority] = useState<AnnouncementPriority>("NORMAL");
+  const [category, setCategory] = useState<AnnouncementCategory>("INFO");
+  const [coverImageUrls, setCoverImageUrls] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
 
   const queryClient = useQueryClient();
@@ -20,13 +25,15 @@ export function CreateAnnouncementModal() {
   const mutation = useMutation({
     mutationFn: createAnnouncement,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      void queryClient.invalidateQueries({ queryKey: announcementKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["home"] });
       setIsOpen(false);
       setTitle("");
       setSummary("");
       setBody("");
       setPriority("NORMAL");
+      setCategory("INFO");
+      setCoverImageUrls([]);
       setErrorMsg("");
     },
     onError: (err: Error) => {
@@ -50,7 +57,15 @@ export function CreateAnnouncementModal() {
       return;
     }
     setErrorMsg("");
-    mutation.mutate({ title, summary, body, priority });
+    mutation.mutate({
+      title,
+      summary,
+      body,
+      priority,
+      category,
+      // PhotoPicker returns a list; a noticeboard row shows one cover image.
+      ...(coverImageUrls[0] ? { coverImageUrl: coverImageUrls[0] } : {}),
+    });
   };
 
   return (
@@ -66,11 +81,7 @@ export function CreateAnnouncementModal() {
               <div className="modal-card" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2 className="modal-title">Buat Pengumuman Baru</h2>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => setIsOpen(false)}
-                  >
+                  <button type="button" className="icon-button" onClick={() => setIsOpen(false)}>
                     <X size={20} />
                   </button>
                 </div>
@@ -105,17 +116,40 @@ export function CreateAnnouncementModal() {
                   </div>
 
                   <div className="field">
+                    <label htmlFor="announcement-category">Kategori</label>
+                    <select
+                      id="announcement-category"
+                      className="input"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value as AnnouncementCategory)}
+                    >
+                      <option value="INFO">Info</option>
+                      <option value="EVENT">Acara</option>
+                    </select>
+                    <p className="field-hint">Menentukan chip Acara/Info di papan pengumuman.</p>
+                  </div>
+
+                  <div className="field">
                     <label htmlFor="announcement-priority">Prioritas</label>
                     <select
                       id="announcement-priority"
                       className="input"
                       value={priority}
-                      onChange={(e) => setPriority(e.target.value as any)}
+                      onChange={(e) => setPriority(e.target.value as AnnouncementPriority)}
                     >
                       <option value="NORMAL">Biasa (Normal)</option>
                       <option value="IMPORTANT">Penting</option>
                       <option value="URGENT">Mendesak (Darurat)</option>
                     </select>
+                    <p className="field-hint">
+                      Di atas Normal, pengumuman ditandai &ldquo;Penting&rdquo; dan chip kategorinya
+                      digantikan.
+                    </p>
+                  </div>
+
+                  <div className="field">
+                    <span className="field-label">Gambar sampul (opsional)</span>
+                    <PhotoPicker onChange={setCoverImageUrls} disabled={mutation.isPending} />
                   </div>
 
                   <div className="field">

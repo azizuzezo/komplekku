@@ -1898,11 +1898,87 @@ div[data-nextjs-toast] {
 
 .announcement-row > a {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr);
+  /* Cover thumbnail, then the copy. The date moved into the meta row so the
+     picture can carry the left column. */
+  grid-template-columns: 5.5rem minmax(0, 1fr);
   gap: var(--space-md);
   min-height: 8rem;
   padding: var(--space-lg) 0;
   transition: background-color var(--dur-hover) var(--ease-out);
+}
+
+.announcement-row__cover {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: var(--radius-card);
+  border: var(--rule-thin) solid var(--color-border);
+  object-fit: cover;
+}
+
+.announcement-row__cover--fallback {
+  display: grid;
+  place-items: center;
+  background: var(--color-brand-wash);
+  color: var(--color-primary);
+}
+
+.announcement-row__cover--important {
+  background: var(--color-surface-soft);
+  border-color: var(--color-danger);
+  color: var(--color-danger-ink);
+}
+
+.announcement-badge {
+  border-radius: 999px;
+  padding: 0.1rem var(--space-xs);
+  font-size: var(--text-xs);
+  font-weight: 750;
+}
+
+.announcement-badge--important {
+  background: var(--color-surface-soft);
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+  color: var(--color-danger-ink);
+}
+
+.announcement-badge--event {
+  background: var(--color-brand-wash);
+  color: var(--color-primary-dark);
+}
+
+.announcement-badge--info {
+  background: var(--color-surface-soft);
+  color: var(--color-text-secondary);
+}
+
+/* ── Noticeboard filter chips ────────────────────────────────── */
+.announcement-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.announcement-filters__chip {
+  min-height: var(--control-min-size);
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  padding: 0 var(--space-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.announcement-filters__chip:hover {
+  background: var(--color-surface-soft);
+}
+
+.announcement-filters__chip[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .announcement-row > a:hover {
@@ -5531,4 +5607,462 @@ div[data-nextjs-toast] {
 .agenda-calendar__selection {
   display: grid;
   gap: var(--space-sm);
+}
+
+/* ── Home quick actions + prayer schedule (5-tab redesign) ──── */
+.home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  gap: var(--space-sm);
+}
+
+.home-quick-actions__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  text-align: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.home-quick-actions__icon {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radius-card);
+  background: var(--color-brand-wash);
+  color: var(--color-primary);
+}
+
+.home-quick-actions__item:hover .home-quick-actions__icon {
+  background: var(--color-surface-soft);
+}
+
+.prayer-schedule {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.prayer-schedule__switcher {
+  display: flex;
+  gap: var(--space-2xs);
+  padding: var(--space-3xs);
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-soft);
+}
+
+.prayer-schedule__tab {
+  flex: 1;
+  min-height: var(--control-height);
+  border: none;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.prayer-schedule__tab--active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.prayer-schedule__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.prayer-schedule__list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.prayer-schedule__list li + li {
+  border-top: var(--rule-thin) solid var(--color-border);
+}
+
+.prayer-schedule__list time {
+  font-size: var(--text-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-schedule__name {
+  margin: 0;
+  font-weight: 750;
+}
+
+.prayer-schedule__hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.prayer-schedule__month {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.prayer-schedule__month h2 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.prayer-schedule__table-scroll {
+  overflow-x: auto;
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.prayer-schedule__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-schedule__table th,
+.prayer-schedule__table td {
+  padding: var(--space-2xs) var(--space-xs);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.prayer-schedule__table thead th {
+  background: var(--color-surface-soft);
+  font-weight: 800;
+}
+
+.prayer-schedule__table tbody th {
+  text-align: left;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.prayer-schedule__table tbody tr + tr {
+  border-top: var(--rule-thin) solid var(--color-border);
+}
+
+.prayer-schedule__table tbody tr[aria-current="date"] {
+  background: var(--color-brand-wash);
+}
+
+.prayer-schedule__table tbody tr[aria-current="date"] th,
+.prayer-schedule__table tbody tr[aria-current="date"] td {
+  color: var(--color-primary-dark);
+  font-weight: 800;
+}
+
+.prayer-schedule__quote {
+  display: flex;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-card);
+  background: var(--color-brand-wash);
+  color: var(--color-text-primary);
+}
+
+.prayer-schedule__quote svg {
+  flex: none;
+  color: var(--color-primary);
+}
+
+.prayer-schedule__quote p {
+  margin: 0 0 var(--space-2xs);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.prayer-schedule__quote cite {
+  color: var(--color-primary-dark);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* ── Forum: board / chat mode switch ─────────────────────────── */
+.forum-tabs {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.forum-tabs__switch {
+  display: flex;
+  gap: var(--space-2xs);
+  padding: var(--space-3xs);
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-soft);
+}
+
+.forum-tabs__tab {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: var(--control-height);
+  border: none;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.forum-tabs__tab--active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* ── Discussion board ────────────────────────────────────────── */
+.forum-board {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.forum-board__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.forum-board__controls {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.forum-board__sorts {
+  display: flex;
+  gap: var(--space-md);
+  border-bottom: var(--rule-thin) solid var(--color-border);
+}
+
+.forum-board__sort {
+  position: relative;
+  min-height: var(--control-min-size);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.forum-board__sort--active {
+  color: var(--color-primary-dark);
+}
+
+.forum-board__sort--active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--color-primary);
+  content: "";
+}
+
+.forum-board__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+.forum-board__list {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.forum-post-card {
+  display: grid;
+  gap: var(--space-xs);
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-md);
+  background: var(--color-surface);
+}
+
+.forum-post-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.forum-post-card__author {
+  margin: 0;
+  font-weight: 750;
+}
+
+.forum-post-card__time {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.forum-post-card__body h2 {
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--text-md);
+  font-weight: 750;
+  color: var(--color-text-primary);
+}
+
+.forum-post-card__body p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  /* Two lines of the excerpt is enough to decide whether to open it. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.forum-post-card > footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  border-top: var(--rule-thin) solid var(--color-border);
+  padding-top: var(--space-xs);
+}
+
+.forum-post-card__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.forum-post-card__like {
+  cursor: pointer;
+}
+
+.forum-post-card__like--on {
+  color: var(--color-danger-ink);
+}
+
+/* ── Thread detail ───────────────────────────────────────────── */
+.forum-thread {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.forum-thread__post {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-xs);
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+}
+
+.forum-thread__post h1 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.forum-thread__byline {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.forum-thread__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.forum-thread__post > footer {
+  display: flex;
+  gap: var(--space-md);
+  width: 100%;
+  border-top: var(--rule-thin) solid var(--color-border);
+  padding-top: var(--space-xs);
+}
+
+.forum-thread__replies {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.forum-thread__replies h2 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 750;
+}
+
+.forum-reply {
+  display: grid;
+  gap: var(--space-2xs);
+  border-bottom: var(--rule-thin) solid var(--color-border);
+  padding-bottom: var(--space-sm);
+}
+
+.forum-reply > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.forum-reply > header span {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.forum-reply p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.forum-reply > footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-2xs);
+}
+
+.forum-reply > footer button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.forum-thread__composer {
+  position: sticky;
+  bottom: 0;
+  border-top: var(--rule-thin) solid var(--color-border);
+  padding-top: var(--space-sm);
+  background: var(--color-surface);
 }

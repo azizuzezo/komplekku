@@ -13,6 +13,7 @@ import { getMe } from "@/features/auth/auth-api";
 import { getRequestState } from "@/lib/api/client";
 
 import { getHome } from "./home-api";
+import { HomeQuickActions } from "./home-quick-actions";
 import { PrayerCard } from "@/features/prayer/prayer-card";
 import { KomplekMap } from "@/components/map/komplek-map";
 
@@ -149,6 +150,8 @@ export function HomeScreen() {
       </header>
 
       <PrayerCard />
+
+      <HomeQuickActions />
 
       <div className="home-desk__grid">
         <section className="home-noticeboard" aria-labelledby="latest-announcement-heading">

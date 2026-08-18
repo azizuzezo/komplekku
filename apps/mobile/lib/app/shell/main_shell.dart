@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/notifications/fcm_service.dart';
 import 'package:komplekku/core/notifications/push_notification_service.dart';
 import 'package:komplekku/core/notifications/realtime_notification_service.dart';
@@ -62,15 +63,6 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
     return Scaffold(
       body: widget.navigationShell,
-      // Forum Warga is a raised, purple "bubble" that gets its own slot in
-      // the bottom bar — matching the web bottom nav's
-      // `.mobile-navigation__item--bubble` (a genuine 6th grid column raised
-      // via negative top offset). Earlier this was layered as an overlay
-      // (FAB, then a Stack) centered on top of the existing 5-tab bar, which
-      // put it directly on top of "Layanan" (the bar's middle tab) instead of
-      // beside it — confirmed by an on-device screenshot showing the overlap.
-      // A custom Row with Forum as its own Expanded slot avoids that: every
-      // tab, including Forum, gets independent horizontal space.
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -79,7 +71,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 74,
+            height: 66,
             child: Row(
               children: [
                 Expanded(
@@ -93,30 +85,29 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                 ),
                 Expanded(
                   child: _NavTab(
-                    icon: Icons.shield_outlined,
-                    selectedIcon: Icons.shield,
-                    label: 'Keamanan',
+                    icon: Icons.mosque_outlined,
+                    selectedIcon: Icons.mosque,
+                    label: 'Shalat',
                     selected: currentIndex == 1,
                     onTap: () => goBranch(1),
                   ),
                 ),
                 Expanded(
                   child: _NavTab(
-                    icon: Icons.miscellaneous_services_outlined,
-                    selectedIcon: Icons.miscellaneous_services,
-                    label: 'Layanan',
+                    icon: Icons.campaign_outlined,
+                    selectedIcon: Icons.campaign,
+                    label: 'Pengumuman',
                     selected: currentIndex == 2,
+                    badgeCount: unreadCount,
                     onTap: () => goBranch(2),
                   ),
                 ),
-                const Expanded(child: _ForumBubbleTab()),
                 Expanded(
                   child: _NavTab(
-                    icon: Icons.notifications_none_outlined,
-                    selectedIcon: Icons.notifications,
-                    label: 'Aktivitas',
+                    icon: Icons.forum_outlined,
+                    selectedIcon: Icons.forum,
+                    label: 'Forum',
                     selected: currentIndex == 3,
-                    badgeCount: unreadCount,
                     onTap: () => goBranch(3),
                   ),
                 ),
@@ -124,7 +115,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                   child: _NavTab(
                     icon: Icons.person_outline,
                     selectedIcon: Icons.person,
-                    label: 'Akun',
+                    label: 'Profil',
                     selected: currentIndex == 4,
                     onTap: () => goBranch(4),
                   ),
@@ -157,7 +148,8 @@ class _NavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF4B2DA1) : const Color(0xFF777480);
+    final color =
+        selected ? KomplekkuColors.primary : KomplekkuColors.textSecondary;
     Widget iconWidget = Icon(selected ? selectedIcon : icon, color: color, size: 24);
     if (badgeCount > 0) {
       iconWidget = Badge(label: Text('$badgeCount'), child: iconWidget);
@@ -189,51 +181,3 @@ class _NavTab extends StatelessWidget {
     );
   }
 }
-
-class _ForumBubbleTab extends StatelessWidget {
-  const _ForumBubbleTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => context.push('/aktivitas/forum'),
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF7C3AED),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.forum, color: Colors.white, size: 22),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                'Forum',
-                style: TextStyle(
-                  color: Color(0xFF7C3AED),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-

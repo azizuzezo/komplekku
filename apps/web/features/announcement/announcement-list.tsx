@@ -1,6 +1,12 @@
 "use client";
 
+import {
+  ANNOUNCEMENT_FILTER_LABELS,
+  announcementFilterSchema,
+  type AnnouncementFilter,
+} from "@komplekku/contracts";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { AnnouncementListSkeleton } from "@/components/ui/content-skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
@@ -8,17 +14,46 @@ import { getMe } from "@/features/auth/auth-api";
 import { TestPushNotificationButton } from "@/features/notification/test-push-notification-button";
 import { getRequestState } from "@/lib/api/client";
 
-import { getAnnouncements } from "./announcement-api";
+import { announcementKeys, getAnnouncements } from "./announcement-api";
 import { AnnouncementRow } from "./announcement-row";
 import { CreateAnnouncementModal } from "./create-announcement-modal";
 
+const FILTERS = announcementFilterSchema.options;
+
 export function AnnouncementList() {
+  const [filter, setFilter] = useState<AnnouncementFilter>("all");
   const meQuery = useQuery({ queryKey: ["me"], queryFn: getMe });
-  const announcementsQuery = useQuery({ queryKey: ["announcements"], queryFn: getAnnouncements });
+  const announcementsQuery = useQuery({
+    queryKey: announcementKeys.list(filter),
+    queryFn: () => getAnnouncements(filter),
+  });
 
   const canManage = meQuery.data?.data.permissions.includes("announcement.manage") ?? false;
 
-  if (announcementsQuery.isPending) return <AnnouncementListSkeleton rows={5} />;
+  const filterChips = (
+    <div className="announcement-filters" role="group" aria-label="Saring pengumuman">
+      {FILTERS.map((value) => (
+        <button
+          key={value}
+          type="button"
+          className="announcement-filters__chip"
+          aria-pressed={filter === value}
+          onClick={() => setFilter(value)}
+        >
+          {ANNOUNCEMENT_FILTER_LABELS[value]}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (announcementsQuery.isPending) {
+    return (
+      <div className="announcement-page-wrapper">
+        {filterChips}
+        <AnnouncementListSkeleton rows={5} />
+      </div>
+    );
+  }
 
   if (announcementsQuery.isError) {
     const state = getRequestState(announcementsQuery.error);
@@ -84,11 +119,17 @@ export function AnnouncementList() {
         </div>
       )}
 
+      {filterChips}
+
       {announcements.length === 0 ? (
         <StatePanel
           kind="empty"
-          title="Belum ada pengumuman"
-          description="Pengumuman yang diterbitkan pengurus akan muncul di sini."
+          title={filter === "all" ? "Belum ada pengumuman" : "Tidak ada yang cocok"}
+          description={
+            filter === "all"
+              ? "Pengumuman yang diterbitkan pengurus akan muncul di sini."
+              : "Coba pilih kategori lain untuk melihat pengumuman lainnya."
+          }
         />
       ) : (
         <div className="announcement-list">

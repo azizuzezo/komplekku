@@ -34,9 +34,16 @@ enum AuthState {
 
   static const _readyDestinations = [
     '/beranda',
+    '/shalat',
+    '/pengumuman',
+    '/agenda',
+    '/kalender',
+    '/notifikasi',
+    '/forum',
+    // Keamanan and Layanan kept their paths when they moved under the Profil
+    // tab, so their deep links stay valid.
     '/keamanan',
     '/layanan',
-    '/aktivitas',
     '/akun',
   ];
 
@@ -46,7 +53,7 @@ enum AuthState {
     if (this == AuthState.ready) {
       // The bottom-navigation shell has several sibling destinations besides
       // '/beranda', plus their own nested/detail routes (e.g.
-      // '/aktivitas/pengumuman/<id>', '/keamanan/cctv').
+      // '/pengumuman/<id>', '/keamanan/cctv').
       return _readyDestinations.any(
         (destination) =>
             path == destination || path.startsWith('$destination/'),

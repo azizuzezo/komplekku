@@ -412,4 +412,69 @@ describe("Forum Warga", () => {
     expect(rejected.statusCode).toBe(404);
     expect(rejected.json().error.code).toBe("FORUM_MESSAGE_NOT_FOUND");
   });
+
+  it("tidak pernah menampilkan nomor HP sebagai nama warga di forum", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+
+    // Budi signed up but never set a display name; before this fix his phone
+    // number was rendered as his name in the invite picker, the member list,
+    // and on every message he posted.
+    repository.clearDisplayName(demoIds.securityUser);
+
+    const owner = await loginWeb(app);
+    const candidates = await app.inject({
+      method: "GET",
+      url: "/api/v1/forum/member-candidates",
+      headers: { cookie: owner.cookie },
+    });
+    const budi = candidates
+      .json()
+      .data.items.find((item: { userId: string }) => item.userId === demoIds.securityUser);
+    expect(budi.displayName).toBe("Budi Santoso");
+    expect(budi.houseLabel).toBe("Blok F No. 03");
+    expect(JSON.stringify(candidates.json())).not.toContain("+62");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: owner.cookie },
+      payload: { name: "Kerja Bakti", invitedUserIds: [demoIds.securityUser] },
+    });
+    const channelId = created.json().data.channel.id as string;
+
+    const members = await app.inject({
+      method: "GET",
+      url: `/api/v1/forum/channels/${channelId}/members`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(JSON.stringify(members.json())).not.toContain("+62");
+    const memberBudi = members
+      .json()
+      .data.items.find((item: { userId: string }) => item.userId === demoIds.securityUser);
+    expect(memberBudi.displayName).toBe("Budi Santoso");
+
+    const invitee = await loginWeb(app, "0812 0000 0003");
+    repository.setPermissions(demoIds.securityUser, ["forum.read", "forum.post"]);
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/invitation`,
+      headers: { cookie: invitee.cookie },
+      payload: { accept: true },
+    });
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/messages`,
+      headers: { cookie: invitee.cookie },
+      payload: { body: "Siap, saya ikut." },
+    });
+
+    const messages = await app.inject({
+      method: "GET",
+      url: `/api/v1/forum/channels/${channelId}/messages`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(messages.json().data.items[0].authorName).toBe("Budi Santoso");
+    expect(JSON.stringify(messages.json())).not.toContain("+62");
+  });
 });

@@ -8,9 +8,9 @@ final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
   return AnnouncementRepository(ref.watch(apiClientProvider));
 });
 
-final announcementListProvider =
-    FutureProvider.autoDispose<List<AnnouncementSummary>>((ref) {
-  return ref.watch(announcementRepositoryProvider).list();
+final announcementListProvider = FutureProvider.autoDispose
+    .family<List<AnnouncementSummary>, AnnouncementFilter>((ref, filter) {
+  return ref.watch(announcementRepositoryProvider).list(filter);
 });
 
 final announcementDetailProvider = FutureProvider.autoDispose
@@ -23,11 +23,13 @@ class AnnouncementRepository {
 
   final Dio _client;
 
-  Future<List<AnnouncementSummary>> list() async {
+  Future<List<AnnouncementSummary>> list([
+    AnnouncementFilter filter = AnnouncementFilter.all,
+  ]) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/announcements',
-        queryParameters: const {'limit': 50},
+        queryParameters: {'limit': 50, 'filter': filter.apiValue},
       );
       final items = response.data?['data']?['items'];
       if (items is! List) throw ApiException.malformedResponse();
@@ -77,6 +79,8 @@ class AnnouncementRepository {
     required String summary,
     required String body,
     String priority = 'NORMAL',
+    AnnouncementCategory category = AnnouncementCategory.info,
+    String? coverImageUrl,
   }) async {
     try {
       final response = await _client.post<Map<String, dynamic>>(
@@ -86,6 +90,8 @@ class AnnouncementRepository {
           'summary': summary,
           'body': body,
           'priority': priority,
+          'category': category == AnnouncementCategory.event ? 'EVENT' : 'INFO',
+          'coverImageUrl': ?coverImageUrl,
         },
       );
       final announcement = response.data?['data']?['announcement'];

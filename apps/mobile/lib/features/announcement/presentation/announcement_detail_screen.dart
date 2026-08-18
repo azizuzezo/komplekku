@@ -77,11 +77,25 @@ class _AnnouncementDetailScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (announcement.priority != AnnouncementPriority.normal)
+                if (announcement.coverImageUrl != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _PriorityLabel(priority: announcement.priority),
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        announcement.coverImageUrl!,
+                        width: double.infinity,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
+                      ),
+                    ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _BadgeLabel(badge: announcement.badge),
+                ),
                 Text(
                   announcement.title,
                   style: Theme.of(context).textTheme.headlineMedium,
@@ -110,18 +124,22 @@ class _AnnouncementDetailScreenState
   }
 }
 
-class _PriorityLabel extends StatelessWidget {
-  const _PriorityLabel({required this.priority});
+class _BadgeLabel extends StatelessWidget {
+  const _BadgeLabel({required this.badge});
 
-  final AnnouncementPriority priority;
+  final AnnouncementBadge badge;
 
   @override
   Widget build(BuildContext context) {
-    final isUrgent = priority == AnnouncementPriority.urgent;
+    final color = switch (badge) {
+      AnnouncementBadge.important => KomplekkuColors.danger,
+      AnnouncementBadge.event => KomplekkuColors.primary,
+      AnnouncementBadge.info => KomplekkuColors.textSecondary,
+    };
     return Text(
-      isUrgent ? 'MENDESAK' : 'PENTING',
+      announcementBadgeLabels[badge]!.toUpperCase(),
       style: TextStyle(
-        color: isUrgent ? KomplekkuColors.danger : KomplekkuColors.accent,
+        color: color,
         fontWeight: FontWeight.w800,
         fontSize: 12,
         letterSpacing: 0.6,

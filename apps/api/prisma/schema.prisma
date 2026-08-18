@@ -54,6 +54,15 @@ enum AnnouncementPriority {
   URGENT
 }
 
+/// How an announcement is filed on the noticeboard, which is a separate
+/// question from how urgent it is. The "Penting" chip warga see is derived
+/// from `priority`, not stored here, so the two can never contradict each
+/// other — see `announcementBadge` in the contracts package.
+enum AnnouncementCategory {
+  INFO
+  EVENT
+}
+
 enum NotificationPriority {
   NORMAL
   IMPORTANT
@@ -195,6 +204,16 @@ enum ForumMemberStatus {
   DECLINED
 }
 
+/// What a discussion-board post is for. Chat channels have no equivalent —
+/// this only applies to the threaded board.
+enum ForumPostCategory {
+  QUESTION
+  SUGGESTION
+  INFORMATION
+  ENVIRONMENT
+  ACTIVITY
+}
+
 model Community {
   id                    String             @id @default(uuid()) @db.Uuid
   slug                  String             @unique @db.VarChar(80)
@@ -244,6 +263,10 @@ model Community {
   forumChannels         ForumChannel[]
   forumMessages         ForumMessage[]
   forumChannelMembers   ForumChannelMember[]
+  forumPosts            ForumPost[]
+  forumPostReplies      ForumPostReply[]
+  forumPostLikes        ForumPostLike[]
+  forumReplyLikes       ForumReplyLike[]
 
   @@map("communities")
 }
@@ -293,6 +316,10 @@ model User {
   createdForumChannels     ForumChannel[]       @relation("ForumChannelCreator")
   forumMemberships         ForumChannelMember[] @relation("ForumChannelMemberUser")
   sentForumInvites         ForumChannelMember[] @relation("ForumChannelMemberInviter")
+  forumPosts               ForumPost[]          @relation("ForumPostAuthor")
+  forumPostReplies         ForumPostReply[]     @relation("ForumPostReplyAuthor")
+  forumPostLikes           ForumPostLike[]
+  forumReplyLikes          ForumReplyLike[]
 
   @@map("users")
 }
@@ -468,6 +495,85 @@ model ForumMessage {
   @@map("forum_messages")
 }
 
+/// A threaded discussion-board post — the "Forum Warga" board, which lives
+/// alongside the realtime chat channels rather than replacing them. A post has
+/// a title, a category, likes, and replies; a chat message has none of those.
+model ForumPost {
+  id           String            @id @default(uuid()) @db.Uuid
+  communityId  String            @map("community_id") @db.Uuid
+  authorUserId String            @map("author_user_id") @db.Uuid
+  category     ForumPostCategory @default(INFORMATION)
+  title        String            @db.VarChar(240)
+  body         String            @db.Text
+  imageUrls    String[]          @default([]) @map("image_urls")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  editedAt     DateTime?         @map("edited_at") @db.Timestamptz(3)
+  deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  community    Community         @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  author       User              @relation("ForumPostAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  replies      ForumPostReply[]
+  likes        ForumPostLike[]
+
+  @@unique([id, communityId])
+  @@index([communityId, createdAt])
+  @@index([communityId, category, createdAt])
+  @@map("forum_posts")
+}
+
+model ForumPostReply {
+  id             String           @id @default(uuid()) @db.Uuid
+  communityId    String           @map("community_id") @db.Uuid
+  postId         String           @map("post_id") @db.Uuid
+  authorUserId   String           @map("author_user_id") @db.Uuid
+  /// Quotes another reply in the same post, so a back-and-forth stays
+  /// readable without nesting the list arbitrarily deep.
+  replyToReplyId String?          @map("reply_to_reply_id") @db.Uuid
+  body           String           @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  editedAt       DateTime?        @map("edited_at") @db.Timestamptz(3)
+  deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  community      Community        @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  post           ForumPost        @relation(fields: [postId, communityId], references: [id, communityId], onDelete: Cascade)
+  author         User             @relation("ForumPostReplyAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  replyTo        ForumPostReply?  @relation("ForumReplyQuote", fields: [replyToReplyId], references: [id], onDelete: SetNull)
+  quotedBy       ForumPostReply[] @relation("ForumReplyQuote")
+  likes          ForumReplyLike[]
+
+  @@unique([id, communityId])
+  @@index([communityId, postId, createdAt])
+  @@map("forum_post_replies")
+}
+
+model ForumPostLike {
+  id          String    @id @default(uuid()) @db.Uuid
+  communityId String    @map("community_id") @db.Uuid
+  postId      String    @map("post_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  post        ForumPost @relation(fields: [postId, communityId], references: [id, communityId], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([communityId, userId])
+  @@map("forum_post_likes")
+}
+
+model ForumReplyLike {
+  id          String         @id @default(uuid()) @db.Uuid
+  communityId String         @map("community_id") @db.Uuid
+  replyId     String         @map("reply_id") @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  community   Community      @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  reply       ForumPostReply @relation(fields: [replyId, communityId], references: [id, communityId], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([replyId, userId])
+  @@index([communityId, userId])
+  @@map("forum_reply_likes")
+}
+
 model House {
   id                 String          @id @default(uuid()) @db.Uuid
   communityId        String          @map("community_id") @db.Uuid
@@ -575,6 +681,8 @@ model Announcement {
   summary     String               @db.VarChar(500)
   body        String               @db.Text
   priority    AnnouncementPriority @default(NORMAL)
+  category    AnnouncementCategory @default(INFO)
+  coverImageUrl String?            @map("cover_image_url") @db.Text
   publishedAt DateTime             @map("published_at") @db.Timestamptz(3)
   archivedAt  DateTime?            @map("archived_at") @db.Timestamptz(3)
   createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -586,6 +694,7 @@ model Announcement {
 
   @@unique([id, communityId])
   @@index([communityId, publishedAt])
+  @@index([communityId, category, publishedAt])
   @@map("announcements")
 }
 

@@ -14,7 +14,7 @@ void main() {
     });
 
     expect(notification.isRead, isFalse);
-    expect(notification.linkedRoute, '/aktivitas/agenda/event-1');
+    expect(notification.linkedRoute, '/agenda/event-1');
   });
 
   test('a read announcement notification links to its detail page', () {
@@ -29,7 +29,7 @@ void main() {
     });
 
     expect(notification.isRead, isTrue);
-    expect(notification.linkedRoute, '/aktivitas/pengumuman/announcement-1');
+    expect(notification.linkedRoute, '/pengumuman/announcement-1');
   });
 
   test('a notification without a linkable entity has no route', () {

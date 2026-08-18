@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
+import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/data/announcement_repository.dart';
 import 'package:komplekku/features/announcement/domain/announcement.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 
-class AnnouncementListScreen extends ConsumerWidget {
+class AnnouncementListScreen extends ConsumerStatefulWidget {
   const AnnouncementListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final announcements = ref.watch(announcementListProvider);
+  ConsumerState<AnnouncementListScreen> createState() =>
+      _AnnouncementListScreenState();
+}
+
+class _AnnouncementListScreenState
+    extends ConsumerState<AnnouncementListScreen> {
+  AnnouncementFilter _filter = AnnouncementFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
+    final announcements = ref.watch(announcementListProvider(_filter));
     final permissions = ref.watch(currentPermissionsProvider);
     final canManage = permissions.contains('announcement.manage');
 
@@ -38,7 +49,24 @@ class AnnouncementListScreen extends ConsumerWidget {
             )
           : null,
       body: SafeArea(
-        child: announcements.when(
+        child: Column(
+          children: [
+            _FilterChips(
+              filter: _filter,
+              onChanged: (filter) => setState(() => _filter = filter),
+            ),
+            Expanded(child: _buildList(context, announcements)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    AsyncValue<List<AnnouncementSummary>> announcements,
+  ) {
+    return announcements.when(
           loading: () => const _AnnouncementListSkeleton(),
           error: (error, _) {
             final failure = error is ApiException
@@ -65,20 +93,24 @@ class AnnouncementListScreen extends ConsumerWidget {
               actionLabel: failure.isForbidden ? null : 'Coba lagi',
               onAction: failure.isForbidden
                   ? null
-                  : () => ref.invalidate(announcementListProvider),
+                  : () => ref.invalidate(announcementListProvider(_filter)),
             );
           },
           data: (items) {
             if (items.isEmpty) {
-              return const StatePanel(
+              return StatePanel(
                 icon: Icons.campaign_outlined,
-                title: 'Belum ada pengumuman',
-                message:
-                    'Informasi lingkungan terbaru akan muncul di sini.',
+                title: _filter == AnnouncementFilter.all
+                    ? 'Belum ada pengumuman'
+                    : 'Tidak ada yang cocok',
+                message: _filter == AnnouncementFilter.all
+                    ? 'Informasi lingkungan terbaru akan muncul di sini.'
+                    : 'Coba pilih kategori lain untuk melihat pengumuman lainnya.',
               );
             }
             return RefreshIndicator(
-              onRefresh: () => ref.refresh(announcementListProvider.future),
+              onRefresh: () =>
+                  ref.refresh(announcementListProvider(_filter).future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
@@ -89,13 +121,128 @@ class AnnouncementListScreen extends ConsumerWidget {
                   final item = items[index];
                   return _AnnouncementCard(
                     announcement: item,
-                    onTap: () => context.push('/aktivitas/pengumuman/${item.id}'),
+                    onTap: () => context.push('/pengumuman/${item.id}'),
                   );
                 },
               ),
             );
           },
+    );
+  }
+}
+
+const _badgeIcons = {
+  AnnouncementBadge.important: Icons.campaign_outlined,
+  AnnouncementBadge.event: Icons.event_outlined,
+  AnnouncementBadge.info: Icons.info_outline,
+};
+
+class _FilterChips extends StatelessWidget {
+  const _FilterChips({required this.filter, required this.onChanged});
+
+  final AnnouncementFilter filter;
+  final ValueChanged<AnnouncementFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          for (final value in AnnouncementFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(announcementFilterLabels[value]!),
+                selected: filter == value,
+                onSelected: (_) => onChanged(value),
+                selectedColor: KomplekkuColors.primary,
+                labelStyle: TextStyle(
+                  color: filter == value
+                      ? Colors.white
+                      : KomplekkuColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  const _BadgeChip({required this.badge});
+
+  final AnnouncementBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (badge) {
+      AnnouncementBadge.important => KomplekkuColors.danger,
+      AnnouncementBadge.event => KomplekkuColors.primary,
+      AnnouncementBadge.info => KomplekkuColors.textSecondary,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        announcementBadgeLabels[badge]!,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+/// The announcement's cover photo, or a category-tinted placeholder when the
+/// author did not upload one — so every row keeps the same shape.
+class _CoverThumbnail extends StatelessWidget {
+  const _CoverThumbnail({required this.url, required this.badge});
+
+  final String? url;
+  final AnnouncementBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final coverUrl = url;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 72,
+        height: 72,
+        child: coverUrl == null
+            ? ColoredBox(
+                color: KomplekkuColors.surfaceMuted,
+                child: Center(
+                  child: Icon(
+                    _badgeIcons[badge],
+                    color: KomplekkuColors.primary,
+                  ),
+                ),
+              )
+            : Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => ColoredBox(
+                  color: KomplekkuColors.surfaceMuted,
+                  child: Center(
+                    child: Icon(
+                      _badgeIcons[badge],
+                      color: KomplekkuColors.primary,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -116,6 +263,9 @@ class __CreateAnnouncementDialogState
   final _summaryController = TextEditingController();
   final _bodyController = TextEditingController();
   String _priority = 'NORMAL';
+  AnnouncementCategory _category = AnnouncementCategory.info;
+  String? _coverImageUrl;
+  bool _uploadingCover = false;
   bool _submitting = false;
   String? _errorMessage;
 
@@ -125,6 +275,33 @@ class __CreateAnnouncementDialogState
     _summaryController.dispose();
     _bodyController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCover() async {
+    if (_uploadingCover) return;
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    setState(() {
+      _uploadingCover = true;
+      _errorMessage = null;
+    });
+    try {
+      final url = await uploadImageToCloudinary(picked.path);
+      if (mounted) setState(() => _coverImageUrl = url);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = error is CloudinaryConfigError
+              ? error.toString()
+              : 'Gambar sampul belum dapat diunggah.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingCover = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -140,6 +317,8 @@ class __CreateAnnouncementDialogState
             summary: _summaryController.text.trim(),
             body: _bodyController.text.trim(),
             priority: _priority,
+            category: _category,
+            coverImageUrl: _coverImageUrl,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
@@ -193,9 +372,41 @@ class __CreateAnnouncementDialogState
                     val == null || val.trim().length < 5 ? 'Ringkasan minimal 5 karakter' : null,
               ),
               const SizedBox(height: 12),
+              DropdownButtonFormField<AnnouncementCategory>(
+                initialValue: _category,
+                decoration: const InputDecoration(
+                  labelText: 'Kategori',
+                  helperText: 'Menentukan chip Acara/Info di papan pengumuman.',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: AnnouncementCategory.info,
+                    child: Text('Info'),
+                  ),
+                  DropdownMenuItem(
+                    value: AnnouncementCategory.event,
+                    child: Text('Acara'),
+                  ),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _category = val);
+                },
+              ),
+              const SizedBox(height: 12),
+              _CoverPickerField(
+                coverImageUrl: _coverImageUrl,
+                isUploading: _uploadingCover,
+                onPick: _pickCover,
+                onRemove: () => setState(() => _coverImageUrl = null),
+              ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _priority,
-                decoration: const InputDecoration(labelText: 'Prioritas'),
+                decoration: const InputDecoration(
+                  labelText: 'Prioritas',
+                  helperText:
+                      'Di atas Normal, pengumuman ditandai "Penting".',
+                ),
                 items: const [
                   DropdownMenuItem(value: 'NORMAL', child: Text('Biasa (Normal)')),
                   DropdownMenuItem(value: 'IMPORTANT', child: Text('Penting')),
@@ -251,24 +462,32 @@ class _AnnouncementCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                announcement.isRead
-                    ? Icons.mark_email_read_outlined
-                    : Icons.campaign_outlined,
-                color: KomplekkuColors.primary,
-                semanticLabel:
-                    announcement.isRead ? 'Sudah dibaca' : 'Belum dibaca',
+              _CoverThumbnail(
+                url: announcement.coverImageUrl,
+                badge: announcement.badge,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (announcement.priority != AnnouncementPriority.normal)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: _PriorityBadge(priority: announcement.priority),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          _BadgeChip(badge: announcement.badge),
+                          if (!announcement.isRead) ...[
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.circle,
+                              size: 8,
+                              color: KomplekkuColors.primary,
+                              semanticLabel: 'Belum dibaca',
+                            ),
+                          ],
+                        ],
                       ),
+                    ),
                     Text(
                       announcement.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -301,30 +520,83 @@ class _AnnouncementCard extends StatelessWidget {
   }
 }
 
-class _PriorityBadge extends StatelessWidget {
-  const _PriorityBadge({required this.priority});
+class _CoverPickerField extends StatelessWidget {
+  const _CoverPickerField({
+    required this.coverImageUrl,
+    required this.isUploading,
+    required this.onPick,
+    required this.onRemove,
+  });
 
-  final AnnouncementPriority priority;
+  final String? coverImageUrl;
+  final bool isUploading;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    final isUrgent = priority == AnnouncementPriority.urgent;
-    final color = isUrgent ? KomplekkuColors.danger : KomplekkuColors.accent;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        isUrgent ? 'Mendesak' : 'Penting',
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+    final url = coverImageUrl;
+    return Row(
+      children: [
+        if (url != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
+          )
+        else
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: KomplekkuColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: KomplekkuColors.border),
+            ),
+            child: isUploading
+                ? const Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : const Icon(
+                    Icons.image_outlined,
+                    color: KomplekkuColors.textSecondary,
+                  ),
+          ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Gambar sampul (opsional)',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: isUploading ? null : onPick,
+                    child: Text(url == null ? 'Pilih gambar' : 'Ganti'),
+                  ),
+                  if (url != null)
+                    TextButton(
+                      onPressed: onRemove,
+                      style: TextButton.styleFrom(
+                        foregroundColor: KomplekkuColors.danger,
+                      ),
+                      child: const Text('Hapus'),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

@@ -46,6 +46,7 @@ import type {
   AgendaRecord,
   ArchiveAgendaResult,
   ArchiveVehicleResult,
+  AnnouncementFilter,
   AnnouncementRecord,
   AppRepository,
   AuditInput,
@@ -77,6 +78,15 @@ import type {
   DirectoryRecord,
   ForumChannelKind,
   ForumChannelRecord,
+  ForumDeleteResult,
+  ForumLikeResult,
+  ForumPostCategory,
+  ForumPostDetailRecord,
+  ForumPostMutationResult,
+  ForumPostReplyMutationResult,
+  ForumPostReplyRecord,
+  ForumPostSort,
+  ForumPostSummaryRecord,
   ForumMemberCandidateRecord,
   ForumMemberStatus,
   ForumMessageRecord,
@@ -151,8 +161,26 @@ function addressLabel(block: string, number: string): string {
   return `Blok ${block} No. ${number}`;
 }
 
-function displayNameOf(user: { displayName: string | null; phoneE164?: string }): string {
-  return user.displayName ?? user.phoneE164 ?? "Pengguna Komplekku";
+/// A person's name for any screen a plain warga can see. The phone number is
+/// deliberately NOT a fallback here — only pengurus may see contact numbers
+/// (see `listDirectory`'s admin-gated `contactPhoneE164`), so an account that
+/// never set a display name must degrade to a neutral label rather than
+/// publish its owner's phone number as their name.
+///
+/// Prefer [residentNameOf] wherever the resident record is in hand: it can
+/// fall back to the `fullName` captured at onboarding.
+function displayNameOf(user: { displayName: string | null }): string {
+  return user.displayName ?? "Warga Komplekku";
+}
+
+/// Same rule as [displayNameOf], but with the community's own `fullName` for
+/// the account as the middle fallback — matching how `listDirectory` resolves
+/// `displayName ?? fullName`.
+function residentNameOf(user: {
+  displayName: string | null;
+  residents?: { fullName: string }[];
+}): string {
+  return user.displayName ?? user.residents?.[0]?.fullName ?? "Warga Komplekku";
 }
 
 function cameraCanSee(accessLevel: "RESIDENT" | "SECURITY" | "ADMIN_ONLY", permissions: string[]) {
@@ -1775,6 +1803,8 @@ export class PrismaRepository implements AppRepository {
         summary: announcement.summary,
         body: announcement.body,
         priority: announcement.priority,
+        category: announcement.category,
+        coverImageUrl: announcement.coverImageUrl,
         publishedAt: announcement.publishedAt,
         isRead: announcement.reads.length > 0,
       })),
@@ -1782,10 +1812,29 @@ export class PrismaRepository implements AppRepository {
     };
   }
 
+  /// Chip filters mirror `announcementBadge` in the contracts package:
+  /// "Penting" is anything above NORMAL priority regardless of how it was
+  /// filed, while "Acara"/"Info" select on the stored category.
+  private static announcementFilterWhere(
+    filter: AnnouncementFilter,
+  ): Prisma.AnnouncementWhereInput {
+    switch (filter) {
+      case "important":
+        return { priority: { not: "NORMAL" } };
+      case "event":
+        return { category: "EVENT" };
+      case "info":
+        return { category: "INFO" };
+      case "all":
+        return {};
+    }
+  }
+
   async listAnnouncements(
     auth: AuthSessionRecord,
     now: Date,
     limit: number,
+    filter: AnnouncementFilter = "all",
   ): Promise<{ items: AnnouncementRecord[]; total: number }> {
     if (!auth.currentCommunityId) return { items: [], total: 0 };
     const where: Prisma.AnnouncementWhereInput = {
@@ -1793,6 +1842,7 @@ export class PrismaRepository implements AppRepository {
       publishedAt: { lte: now },
       archivedAt: null,
       deletedAt: null,
+      ...PrismaRepository.announcementFilterWhere(filter),
     };
     const [announcements, total] = await this.prisma.$transaction([
       this.prisma.announcement.findMany({
@@ -1811,6 +1861,8 @@ export class PrismaRepository implements AppRepository {
         summary: announcement.summary,
         body: announcement.body,
         priority: announcement.priority,
+        category: announcement.category,
+        coverImageUrl: announcement.coverImageUrl,
         publishedAt: announcement.publishedAt,
         isRead: announcement.reads.length > 0,
       })),
@@ -1841,6 +1893,8 @@ export class PrismaRepository implements AppRepository {
           summary: announcement.summary,
           body: announcement.body,
           priority: announcement.priority,
+          category: announcement.category,
+          coverImageUrl: announcement.coverImageUrl,
           publishedAt: announcement.publishedAt,
           isRead: announcement.reads.length > 0,
         }
@@ -1888,6 +1942,8 @@ export class PrismaRepository implements AppRepository {
           summary: input.announcement.summary,
           body: input.announcement.body,
           priority: input.announcement.priority,
+          category: input.announcement.category,
+          coverImageUrl: input.announcement.coverImageUrl ?? null,
           publishedAt: input.now,
         },
       });
@@ -1938,6 +1994,8 @@ export class PrismaRepository implements AppRepository {
         summary: created.summary,
         body: created.body,
         priority: created.priority,
+        category: created.category,
+        coverImageUrl: created.coverImageUrl,
         publishedAt: created.publishedAt,
         isRead: false,
       };
@@ -5089,6 +5147,13 @@ export class PrismaRepository implements AppRepository {
     return household?.house.rtId ?? null;
   }
 
+  /// Author names in the forum come from the account's display name, falling
+  /// back to the `fullName` on their resident record — never the phone number,
+  /// which only pengurus may see.
+  private static readonly forumAuthorInclude = {
+    include: { residents: { select: { fullName: true }, take: 1 } },
+  } as const;
+
   private mapForumMessage(message: {
     id: string;
     channelId: string;
@@ -5098,11 +5163,11 @@ export class PrismaRepository implements AppRepository {
     createdAt: Date;
     editedAt: Date | null;
     replyToMessageId: string | null;
-    author: { displayName: string | null; phoneE164: string };
+    author: { displayName: string | null; residents: { fullName: string }[] };
     replyTo?: {
       body: string;
       deletedAt: Date | null;
-      author: { displayName: string | null; phoneE164: string };
+      author: { displayName: string | null; residents: { fullName: string }[] };
     } | null;
   }): ForumMessageRecord {
     // A reply whose parent was deleted keeps its own text but loses the quote,
@@ -5112,13 +5177,13 @@ export class PrismaRepository implements AppRepository {
       id: message.id,
       channelId: message.channelId,
       authorUserId: message.authorUserId,
-      authorName: displayNameOf(message.author),
+      authorName: residentNameOf(message.author),
       body: message.body,
       imageUrls: message.imageUrls,
       createdAt: message.createdAt,
       editedAt: message.editedAt,
       replyToMessageId: message.replyToMessageId,
-      replyToAuthorName: parent ? displayNameOf(parent.author) : null,
+      replyToAuthorName: parent ? residentNameOf(parent.author) : null,
       replyToBody: parent ? parent.body : null,
     };
   }
@@ -5248,7 +5313,9 @@ export class PrismaRepository implements AppRepository {
       const house = resident.householdMemberships[0]?.household.house;
       byUserId.set(resident.userId, {
         userId: resident.userId,
-        displayName: displayNameOf(resident.user),
+        // Name + house only: the invite picker is visible to every warga, so
+        // it must never fall back to showing someone's phone number.
+        displayName: resident.user.displayName ?? resident.fullName,
         houseLabel: house ? addressLabel(house.block, house.number) : null,
       });
     }
@@ -5374,20 +5441,23 @@ export class PrismaRepository implements AppRepository {
       return { outcome: "CHANNEL_NOT_FOUND" };
     }
 
-    const houseLabels = await this.houseLabelsByUserId(
+    const profiles = await this.forumProfilesByUserId(
       communityId,
       channel.members.map((member) => member.userId),
     );
 
     const items = channel.members
       .filter((member) => member.status !== "DECLINED")
-      .map((member) => ({
-        userId: member.userId,
-        displayName: displayNameOf(member.user),
-        houseLabel: houseLabels.get(member.userId) ?? null,
-        status: member.status,
-        isOwner: member.isOwner,
-      }))
+      .map((member) => {
+        const profile = profiles.get(member.userId);
+        return {
+          userId: member.userId,
+          displayName: member.user.displayName ?? profile?.fullName ?? "Warga Komplekku",
+          houseLabel: profile?.houseLabel ?? null,
+          status: member.status,
+          isOwner: member.isOwner,
+        };
+      })
       .sort((left, right) => {
         if (left.isOwner !== right.isOwner) return left.isOwner ? -1 : 1;
         return left.displayName.localeCompare(right.displayName);
@@ -5396,10 +5466,13 @@ export class PrismaRepository implements AppRepository {
     return { outcome: "OK", items };
   }
 
-  private async houseLabelsByUserId(
+  /// Name + house for a set of accounts, the only two things a forum roster
+  /// shows. Reading the resident record is what lets a member who never set a
+  /// display name still appear by their real name instead of a phone number.
+  private async forumProfilesByUserId(
     communityId: string,
     userIds: string[],
-  ): Promise<Map<string, string>> {
+  ): Promise<Map<string, { fullName: string; houseLabel: string | null }>> {
     if (userIds.length === 0) return new Map();
     const residents = await this.prisma.resident.findMany({
       where: { communityId, userId: { in: [...new Set(userIds)] } },
@@ -5411,14 +5484,16 @@ export class PrismaRepository implements AppRepository {
         },
       },
     });
-    const labels = new Map<string, string>();
+    const profiles = new Map<string, { fullName: string; houseLabel: string | null }>();
     for (const resident of residents) {
+      if (profiles.has(resident.userId)) continue;
       const house = resident.householdMemberships[0]?.household.house;
-      if (house && !labels.has(resident.userId)) {
-        labels.set(resident.userId, addressLabel(house.block, house.number));
-      }
+      profiles.set(resident.userId, {
+        fullName: resident.fullName,
+        houseLabel: house ? addressLabel(house.block, house.number) : null,
+      });
     }
-    return labels;
+    return profiles;
   }
 
   async inviteForumMembers(input: {
@@ -5588,7 +5663,10 @@ export class PrismaRepository implements AppRepository {
     const [messages, total] = await this.prisma.$transaction([
       this.prisma.forumMessage.findMany({
         where,
-        include: { author: true, replyTo: { include: { author: true } } },
+        include: {
+          author: PrismaRepository.forumAuthorInclude,
+          replyTo: { include: { author: PrismaRepository.forumAuthorInclude } },
+        },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit + 1,
         ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
@@ -5648,7 +5726,10 @@ export class PrismaRepository implements AppRepository {
         imageUrls: input.imageUrls,
         replyToMessageId: input.replyToMessageId ?? null,
       },
-      include: { author: true, replyTo: { include: { author: true } } },
+      include: {
+        author: PrismaRepository.forumAuthorInclude,
+        replyTo: { include: { author: PrismaRepository.forumAuthorInclude } },
+      },
     });
 
     await this.recordAudit({
@@ -5735,7 +5816,10 @@ export class PrismaRepository implements AppRepository {
         ...(input.imageUrls ? { imageUrls: input.imageUrls } : {}),
         editedAt: input.now,
       },
-      include: { author: true, replyTo: { include: { author: true } } },
+      include: {
+        author: PrismaRepository.forumAuthorInclude,
+        replyTo: { include: { author: PrismaRepository.forumAuthorInclude } },
+      },
     });
 
     await this.recordAudit({
@@ -5812,6 +5896,554 @@ export class PrismaRepository implements AppRepository {
 
       return { outcome: "DELETED" as const, messageId: message.id, channelId: message.channelId };
     });
+  }
+
+  /* ── Forum Warga discussion board ─────────────────────────────────────
+   * Community-wide and readable by anyone with `forum.read`. RT scoping and
+   * invitations belong to the chat channels above; the board is the one
+   * shared space, which is why none of these methods take a channel.
+   */
+
+  /** Enough of the body to fill a card on the board without shipping the whole
+   * post to a list view. */
+  private static forumPostExcerpt(body: string): string {
+    const collapsed = body.replace(/\s+/g, " ").trim();
+    return collapsed.length > 180 ? `${collapsed.slice(0, 179)}…` : collapsed;
+  }
+
+  private static readonly forumPostInclude = {
+    author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+    _count: { select: { replies: true, likes: true } },
+  } as const;
+
+  private mapForumPostSummary(
+    post: {
+      id: string;
+      category: ForumPostCategory;
+      title: string;
+      body: string;
+      imageUrls: string[];
+      authorUserId: string;
+      createdAt: Date;
+      editedAt: Date | null;
+      author: { displayName: string | null; residents: { fullName: string }[] };
+      _count: { replies: number; likes: number };
+    },
+    likedByMe: boolean,
+  ): ForumPostSummaryRecord {
+    return {
+      id: post.id,
+      category: post.category,
+      title: post.title,
+      excerpt: PrismaRepository.forumPostExcerpt(post.body),
+      imageUrls: post.imageUrls,
+      replyCount: post._count.replies,
+      authorUserId: post.authorUserId,
+      authorName: residentNameOf(post.author),
+      createdAt: post.createdAt,
+      editedAt: post.editedAt,
+      likeCount: post._count.likes,
+      likedByMe,
+    };
+  }
+
+  private mapForumPostReply(
+    reply: {
+      id: string;
+      postId: string;
+      body: string;
+      replyToReplyId: string | null;
+      authorUserId: string;
+      createdAt: Date;
+      editedAt: Date | null;
+      author: { displayName: string | null; residents: { fullName: string }[] };
+      replyTo?: {
+        body: string;
+        deletedAt: Date | null;
+        author: { displayName: string | null; residents: { fullName: string }[] };
+      } | null;
+      _count: { likes: number };
+    },
+    likedByMe: boolean,
+  ): ForumPostReplyRecord {
+    const parent = reply.replyTo && !reply.replyTo.deletedAt ? reply.replyTo : null;
+    return {
+      id: reply.id,
+      postId: reply.postId,
+      body: reply.body,
+      replyToReplyId: reply.replyToReplyId,
+      replyToAuthorName: parent ? residentNameOf(parent.author) : null,
+      replyToBody: parent ? parent.body : null,
+      authorUserId: reply.authorUserId,
+      authorName: residentNameOf(reply.author),
+      createdAt: reply.createdAt,
+      editedAt: reply.editedAt,
+      likeCount: reply._count.likes,
+      likedByMe,
+    };
+  }
+
+  async listForumPosts(input: {
+    auth: AuthSessionRecord;
+    sort: ForumPostSort;
+    category?: ForumPostCategory;
+    limit: number;
+  }): Promise<ForumPostSummaryRecord[]> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return [];
+
+    const where: Prisma.ForumPostWhereInput = {
+      communityId,
+      deletedAt: null,
+      ...(input.category ? { category: input.category } : {}),
+      // "Terjawab" is the board's way of hiding questions nobody has picked
+      // up yet, so it filters rather than just reordering.
+      ...(input.sort === "answered" ? { replies: { some: { deletedAt: null } } } : {}),
+    };
+
+    const posts = await this.prisma.forumPost.findMany({
+      where,
+      include: {
+        ...PrismaRepository.forumPostInclude,
+        likes: { where: { userId: input.auth.userId }, take: 1 },
+      },
+      orderBy:
+        input.sort === "popular"
+          ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
+          : [{ createdAt: "desc" }],
+      take: input.limit,
+    });
+
+    return posts.map((post) => this.mapForumPostSummary(post, post.likes.length > 0));
+  }
+
+  async getForumPost(
+    auth: AuthSessionRecord,
+    postId: string,
+  ): Promise<ForumPostDetailRecord | null> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return null;
+
+    const post = await this.prisma.forumPost.findFirst({
+      where: { id: postId, communityId, deletedAt: null },
+      include: {
+        ...PrismaRepository.forumPostInclude,
+        likes: { where: { userId: auth.userId }, take: 1 },
+        replies: {
+          where: { deletedAt: null },
+          orderBy: [{ createdAt: "asc" }],
+          include: {
+            author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+            replyTo: {
+              include: {
+                author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+              },
+            },
+            likes: { where: { userId: auth.userId }, take: 1 },
+            _count: { select: { likes: true } },
+          },
+        },
+      },
+    });
+    if (!post) return null;
+
+    return {
+      ...this.mapForumPostSummary(post, post.likes.length > 0),
+      body: post.body,
+      replies: post.replies.map((reply) =>
+        this.mapForumPostReply(reply, reply.likes.length > 0),
+      ),
+    };
+  }
+
+  /** Everyone else in the community — the board is community-wide, so a new
+   * post or reply notifies the whole warga list minus the author. */
+  private async forumBoardRecipients(
+    communityId: string,
+    excludeUserId: string,
+  ): Promise<string[]> {
+    const residents = await this.prisma.resident.findMany({
+      where: { communityId, status: "ACTIVE", userId: { not: excludeUserId } },
+      select: { userId: true },
+    });
+    return [...new Set(residents.map((resident) => resident.userId))];
+  }
+
+  async createForumPost(input: {
+    auth: AuthSessionRecord;
+    category: ForumPostCategory;
+    title: string;
+    body: string;
+    imageUrls: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post = await this.prisma.forumPost.create({
+      data: {
+        communityId,
+        authorUserId: input.auth.userId,
+        category: input.category,
+        title: input.title,
+        body: input.body,
+        imageUrls: input.imageUrls,
+        createdAt: input.now,
+      },
+      include: {
+        ...PrismaRepository.forumPostInclude,
+      },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.post.created",
+      entityType: "ForumPost",
+      entityId: post.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      post: this.mapForumPostSummary(post, false),
+      recipientUserIds: await this.forumBoardRecipients(communityId, input.auth.userId),
+    };
+  }
+
+  async updateForumPost(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    changes: {
+      category?: ForumPostCategory;
+      title?: string;
+      body?: string;
+      imageUrls?: string[];
+    };
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.forumPost.findFirst({
+      where: { id: input.postId, communityId, deletedAt: null },
+      select: { id: true, authorUserId: true },
+    });
+    // Author-only, same rule as chat: `forum.manage` takes a post down, it
+    // never rewrites someone else's words under their name.
+    if (!existing || existing.authorUserId !== input.auth.userId) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    const post = await this.prisma.forumPost.update({
+      where: { id: existing.id },
+      data: {
+        ...(input.changes.category ? { category: input.changes.category } : {}),
+        ...(input.changes.title ? { title: input.changes.title } : {}),
+        ...(input.changes.body ? { body: input.changes.body } : {}),
+        ...(input.changes.imageUrls ? { imageUrls: input.changes.imageUrls } : {}),
+        editedAt: input.now,
+      },
+      include: {
+        ...PrismaRepository.forumPostInclude,
+        likes: { where: { userId: input.auth.userId }, take: 1 },
+      },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.post.edited",
+      entityType: "ForumPost",
+      entityId: post.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      post: this.mapForumPostSummary(post, post.likes.length > 0),
+      recipientUserIds: [],
+    };
+  }
+
+  async deleteForumPost(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumDeleteResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post = await this.prisma.forumPost.findFirst({
+      where: { id: input.postId, communityId, deletedAt: null },
+      select: { id: true, authorUserId: true },
+    });
+    if (!post) return { outcome: "NOT_FOUND" };
+    const canModerate = input.auth.permissions.includes("forum.manage");
+    if (post.authorUserId !== input.auth.userId && !canModerate) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    await this.prisma.forumPost.update({
+      where: { id: post.id },
+      data: { deletedAt: input.now },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.post.deleted",
+      entityType: "ForumPost",
+      entityId: post.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "DELETED" };
+  }
+
+  async toggleForumPostLike(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    now: Date;
+  }): Promise<ForumLikeResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const post = await this.prisma.forumPost.findFirst({
+      where: { id: input.postId, communityId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!post) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.forumPostLike.findUnique({
+      where: { postId_userId: { postId: post.id, userId: input.auth.userId } },
+      select: { id: true },
+    });
+    if (existing) {
+      await this.prisma.forumPostLike.delete({ where: { id: existing.id } });
+    } else {
+      await this.prisma.forumPostLike.create({
+        data: {
+          communityId,
+          postId: post.id,
+          userId: input.auth.userId,
+          createdAt: input.now,
+        },
+      });
+    }
+
+    const likeCount = await this.prisma.forumPostLike.count({ where: { postId: post.id } });
+    return { outcome: "OK", likeCount, likedByMe: !existing };
+  }
+
+  async createForumPostReply(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    body: string;
+    replyToReplyId?: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostReplyMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "POST_NOT_FOUND" };
+
+    const post = await this.prisma.forumPost.findFirst({
+      where: { id: input.postId, communityId, deletedAt: null },
+      select: { id: true, authorUserId: true, title: true },
+    });
+    if (!post) return { outcome: "POST_NOT_FOUND" };
+
+    if (input.replyToReplyId) {
+      // The quoted reply must live on this very post, otherwise a crafted id
+      // could pull text out of a discussion the author is not reading.
+      const parent = await this.prisma.forumPostReply.findFirst({
+        where: {
+          id: input.replyToReplyId,
+          communityId,
+          postId: post.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!parent) return { outcome: "REPLY_NOT_FOUND" };
+    }
+
+    const reply = await this.prisma.forumPostReply.create({
+      data: {
+        communityId,
+        postId: post.id,
+        authorUserId: input.auth.userId,
+        replyToReplyId: input.replyToReplyId ?? null,
+        body: input.body,
+        createdAt: input.now,
+      },
+      include: {
+        author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+        replyTo: {
+          include: {
+            author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+          },
+        },
+        _count: { select: { likes: true } },
+      },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.reply.created",
+      entityType: "ForumPostReply",
+      entityId: reply.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    // A reply notifies the people actually in the conversation — the post's
+    // author and everyone who already replied — not the whole community.
+    const participants = await this.prisma.forumPostReply.findMany({
+      where: { postId: post.id, deletedAt: null },
+      select: { authorUserId: true },
+      distinct: ["authorUserId"],
+    });
+    const recipientUserIds = [
+      ...new Set([post.authorUserId, ...participants.map((item) => item.authorUserId)]),
+    ].filter((userId) => userId !== input.auth.userId);
+
+    return { outcome: "OK", reply: this.mapForumPostReply(reply, false), recipientUserIds };
+  }
+
+  async updateForumPostReply(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    body: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostReplyMutationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "REPLY_NOT_FOUND" };
+
+    const existing = await this.prisma.forumPostReply.findFirst({
+      where: { id: input.replyId, communityId, deletedAt: null },
+      select: { id: true, authorUserId: true },
+    });
+    if (!existing || existing.authorUserId !== input.auth.userId) {
+      return { outcome: "REPLY_NOT_FOUND" };
+    }
+
+    const reply = await this.prisma.forumPostReply.update({
+      where: { id: existing.id },
+      data: { body: input.body, editedAt: input.now },
+      include: {
+        author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+        replyTo: {
+          include: {
+            author: { include: { residents: { select: { fullName: true }, take: 1 } } },
+          },
+        },
+        likes: { where: { userId: input.auth.userId }, take: 1 },
+        _count: { select: { likes: true } },
+      },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.reply.edited",
+      entityType: "ForumPostReply",
+      entityId: reply.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      reply: this.mapForumPostReply(reply, reply.likes.length > 0),
+      recipientUserIds: [],
+    };
+  }
+
+  async deleteForumPostReply(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumDeleteResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const reply = await this.prisma.forumPostReply.findFirst({
+      where: { id: input.replyId, communityId, deletedAt: null },
+      select: { id: true, authorUserId: true },
+    });
+    if (!reply) return { outcome: "NOT_FOUND" };
+    const canModerate = input.auth.permissions.includes("forum.manage");
+    if (reply.authorUserId !== input.auth.userId && !canModerate) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    await this.prisma.forumPostReply.update({
+      where: { id: reply.id },
+      data: { deletedAt: input.now },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.reply.deleted",
+      entityType: "ForumPostReply",
+      entityId: reply.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return { outcome: "DELETED" };
+  }
+
+  async toggleForumReplyLike(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    now: Date;
+  }): Promise<ForumLikeResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const reply = await this.prisma.forumPostReply.findFirst({
+      where: { id: input.replyId, communityId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!reply) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.forumReplyLike.findUnique({
+      where: { replyId_userId: { replyId: reply.id, userId: input.auth.userId } },
+      select: { id: true },
+    });
+    if (existing) {
+      await this.prisma.forumReplyLike.delete({ where: { id: existing.id } });
+    } else {
+      await this.prisma.forumReplyLike.create({
+        data: {
+          communityId,
+          replyId: reply.id,
+          userId: input.auth.userId,
+          createdAt: input.now,
+        },
+      });
+    }
+
+    const likeCount = await this.prisma.forumReplyLike.count({ where: { replyId: reply.id } });
+    return { outcome: "OK", likeCount, likedByMe: !existing };
   }
 
   async updateProfile(input: {

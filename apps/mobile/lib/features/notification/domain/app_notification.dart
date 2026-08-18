@@ -39,9 +39,9 @@ class AppNotification {
     if (id == null || id.isEmpty) return null;
     switch (entityType) {
       case 'ANNOUNCEMENT':
-        return '/aktivitas/pengumuman/$id';
+        return '/pengumuman/$id';
       case 'EVENT':
-        return '/aktivitas/agenda/$id';
+        return '/agenda/$id';
       default:
         return null;
     }

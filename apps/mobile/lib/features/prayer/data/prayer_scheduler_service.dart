@@ -43,6 +43,9 @@ class PrayerSchedulerService {
   static const _notificationIcon = '@mipmap/ic_launcher';
   static const _scheduledIdsKey = 'prayer_scheduler_scheduled_ids';
   static const _autoAdzanEnabledKey = 'prayer_scheduler_auto_enabled';
+  // Stored as the *muted* set rather than the enabled one so that a prayer
+  // added later (or a fresh install) defaults to sounding.
+  static const _mutedPrayersKey = 'prayer_scheduler_muted_prayers';
   // A week of lead time, so the adzan keeps firing even if the app is not
   // opened for several days (nothing reschedules while it is closed). At
   // 5 prayers x 2 notifications this is 70 pending alarms, well inside
@@ -169,10 +172,46 @@ class PrayerSchedulerService {
     }
   }
 
-  /// Whether the user has left auto-adzan on (default) or muted it via
-  /// [PrayerCard]'s mute toggle.
+  /// The prayers that still notify. The master switch below can silence all of
+  /// them at once; this is the per-prayer bell shown on the Shalat tab.
+  static List<PrayerName> get schedulablePrayers => _adzanPrayers;
+
+  /// Whether the user has left auto-adzan on (default) or muted everything via
+  /// the master toggle.
   Future<bool> isAutoAdzanEnabled() async {
     return await _preferences.getBool(_autoAdzanEnabledKey) ?? true;
+  }
+
+  Future<Set<PrayerName>> mutedPrayers() async {
+    final stored = await _preferences.getStringList(_mutedPrayersKey);
+    if (stored == null) return const {};
+    return stored
+        .map(
+          (name) => _adzanPrayers.where((prayer) => prayer.name == name).firstOrNull,
+        )
+        .whereType<PrayerName>()
+        .toSet();
+  }
+
+  Future<bool> isPrayerEnabled(PrayerName prayer) async {
+    if (!await isAutoAdzanEnabled()) return false;
+    return !(await mutedPrayers()).contains(prayer);
+  }
+
+  /// Silences (or restores) one prayer and reapplies the schedule immediately,
+  /// so the bell on the Shalat tab is the truth rather than a stored intention.
+  Future<void> setPrayerEnabled(PrayerName prayer, bool enabled) async {
+    final muted = {...await mutedPrayers()};
+    if (enabled) {
+      muted.remove(prayer);
+    } else {
+      muted.add(prayer);
+    }
+    await _preferences.setStringList(
+      _mutedPrayersKey,
+      muted.map((item) => item.name).toList(),
+    );
+    await rescheduleUpcomingPrayers();
   }
 
   /// Persists the mute toggle and immediately applies it: scheduling the
@@ -209,6 +248,7 @@ class PrayerSchedulerService {
         ? AndroidScheduleMode.exactAllowWhileIdle
         : AndroidScheduleMode.inexactAllowWhileIdle;
 
+    final muted = await mutedPrayers();
     final now = DateTime.now();
     final scheduledIds = <int>[];
 
@@ -217,6 +257,7 @@ class PrayerSchedulerService {
       final times = calculatePrayerTimes(date: day);
 
       for (final prayer in _adzanPrayers) {
+        if (muted.contains(prayer)) continue;
         final adzanTime = times[prayer]!;
         final label = prayerLabels[prayer];
 

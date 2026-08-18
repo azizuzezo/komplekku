@@ -2,12 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/home/data/home_repository.dart';
+import 'package:komplekku/features/announcement/domain/announcement.dart';
 import 'package:komplekku/features/home/domain/home_snapshot.dart';
-import 'package:komplekku/features/prayer/presentation/prayer_card.dart';
+import 'package:komplekku/features/home/presentation/prayer_summary_card.dart';
 import 'package:komplekku/features/map/presentation/komplek_map_screen.dart';
+
+/// The five shortcuts on the home grid. Everything else lives in the Profil
+/// tab's grouped menu — the bottom bar only has room for five destinations, so
+/// the home grid is what keeps the daily tasks one tap away.
+const _quickActions = [
+  (
+    icon: Icons.campaign_outlined,
+    label: 'Pengumuman',
+    route: '/pengumuman',
+    permission: null,
+  ),
+  (
+    icon: Icons.forum_outlined,
+    label: 'Forum Warga',
+    route: '/forum',
+    permission: 'forum.read',
+  ),
+  (
+    icon: Icons.receipt_long_outlined,
+    label: 'Iuran',
+    route: '/layanan/iuran',
+    permission: 'invoice.read',
+  ),
+  (
+    icon: Icons.report_outlined,
+    label: 'Laporan',
+    route: '/layanan/laporan',
+    permission: 'report.create',
+  ),
+  (
+    icon: Icons.event_outlined,
+    label: 'Agenda',
+    route: '/agenda',
+    permission: null,
+  ),
+];
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -17,10 +55,7 @@ class HomeScreen extends ConsumerWidget {
     final snapshot = ref.watch(homeSnapshotProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: KomplekkuColors.background,
-        title: const Text('Komplekku'),
-      ),
+      backgroundColor: KomplekkuColors.background,
       body: SafeArea(
         child: snapshot.when(
           loading: () => const _HomeSkeleton(),
@@ -47,66 +82,187 @@ class HomeScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(homeSnapshotProvider.future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               children: [
+                _WelcomeHeader(data: data),
+                const SizedBox(height: 16),
                 if (data.isCached) ...[
                   const _OfflineNotice(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
-                Text(
-                  'Selamat datang, ${data.firstName}',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${data.communityName} · ${data.houseLabel}',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 16),
-                const PrayerCard(),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.map_outlined, color: KomplekkuColors.primary),
-                  label: const Text('Peta Digital & Pos Security Utama (RED)'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: KomplekkuColors.border),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const KomplekMapScreen()),
-                    );
-                  },
-                ),
+                const PrayerSummaryCard(),
+                const SizedBox(height: 20),
+                const _QuickActionGrid(),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Pengumuman terbaru',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/aktivitas/pengumuman'),
-                      child: const Text('Lihat semua'),
-                    ),
-                  ],
+                _SectionHeader(
+                  title: 'Pengumuman Terbaru',
+                  onSeeAll: () => context.go('/pengumuman'),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 10),
                 if (data.announcements.isEmpty)
                   const _EmptyAnnouncements()
                 else
                   ...data.announcements.map(
                     (announcement) => _AnnouncementTile(
                       announcement: announcement,
-                      onTap: () =>
-                          context.push('/aktivitas/pengumuman/${announcement.id}'),
+                      onTap: () => context.push('/pengumuman/${announcement.id}'),
                     ),
                   ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(
+                    Icons.map_outlined,
+                    color: KomplekkuColors.primary,
+                  ),
+                  label: const Text('Peta Digital & Pos Security Utama'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: KomplekkuColors.border),
+                  ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KomplekMapScreen()),
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _WelcomeHeader extends StatelessWidget {
+  const _WelcomeHeader({required this.data});
+
+  final HomeSnapshot data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Selamat datang, ${data.firstName}',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${data.communityName} · ${data.houseLabel}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: KomplekkuColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Notifikasi',
+          onPressed: () => context.push('/notifikasi'),
+          icon: const Icon(Icons.notifications_none_outlined),
+          style: IconButton.styleFrom(
+            backgroundColor: KomplekkuColors.surfaceSoft,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionGrid extends ConsumerWidget {
+  const _QuickActionGrid();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final permissions = ref.watch(currentPermissionsProvider);
+    final visible = _quickActions
+        .where((action) => hasPermission(permissions, action.permission))
+        .toList(growable: false);
+    if (visible.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final action in visible)
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => context.push(action.route),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: KomplekkuColors.surfaceMuted,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        action.icon,
+                        color: KomplekkuColors.primary,
+                        size: 25,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      action.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.onSeeAll});
+
+  final String title;
+  final VoidCallback onSeeAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        TextButton(
+          onPressed: onSeeAll,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Lihat semua'),
+              Icon(Icons.chevron_right, size: 18),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -120,42 +276,50 @@ class _AnnouncementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: KomplekkuColors.surface,
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: KomplekkuColors.border),
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  announcement.isRead
-                      ? Icons.mark_email_read_outlined
-                      : Icons.campaign_outlined,
-                  color: KomplekkuColors.primary,
-                  semanticLabel:
-                      announcement.isRead ? 'Sudah dibaca' : 'Belum dibaca',
+                _HomeCover(
+                  url: announcement.coverImageUrl,
+                  badge: announcement.badge,
+                  isRead: announcement.isRead,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        announcement.title,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              announcement.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          _HomeBadge(badge: announcement.badge),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        announcement.summary,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 4),
                       Text(
                         _formatPublishedAt(announcement.publishedAt),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -165,13 +329,104 @@ class _AnnouncementTile extends StatelessWidget {
                               ],
                             ),
                       ),
+                      const SizedBox(height: 6),
+                      Text(
+                        announcement.summary,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ],
                   ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: KomplekkuColors.textSecondary,
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+const _homeBadgeIcons = {
+  AnnouncementBadge.important: Icons.campaign_outlined,
+  AnnouncementBadge.event: Icons.event_outlined,
+  AnnouncementBadge.info: Icons.info_outline,
+};
+
+Color _homeBadgeColor(AnnouncementBadge badge) => switch (badge) {
+      AnnouncementBadge.important => KomplekkuColors.danger,
+      AnnouncementBadge.event => KomplekkuColors.primary,
+      AnnouncementBadge.info => KomplekkuColors.textSecondary,
+    };
+
+class _HomeBadge extends StatelessWidget {
+  const _HomeBadge({required this.badge});
+
+  final AnnouncementBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _homeBadgeColor(badge);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        announcementBadgeLabels[badge]!,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCover extends StatelessWidget {
+  const _HomeCover({
+    required this.url,
+    required this.badge,
+    required this.isRead,
+  });
+
+  final String? url;
+  final AnnouncementBadge badge;
+  final bool isRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final coverUrl = url;
+    final placeholder = ColoredBox(
+      color: KomplekkuColors.surfaceMuted,
+      child: Center(
+        child: Icon(
+          _homeBadgeIcons[badge],
+          color: KomplekkuColors.primary,
+          semanticLabel: isRead ? 'Sudah dibaca' : 'Belum dibaca',
+        ),
+      ),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 52,
+        height: 52,
+        child: coverUrl == null
+            ? placeholder
+            : Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => placeholder,
+              ),
       ),
     );
   }
@@ -198,7 +453,7 @@ class _OfflineNotice extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Anda sedang offline. Menampilkan data terakhir yang tersedia.',
+              'Kamu sedang offline. Data yang tampil adalah salinan terakhir.',
             ),
           ),
         ],
@@ -212,12 +467,17 @@ class _EmptyAnnouncements extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Text(
-          'Belum ada pengumuman. Informasi lingkungan terbaru akan muncul di sini.',
-        ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: KomplekkuColors.border),
+      ),
+      child: Text(
+        'Belum ada pengumuman baru dari pengurus.',
+        style: Theme.of(context).textTheme.bodyMedium,
       ),
     );
   }
@@ -240,35 +500,60 @@ class _HomeError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
+    return Center(
+      child: Padding(
         padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight:
-                constraints.maxHeight > 48 ? constraints.maxHeight - 48 : 0.0,
-          ),
-          child: Center(
-            child: Semantics(
-              liveRegion: true,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 32),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(message, textAlign: TextAlign.center),
-                  const SizedBox(height: 20),
-                  FilledButton(onPressed: onAction, child: Text(actionLabel)),
-                ],
+        child: Semantics(
+          liveRegion: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 32, color: KomplekkuColors.textSecondary),
+              const SizedBox(height: 12),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-            ),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: onAction, child: Text(actionLabel)),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget block(double height) => Container(
+          height: height,
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            color: KomplekkuColors.surfaceSoft,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        );
+
+    return Semantics(
+      label: 'Memuat beranda',
+      liveRegion: true,
+      child: ExcludeSemantics(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          children: [
+            block(34),
+            block(150),
+            block(76),
+            block(96),
+            block(96),
+          ],
         ),
       ),
     );
@@ -293,31 +578,5 @@ String _formatPublishedAt(DateTime value) {
   final local = value.toLocal();
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
-  return '${local.day} ${months[local.month - 1]} ${local.year} · $hour:$minute';
-}
-
-class _HomeSkeleton extends StatelessWidget {
-  const _HomeSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Memuat beranda',
-      liveRegion: true,
-      child: ExcludeSemantics(
-        child: ListView.separated(
-          padding: const EdgeInsets.all(20),
-          itemCount: 4,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => Container(
-            height: index == 0 ? 72 : 110,
-            decoration: const BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  return '${local.day} ${months[local.month - 1]} ${local.year} · $hour:$minute WIB';
 }

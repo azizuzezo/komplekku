@@ -32,7 +32,7 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
           IconButton(
             tooltip: 'Tampilan kalender',
             icon: const Icon(Icons.calendar_month_outlined),
-            onPressed: () => context.push('/aktivitas/kalender'),
+            onPressed: () => context.push('/kalender'),
           ),
         ],
       ),
@@ -132,7 +132,7 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
                         final event = items[index];
                         return _AgendaCard(
                           event: event,
-                          onTap: () => context.push('/aktivitas/agenda/${event.id}'),
+                          onTap: () => context.push('/agenda/${event.id}'),
                         );
                       },
                     ),

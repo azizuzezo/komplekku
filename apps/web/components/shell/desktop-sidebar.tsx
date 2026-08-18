@@ -17,6 +17,7 @@ import {
   Megaphone,
   MessageSquareWarning,
   MessagesSquare,
+  Moon,
   Package,
   ShieldCheck,
   Siren,
@@ -46,6 +47,7 @@ type NavigationItem = {
 
 const navigation: NavigationItem[] = [
   { href: "/", label: "Beranda", icon: Home },
+  { href: "/shalat", label: "Jadwal Shalat", icon: Moon },
   {
     href: "/pengumuman",
     label: "Pengumuman",

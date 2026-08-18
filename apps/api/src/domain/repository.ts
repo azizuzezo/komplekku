@@ -257,12 +257,17 @@ export type CreateHouseResult =
 export type UpdateHouseResult =
   { outcome: "OK"; house: HouseRecord } | { outcome: "NOT_FOUND" | "RT_NOT_FOUND" };
 
+export type AnnouncementCategory = "INFO" | "EVENT";
+export type AnnouncementFilter = "all" | "important" | "event" | "info";
+
 export interface AnnouncementRecord {
   id: string;
   title: string;
   summary: string;
   body: string;
   priority: AnnouncementPriority;
+  category: AnnouncementCategory;
+  coverImageUrl: string | null;
   publishedAt: Date;
   isRead: boolean;
 }
@@ -790,6 +795,65 @@ export type UpdateForumMessageResult =
 export type DeleteForumMessageResult =
   { outcome: "DELETED"; messageId: string; channelId: string } | { outcome: "NOT_FOUND" };
 
+export type ForumPostCategory =
+  | "QUESTION"
+  | "SUGGESTION"
+  | "INFORMATION"
+  | "ENVIRONMENT"
+  | "ACTIVITY";
+
+export type ForumPostSort = "latest" | "popular" | "answered";
+
+export interface ForumPostSummaryRecord {
+  id: string;
+  category: ForumPostCategory;
+  title: string;
+  excerpt: string;
+  imageUrls: string[];
+  replyCount: number;
+  authorUserId: string;
+  authorName: string;
+  createdAt: Date;
+  editedAt: Date | null;
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+export interface ForumPostReplyRecord {
+  id: string;
+  postId: string;
+  body: string;
+  replyToReplyId: string | null;
+  replyToAuthorName: string | null;
+  replyToBody: string | null;
+  authorUserId: string;
+  authorName: string;
+  createdAt: Date;
+  editedAt: Date | null;
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+export interface ForumPostDetailRecord extends ForumPostSummaryRecord {
+  body: string;
+  replies: ForumPostReplyRecord[];
+}
+
+export type ForumPostMutationResult =
+  | { outcome: "OK"; post: ForumPostSummaryRecord; recipientUserIds: string[] }
+  | { outcome: "NOT_FOUND" };
+
+export type ForumPostReplyMutationResult =
+  | { outcome: "OK"; reply: ForumPostReplyRecord; recipientUserIds: string[] }
+  | { outcome: "POST_NOT_FOUND" }
+  | { outcome: "REPLY_NOT_FOUND" };
+
+export type ForumDeleteResult = { outcome: "DELETED" } | { outcome: "NOT_FOUND" };
+
+export type ForumLikeResult =
+  | { outcome: "OK"; likeCount: number; likedByMe: boolean }
+  | { outcome: "NOT_FOUND" };
+
 export interface AppRepository {
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -912,6 +976,7 @@ export interface AppRepository {
     auth: AuthSessionRecord,
     now: Date,
     limit: number,
+    filter?: AnnouncementFilter,
   ): Promise<{ items: AnnouncementRecord[]; total: number }>;
   getAnnouncement(
     auth: AuthSessionRecord,
@@ -1345,6 +1410,71 @@ export interface AppRepository {
     now: Date;
     audit: RequestAuditContext;
   }): Promise<CreateForumMessageResult>;
+  listForumPosts(input: {
+    auth: AuthSessionRecord;
+    sort: ForumPostSort;
+    category?: ForumPostCategory;
+    limit: number;
+  }): Promise<ForumPostSummaryRecord[]>;
+  getForumPost(auth: AuthSessionRecord, postId: string): Promise<ForumPostDetailRecord | null>;
+  createForumPost(input: {
+    auth: AuthSessionRecord;
+    category: ForumPostCategory;
+    title: string;
+    body: string;
+    imageUrls: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostMutationResult>;
+  updateForumPost(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    changes: {
+      category?: ForumPostCategory;
+      title?: string;
+      body?: string;
+      imageUrls?: string[];
+    };
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostMutationResult>;
+  deleteForumPost(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumDeleteResult>;
+  toggleForumPostLike(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    now: Date;
+  }): Promise<ForumLikeResult>;
+  createForumPostReply(input: {
+    auth: AuthSessionRecord;
+    postId: string;
+    body: string;
+    replyToReplyId?: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostReplyMutationResult>;
+  updateForumPostReply(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    body: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumPostReplyMutationResult>;
+  deleteForumPostReply(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<ForumDeleteResult>;
+  toggleForumReplyLike(input: {
+    auth: AuthSessionRecord;
+    replyId: string;
+    now: Date;
+  }): Promise<ForumLikeResult>;
   updateForumMessage(input: {
     auth: AuthSessionRecord;
     messageId: string;

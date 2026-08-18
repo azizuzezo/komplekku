@@ -12,6 +12,7 @@ export * from "./envelope";
 export * from "./facility";
 export * from "./finance-dashboard";
 export * from "./forum";
+export * from "./forum-post";
 export * from "./home";
 export * from "./house";
 export * from "./household";

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/not_found_screen.dart';
-import 'package:komplekku/app/shell/aktivitas_hub_screen.dart';
 import 'package:komplekku/app/shell/keamanan_hub_screen.dart';
 import 'package:komplekku/app/shell/layanan_hub_screen.dart';
 import 'package:komplekku/app/shell/main_shell.dart';
@@ -40,6 +39,7 @@ import 'package:komplekku/features/onboarding/presentation/pending_verification_
 import 'package:komplekku/features/package/presentation/package_screen.dart';
 import 'package:komplekku/features/patrol/presentation/patrol_screen.dart';
 import 'package:komplekku/features/report/presentation/report_detail_screen.dart';
+import 'package:komplekku/features/prayer/presentation/shalat_screen.dart';
 import 'package:komplekku/features/report/presentation/report_list_screen.dart';
 import 'package:komplekku/features/security_dashboard/presentation/security_dashboard_screen.dart';
 import 'package:komplekku/features/visitor/presentation/visitor_screen.dart';
@@ -87,6 +87,84 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/shalat',
+                builder: (context, state) => const ShalatScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/pengumuman',
+                builder: (context, state) => const AnnouncementListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => AnnouncementDetailScreen(
+                      id: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: '/agenda',
+                builder: (context, state) => const AgendaListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => AgendaDetailScreen(
+                      id: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: '/kalender',
+                builder: (context, state) => const AgendaCalendarScreen(),
+              ),
+              GoRoute(
+                path: '/notifikasi',
+                builder: (context, state) => const NotificationListScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/forum',
+                builder: (context, state) => const ForumScreen(),
+              ),
+            ],
+          ),
+          // Profil owns every operational menu that no longer fits the
+          // five-slot bottom bar: Keamanan and Layanan keep their existing
+          // paths so no deep link or notification payload breaks.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/akun',
+                builder: (context, state) => const AccountScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'permohonan-warga',
+                    builder: (context, state) =>
+                        const ResidencyRequestQueueScreen(),
+                  ),
+                  GoRoute(
+                    path: 'komunitas',
+                    builder: (context, state) => const CommunityAdminScreen(),
+                  ),
+                  GoRoute(
+                    path: 'rumah',
+                    builder: (context, state) => const HouseAdminScreen(),
+                  ),
+                  GoRoute(
+                    path: 'pengguna',
+                    builder: (context, state) => const AdminRoleScreen(),
+                  ),
+                ],
+              ),
+              GoRoute(
                 path: '/keamanan',
                 builder: (context, state) => const KeamananHubScreen(),
                 routes: [
@@ -132,10 +210,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                 ],
               ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
               GoRoute(
                 path: '/layanan',
                 builder: (context, state) => const LayananHubScreen(),
@@ -179,79 +253,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'keuangan',
                     builder: (context, state) => const FinanceDashboardScreen(),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/aktivitas',
-                builder: (context, state) => const AktivitasHubScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'pengumuman',
-                    builder: (context, state) => const AnnouncementListScreen(),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        builder: (context, state) => AnnouncementDetailScreen(
-                          id: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: 'agenda',
-                    builder: (context, state) => const AgendaListScreen(),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        builder: (context, state) => AgendaDetailScreen(
-                          id: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: 'kalender',
-                    builder: (context, state) => const AgendaCalendarScreen(),
-                  ),
-                  GoRoute(
-                    path: 'notifikasi',
-                    builder: (context, state) => const NotificationListScreen(),
-                  ),
-                  GoRoute(
-                    path: 'forum',
-                    builder: (context, state) => const ForumScreen(),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/akun',
-                builder: (context, state) => const AccountScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'permohonan-warga',
-                    builder: (context, state) =>
-                        const ResidencyRequestQueueScreen(),
-                  ),
-                  GoRoute(
-                    path: 'komunitas',
-                    builder: (context, state) => const CommunityAdminScreen(),
-                  ),
-                  GoRoute(
-                    path: 'rumah',
-                    builder: (context, state) => const HouseAdminScreen(),
-                  ),
-                  GoRoute(
-                    path: 'pengguna',
-                    builder: (context, state) => const AdminRoleScreen(),
                   ),
                 ],
               ),
