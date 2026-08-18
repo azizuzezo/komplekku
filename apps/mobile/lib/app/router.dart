@@ -8,6 +8,8 @@ import 'package:komplekku/app/shell/layanan_hub_screen.dart';
 import 'package:komplekku/app/shell/main_shell.dart';
 import 'package:komplekku/features/account/presentation/account_screen.dart';
 import 'package:komplekku/features/admin_residency/presentation/residency_request_queue_screen.dart';
+import 'package:komplekku/features/admin_role/presentation/admin_role_screen.dart';
+import 'package:komplekku/features/agenda/presentation/agenda_calendar_screen.dart';
 import 'package:komplekku/features/agenda/presentation/agenda_detail_screen.dart';
 import 'package:komplekku/features/agenda/presentation/agenda_list_screen.dart';
 import 'package:komplekku/features/announcement/presentation/announcement_detail_screen.dart';
@@ -18,11 +20,14 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/auth/presentation/session_gate_screen.dart';
 import 'package:komplekku/features/camera/presentation/camera_list_screen.dart';
 import 'package:komplekku/features/cash/presentation/kas_screen.dart';
+import 'package:komplekku/features/community_admin/presentation/community_admin_screen.dart';
 import 'package:komplekku/features/emergency/presentation/emergency_screen.dart';
+import 'package:komplekku/features/emergency/presentation/emergency_triage_screen.dart';
 import 'package:komplekku/features/facility/presentation/facility_screen.dart';
 import 'package:komplekku/features/finance_dashboard/presentation/finance_dashboard_screen.dart';
 import 'package:komplekku/features/forum/presentation/forum_screen.dart';
 import 'package:komplekku/features/home/presentation/home_screen.dart';
+import 'package:komplekku/features/house_admin/presentation/house_admin_screen.dart';
 import 'package:komplekku/features/incident/presentation/incident_detail_screen.dart';
 import 'package:komplekku/features/incident/presentation/incident_list_screen.dart';
 import 'package:komplekku/features/invoice/presentation/invoice_detail_screen.dart';
@@ -100,6 +105,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'darurat',
                     builder: (context, state) => const EmergencyScreen(),
+                  ),
+                  GoRoute(
+                    path: 'darurat-masuk',
+                    builder: (context, state) => const EmergencyTriageScreen(),
                   ),
                   GoRoute(
                     path: 'kejadian',
@@ -206,6 +215,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ],
                   ),
                   GoRoute(
+                    path: 'kalender',
+                    builder: (context, state) => const AgendaCalendarScreen(),
+                  ),
+                  GoRoute(
                     path: 'notifikasi',
                     builder: (context, state) => const NotificationListScreen(),
                   ),
@@ -227,6 +240,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'permohonan-warga',
                     builder: (context, state) =>
                         const ResidencyRequestQueueScreen(),
+                  ),
+                  GoRoute(
+                    path: 'komunitas',
+                    builder: (context, state) => const CommunityAdminScreen(),
+                  ),
+                  GoRoute(
+                    path: 'rumah',
+                    builder: (context, state) => const HouseAdminScreen(),
+                  ),
+                  GoRoute(
+                    path: 'pengguna',
+                    builder: (context, state) => const AdminRoleScreen(),
                   ),
                 ],
               ),

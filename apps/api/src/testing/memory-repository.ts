@@ -78,6 +78,7 @@ import type {
   CommunityMemberRecord,
   CreateCommunityResult,
   CreateFacilityBookingResult,
+  CreateForumChannelResult,
   CreateForumMessageResult,
   CreateHouseResult,
   CreateLetterRequestResult,
@@ -98,8 +99,16 @@ import type {
   FacilityBookingRecord,
   FacilityRecord,
   FinanceDashboardRecord,
+  ForumChannelKind,
+  ForumChannelMemberRecord,
   ForumChannelRecord,
+  ForumMemberCandidateRecord,
+  ForumMemberStatus,
   ForumMessageRecord,
+  InviteForumMembersResult,
+  ListForumChannelMembersResult,
+  RespondForumInvitationResult,
+  UpdateForumMessageResult,
   HomeRecord,
   HouseRecord,
   IncidentRecord,
@@ -249,7 +258,22 @@ interface MemoryForumChannel {
   id: string;
   communityId: string;
   rtId: string | null;
+  kind: ForumChannelKind;
   name: string;
+  description: string | null;
+  createdByUserId: string | null;
+}
+
+interface MemoryForumChannelMember {
+  id: string;
+  communityId: string;
+  channelId: string;
+  userId: string;
+  status: ForumMemberStatus;
+  isOwner: boolean;
+  invitedByUserId: string | null;
+  invitedAt: Date;
+  respondedAt: Date | null;
 }
 
 interface MemoryForumMessage {
@@ -257,9 +281,11 @@ interface MemoryForumMessage {
   communityId: string;
   channelId: string;
   authorUserId: string;
+  replyToMessageId: string | null;
   body: string;
   imageUrls: string[];
   createdAt: Date;
+  editedAt: Date | null;
   deletedAt: Date | null;
 }
 
@@ -730,6 +756,7 @@ export class MemoryRepository implements AppRepository {
   private readonly communities = new Map<string, MemoryCommunity>();
   private readonly rts = new Map<string, MemoryRt>();
   private readonly forumChannels = new Map<string, MemoryForumChannel>();
+  private readonly forumChannelMembers = new Map<string, MemoryForumChannelMember>();
   private readonly forumMessages = new Map<string, MemoryForumMessage>();
   private readonly houses = new Map<string, MemoryHouse>();
   private readonly households = new Map<string, MemoryHousehold>();
@@ -806,25 +833,37 @@ export class MemoryRepository implements AppRepository {
       id: demoIds.forumChannelCommunity,
       communityId: demoIds.community,
       rtId: null,
+      kind: "SYSTEM",
       name: "Forum Warga",
+      description: null,
+      createdByUserId: null,
     });
     this.forumChannels.set(demoIds.forumChannelRtOne, {
       id: demoIds.forumChannelRtOne,
       communityId: demoIds.community,
       rtId: demoIds.rtOne,
+      kind: "SYSTEM",
       name: "RT 01",
+      description: null,
+      createdByUserId: null,
     });
     this.forumChannels.set(demoIds.forumChannelRtTwo, {
       id: demoIds.forumChannelRtTwo,
       communityId: demoIds.community,
       rtId: demoIds.rtTwo,
+      kind: "SYSTEM",
       name: "RT 02",
+      description: null,
+      createdByUserId: null,
     });
     this.forumChannels.set(demoIds.forumChannelSecondCommunity, {
       id: demoIds.forumChannelSecondCommunity,
       communityId: demoIds.secondCommunity,
       rtId: null,
+      kind: "SYSTEM",
       name: "Forum Warga",
+      description: null,
+      createdByUserId: null,
     });
     this.houses.set(demoIds.house, {
       id: demoIds.house,
@@ -1811,7 +1850,10 @@ export class MemoryRepository implements AppRepository {
       id: forumChannelId,
       communityId: community.id,
       rtId: null,
+      kind: "SYSTEM",
       name: "Forum Warga",
+      description: null,
+      createdByUserId: null,
     });
 
     this.audits.push({
@@ -1886,7 +1928,10 @@ export class MemoryRepository implements AppRepository {
       id: forumChannelId,
       communityId,
       rtId: rt.id,
+      kind: "SYSTEM",
       name: rt.name,
+      description: null,
+      createdByUserId: null,
     });
 
     this.audits.push({
@@ -4994,18 +5039,62 @@ export class MemoryRepository implements AppRepository {
     return this.houses.get(household.houseId)?.rtId ?? null;
   }
 
-  private canAccessForumChannel(
-    auth: AuthSessionRecord,
-    channel: { rtId: string | null },
-  ): boolean {
+  private forumMembership(channelId: string, userId: string): MemoryForumChannelMember | null {
+    return (
+      [...this.forumChannelMembers.values()].find(
+        (member) => member.channelId === channelId && member.userId === userId,
+      ) ?? null
+    );
+  }
+
+  private forumAcceptedMemberCount(channelId: string): number {
+    return [...this.forumChannelMembers.values()].filter(
+      (member) => member.channelId === channelId && member.status === "ACCEPTED",
+    ).length;
+  }
+
+  private canAccessForumChannel(auth: AuthSessionRecord, channel: MemoryForumChannel): boolean {
+    if (channel.kind === "PRIVATE") {
+      return this.forumMembership(channel.id, auth.userId)?.status === "ACCEPTED";
+    }
     if (channel.rtId === null) return true;
     if (auth.permissions.includes("community.manage")) return true;
     if (auth.rtScopeId === channel.rtId) return true;
     return this.viewerHouseRtId(auth) === channel.rtId;
   }
 
+  private mapForumChannel(
+    channel: MemoryForumChannel,
+    auth: AuthSessionRecord,
+  ): ForumChannelRecord {
+    const membership = this.forumMembership(channel.id, auth.userId);
+    return {
+      id: channel.id,
+      rtId: channel.rtId,
+      kind: channel.kind,
+      name: channel.name,
+      description: channel.description,
+      createdByUserId: channel.createdByUserId,
+      membershipStatus: membership?.status ?? null,
+      isOwner: membership?.isOwner ?? false,
+      memberCount: channel.kind === "PRIVATE" ? this.forumAcceptedMemberCount(channel.id) : 0,
+    };
+  }
+
+  private forumChannelRank(channel: MemoryForumChannel): number {
+    if (channel.kind === "PRIVATE") return 2;
+    return channel.rtId === null ? 0 : 1;
+  }
+
   private mapForumMessage(message: MemoryForumMessage): ForumMessageRecord {
     const author = this.users.get(message.authorUserId);
+    const parent = message.replyToMessageId
+      ? this.forumMessages.get(message.replyToMessageId)
+      : null;
+    // A reply whose parent was deleted keeps its own text but loses the quote,
+    // so the thread never resurrects removed content.
+    const visibleParent = parent && !parent.deletedAt ? parent : null;
+    const parentAuthor = visibleParent ? this.users.get(visibleParent.authorUserId) : null;
     return {
       id: message.id,
       channelId: message.channelId,
@@ -5014,18 +5103,308 @@ export class MemoryRepository implements AppRepository {
       body: message.body,
       imageUrls: message.imageUrls,
       createdAt: message.createdAt,
+      editedAt: message.editedAt,
+      replyToMessageId: message.replyToMessageId,
+      replyToAuthorName: visibleParent
+        ? (parentAuthor?.displayName ?? parentAuthor?.phoneE164 ?? "Pengguna Komplekku")
+        : null,
+      replyToBody: visibleParent ? visibleParent.body : null,
     };
+  }
+
+  private houseLabelForUser(communityId: string, userId: string): string | null {
+    const resident = [...this.residents.values()].find(
+      (candidate) => candidate.communityId === communityId && candidate.userId === userId,
+    );
+    const household = resident?.householdId ? this.households.get(resident.householdId) : null;
+    const house = household ? this.houses.get(household.houseId) : null;
+    return house ? `Blok ${house.block} No. ${house.number}` : null;
   }
 
   async listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]> {
     const communityId = auth.currentCommunityId;
     if (!communityId) return [];
     return [...this.forumChannels.values()]
-      .filter(
-        (channel) => channel.communityId === communityId && this.canAccessForumChannel(auth, channel),
-      )
-      .sort((left, right) => (left.rtId ?? "").localeCompare(right.rtId ?? ""))
-      .map((channel) => ({ id: channel.id, rtId: channel.rtId, name: channel.name }));
+      .filter((channel) => {
+        if (channel.communityId !== communityId) return false;
+        if (channel.kind === "PRIVATE") {
+          // Invitation-only for everyone, admins included; a declined
+          // invitation drops the forum out of the list entirely.
+          const status = this.forumMembership(channel.id, auth.userId)?.status;
+          return status === "PENDING" || status === "ACCEPTED";
+        }
+        return this.canAccessForumChannel(auth, channel);
+      })
+      .sort((left, right) => {
+        const rankDelta = this.forumChannelRank(left) - this.forumChannelRank(right);
+        return rankDelta !== 0 ? rankDelta : left.name.localeCompare(right.name);
+      })
+      .map((channel) => this.mapForumChannel(channel, auth));
+  }
+
+  /** Filters requested invitees down to real, active residents of the viewer's
+   * community so an invitation can never leak a forum outside it. */
+  private resolveInvitableUserIds(
+    communityId: string,
+    userIds: string[],
+    excludeUserId: string,
+  ): string[] {
+    const wanted = new Set(userIds.filter((userId) => userId !== excludeUserId));
+    const resolved = new Set<string>();
+    for (const resident of this.residents.values()) {
+      if (resident.communityId !== communityId) continue;
+      if (resident.status !== "ACTIVE") continue;
+      if (!wanted.has(resident.userId)) continue;
+      resolved.add(resident.userId);
+    }
+    return [...resolved];
+  }
+
+  async listForumMemberCandidates(auth: AuthSessionRecord): Promise<ForumMemberCandidateRecord[]> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return [];
+
+    const byUserId = new Map<string, ForumMemberCandidateRecord>();
+    for (const resident of this.residents.values()) {
+      if (resident.communityId !== communityId) continue;
+      if (resident.status !== "ACTIVE") continue;
+      if (resident.userId === auth.userId) continue;
+      if (byUserId.has(resident.userId)) continue;
+      const user = this.users.get(resident.userId);
+      byUserId.set(resident.userId, {
+        userId: resident.userId,
+        displayName: user?.displayName ?? user?.phoneE164 ?? "Pengguna Komplekku",
+        houseLabel: this.houseLabelForUser(communityId, resident.userId),
+      });
+    }
+
+    return [...byUserId.values()].sort((left, right) =>
+      left.displayName.localeCompare(right.displayName),
+    );
+  }
+
+  async createForumChannel(input: {
+    auth: AuthSessionRecord;
+    name: string;
+    description?: string;
+    invitedUserIds: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateForumChannelResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NO_COMMUNITY" };
+
+    const channel: MemoryForumChannel = {
+      id: randomUUID(),
+      communityId,
+      rtId: null,
+      kind: "PRIVATE",
+      name: input.name,
+      description: input.description ?? null,
+      createdByUserId: input.auth.userId,
+    };
+    this.forumChannels.set(channel.id, channel);
+
+    const ownerMember: MemoryForumChannelMember = {
+      id: randomUUID(),
+      communityId,
+      channelId: channel.id,
+      userId: input.auth.userId,
+      status: "ACCEPTED",
+      isOwner: true,
+      invitedByUserId: null,
+      invitedAt: input.now,
+      respondedAt: input.now,
+    };
+    this.forumChannelMembers.set(ownerMember.id, ownerMember);
+
+    const invitedUserIds = this.resolveInvitableUserIds(
+      communityId,
+      input.invitedUserIds,
+      input.auth.userId,
+    );
+    for (const userId of invitedUserIds) {
+      const member: MemoryForumChannelMember = {
+        id: randomUUID(),
+        communityId,
+        channelId: channel.id,
+        userId,
+        status: "PENDING",
+        isOwner: false,
+        invitedByUserId: input.auth.userId,
+        invitedAt: input.now,
+        respondedAt: null,
+      };
+      this.forumChannelMembers.set(member.id, member);
+    }
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.channel.created",
+      entityType: "ForumChannel",
+      entityId: channel.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      channel: this.mapForumChannel(channel, input.auth),
+      invitedUserIds,
+    };
+  }
+
+  async listForumChannelMembers(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+  }): Promise<ListForumChannelMembersResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const channel = this.forumChannels.get(input.channelId);
+    if (!channel || channel.communityId !== communityId) {
+      return { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    if (channel.kind === "PRIVATE") {
+      // A pending invitee may look at the roster before deciding, but nobody
+      // outside the invitation list can.
+      const viewer = this.forumMembership(channel.id, input.auth.userId);
+      if (!viewer || viewer.status === "DECLINED") return { outcome: "CHANNEL_NOT_FOUND" };
+    } else if (!this.canAccessForumChannel(input.auth, channel)) {
+      return { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    const items: ForumChannelMemberRecord[] = [...this.forumChannelMembers.values()]
+      .filter((member) => member.channelId === channel.id && member.status !== "DECLINED")
+      .map((member) => {
+        const user = this.users.get(member.userId);
+        return {
+          userId: member.userId,
+          displayName: user?.displayName ?? user?.phoneE164 ?? "Pengguna Komplekku",
+          houseLabel: this.houseLabelForUser(communityId, member.userId),
+          status: member.status,
+          isOwner: member.isOwner,
+        };
+      })
+      .sort((left, right) => {
+        if (left.isOwner !== right.isOwner) return left.isOwner ? -1 : 1;
+        return left.displayName.localeCompare(right.displayName);
+      });
+
+    return { outcome: "OK", items };
+  }
+
+  async inviteForumMembers(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    userIds: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<InviteForumMembersResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const channel = this.forumChannels.get(input.channelId);
+    if (!channel || channel.communityId !== communityId || channel.kind !== "PRIVATE") {
+      return { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    const viewer = this.forumMembership(channel.id, input.auth.userId);
+    if (!viewer) return { outcome: "CHANNEL_NOT_FOUND" };
+    // A pending invitee exists but may not grow the room before accepting.
+    if (viewer.status !== "ACCEPTED") return { outcome: "FORBIDDEN" };
+
+    const candidates = this.resolveInvitableUserIds(communityId, input.userIds, input.auth.userId);
+    const invitedUserIds: string[] = [];
+    for (const userId of candidates) {
+      const existing = this.forumMembership(channel.id, userId);
+      // Re-inviting someone who already accepted or is still deciding is a
+      // no-op; a previously declined invitation is reopened as PENDING.
+      if (existing && existing.status !== "DECLINED") continue;
+      if (existing) {
+        existing.status = "PENDING";
+        existing.invitedByUserId = input.auth.userId;
+        existing.invitedAt = input.now;
+        existing.respondedAt = null;
+      } else {
+        const member: MemoryForumChannelMember = {
+          id: randomUUID(),
+          communityId,
+          channelId: channel.id,
+          userId,
+          status: "PENDING",
+          isOwner: false,
+          invitedByUserId: input.auth.userId,
+          invitedAt: input.now,
+          respondedAt: null,
+        };
+        this.forumChannelMembers.set(member.id, member);
+      }
+      invitedUserIds.push(userId);
+    }
+
+    if (invitedUserIds.length > 0) {
+      this.audits.push({
+        communityId,
+        actorUserId: input.auth.userId,
+        sessionId: input.auth.sessionId,
+        action: "forum.channel.invited",
+        entityType: "ForumChannel",
+        entityId: channel.id,
+        ipAddress: input.audit.ipAddress,
+        userAgent: input.audit.userAgent,
+      });
+    }
+
+    return {
+      outcome: "OK",
+      channel: this.mapForumChannel(channel, input.auth),
+      invitedUserIds,
+    };
+  }
+
+  async respondToForumInvitation(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    accept: boolean;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<RespondForumInvitationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "INVITATION_NOT_FOUND" };
+
+    const channel = this.forumChannels.get(input.channelId);
+    if (!channel || channel.communityId !== communityId || channel.kind !== "PRIVATE") {
+      return { outcome: "INVITATION_NOT_FOUND" };
+    }
+
+    const membership = this.forumMembership(channel.id, input.auth.userId);
+    if (!membership || membership.status !== "PENDING") {
+      return { outcome: "INVITATION_NOT_FOUND" };
+    }
+
+    membership.status = input.accept ? "ACCEPTED" : "DECLINED";
+    membership.respondedAt = input.now;
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: input.accept ? "forum.invitation.accepted" : "forum.invitation.declined",
+      entityType: "ForumChannel",
+      entityId: channel.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      status: membership.status,
+      channel: this.mapForumChannel(channel, input.auth),
+    };
   }
 
   async listForumMessages(input: {
@@ -5077,6 +5456,7 @@ export class MemoryRepository implements AppRepository {
     channelId: string;
     body: string;
     imageUrls: string[];
+    replyToMessageId?: string;
     now: Date;
     audit: RequestAuditContext;
   }): Promise<CreateForumMessageResult> {
@@ -5092,14 +5472,30 @@ export class MemoryRepository implements AppRepository {
       return { outcome: "CHANNEL_NOT_FOUND" };
     }
 
+    if (input.replyToMessageId) {
+      // A reply must point at a live message in the same channel, otherwise a
+      // crafted id could quote a message from a forum the author cannot read.
+      const parent = this.forumMessages.get(input.replyToMessageId);
+      if (
+        !parent ||
+        parent.communityId !== communityId ||
+        parent.channelId !== channel.id ||
+        parent.deletedAt
+      ) {
+        return { outcome: "REPLY_NOT_FOUND" };
+      }
+    }
+
     const message: MemoryForumMessage = {
       id: randomUUID(),
       communityId,
       channelId: channel.id,
       authorUserId: input.auth.userId,
+      replyToMessageId: input.replyToMessageId ?? null,
       body: input.body,
       imageUrls: input.imageUrls,
       createdAt: input.now,
+      editedAt: null,
       deletedAt: null,
     };
     this.forumMessages.set(message.id, message);
@@ -5115,25 +5511,84 @@ export class MemoryRepository implements AppRepository {
       userAgent: input.audit.userAgent,
     });
 
-    // Recipients: active residents whose household's house sits in this RT
-    // (or the whole community for the community-wide channel), minus the
-    // author — mirrors prisma-repository.ts's channel-scoped notification
-    // fan-out.
-    const recipientUserIds = [...this.residents.values()]
-      .filter((resident) => {
-        if (resident.communityId !== communityId || resident.status !== "ACTIVE") return false;
-        if (resident.userId === input.auth.userId) return false;
-        if (!channel.rtId) return true;
-        const household = resident.householdId ? this.households.get(resident.householdId) : null;
-        const house = household ? this.houses.get(household.houseId) : null;
-        return house?.rtId === channel.rtId;
-      })
-      .map((resident) => resident.userId);
+    // Recipients: everyone who can read the channel minus the author — the
+    // accepted members of a private forum, otherwise the active residents in
+    // the channel's RT (or the whole community for the shared channel).
+    const recipientUserIds =
+      channel.kind === "PRIVATE"
+        ? [...this.forumChannelMembers.values()]
+            .filter(
+              (member) =>
+                member.channelId === channel.id &&
+                member.status === "ACCEPTED" &&
+                member.userId !== input.auth.userId,
+            )
+            .map((member) => member.userId)
+        : [...this.residents.values()]
+            .filter((resident) => {
+              if (resident.communityId !== communityId || resident.status !== "ACTIVE") {
+                return false;
+              }
+              if (resident.userId === input.auth.userId) return false;
+              if (!channel.rtId) return true;
+              const household = resident.householdId
+                ? this.households.get(resident.householdId)
+                : null;
+              const house = household ? this.houses.get(household.houseId) : null;
+              return house?.rtId === channel.rtId;
+            })
+            .map((resident) => resident.userId);
 
     return {
       outcome: "OK",
       message: this.mapForumMessage(message),
       recipientUserIds,
+    };
+  }
+
+  async updateForumMessage(input: {
+    auth: AuthSessionRecord;
+    messageId: string;
+    body: string;
+    imageUrls?: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateForumMessageResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const message = this.forumMessages.get(input.messageId);
+    if (!message || message.communityId !== communityId || message.deletedAt) {
+      return { outcome: "NOT_FOUND" };
+    }
+    // Editing is author-only on purpose: `forum.manage` lets a moderator take a
+    // message down, never rewrite someone else's words under their name.
+    if (message.authorUserId !== input.auth.userId) return { outcome: "NOT_FOUND" };
+
+    const channel = this.forumChannels.get(message.channelId);
+    if (!channel || !this.canAccessForumChannel(input.auth, channel)) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    message.body = input.body;
+    if (input.imageUrls) message.imageUrls = input.imageUrls;
+    message.editedAt = input.now;
+
+    this.audits.push({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.message.edited",
+      entityType: "ForumMessage",
+      entityId: message.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      message: this.mapForumMessage(message),
+      channelId: message.channelId,
     };
   }
 
@@ -5152,15 +5607,19 @@ export class MemoryRepository implements AppRepository {
     }
     const channel = this.forumChannels.get(message.channelId);
     const isOwnMessage = message.authorUserId === input.auth.userId;
-    const canModerate = input.auth.permissions.includes("forum.manage");
-    if (!isOwnMessage && !canModerate) return { outcome: "NOT_FOUND" };
-    if (
-      canModerate &&
-      !isOwnMessage &&
-      input.auth.rtScopeId &&
-      channel?.rtId !== input.auth.rtScopeId
-    ) {
-      return { outcome: "NOT_FOUND" };
+    if (!isOwnMessage) {
+      if (channel?.kind === "PRIVATE") {
+        // Private forums are moderated by the warga who opened them, not by
+        // community staff who cannot even read the room.
+        const viewer = this.forumMembership(channel.id, input.auth.userId);
+        if (!viewer?.isOwner || viewer.status !== "ACCEPTED") return { outcome: "NOT_FOUND" };
+      } else {
+        const canModerate = input.auth.permissions.includes("forum.manage");
+        if (!canModerate) return { outcome: "NOT_FOUND" };
+        if (input.auth.rtScopeId && channel?.rtId !== input.auth.rtScopeId) {
+          return { outcome: "NOT_FOUND" };
+        }
+      }
     }
 
     message.deletedAt = input.now;

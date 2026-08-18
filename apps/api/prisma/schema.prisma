@@ -181,6 +181,20 @@ enum CashVisibility {
   ADMIN_ONLY
 }
 
+/// SYSTEM channels are the community-wide and per-RT "Forum Warga" seeded
+/// automatically; PRIVATE channels are opened by a warga and readable only by
+/// the residents they invited and who accepted.
+enum ForumChannelKind {
+  SYSTEM
+  PRIVATE
+}
+
+enum ForumMemberStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model Community {
   id                    String             @id @default(uuid()) @db.Uuid
   slug                  String             @unique @db.VarChar(80)
@@ -229,6 +243,7 @@ model Community {
   auditLogs             AuditLog[]
   forumChannels         ForumChannel[]
   forumMessages         ForumMessage[]
+  forumChannelMembers   ForumChannelMember[]
 
   @@map("communities")
 }
@@ -274,7 +289,10 @@ model User {
   recordedCashTransactions CashTransaction[]  @relation("CashTransactionRecorder")
   pushTokens               PushToken[]
   auditLogs                AuditLog[]         @relation("AuditActor")
-  forumMessages            ForumMessage[]     @relation("ForumMessageAuthor")
+  forumMessages            ForumMessage[]       @relation("ForumMessageAuthor")
+  createdForumChannels     ForumChannel[]       @relation("ForumChannelCreator")
+  forumMemberships         ForumChannelMember[] @relation("ForumChannelMemberUser")
+  sentForumInvites         ForumChannelMember[] @relation("ForumChannelMemberInviter")
 
   @@map("users")
 }
@@ -385,32 +403,65 @@ model Rt {
 }
 
 model ForumChannel {
-  id          String         @id @default(uuid()) @db.Uuid
-  communityId String         @map("community_id") @db.Uuid
-  rtId        String?        @map("rt_id") @db.Uuid
-  name        String         @db.VarChar(160)
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  community   Community      @relation(fields: [communityId], references: [id], onDelete: Restrict)
-  rt          Rt?            @relation(fields: [rtId, communityId], references: [id, communityId], onDelete: Restrict)
-  messages    ForumMessage[]
+  id              String               @id @default(uuid()) @db.Uuid
+  communityId     String               @map("community_id") @db.Uuid
+  rtId            String?              @map("rt_id") @db.Uuid
+  kind            ForumChannelKind     @default(SYSTEM)
+  name            String               @db.VarChar(160)
+  description     String?              @db.VarChar(500)
+  createdByUserId String?              @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  community       Community            @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  rt              Rt?                  @relation(fields: [rtId, communityId], references: [id, communityId], onDelete: Restrict)
+  createdBy       User?                @relation("ForumChannelCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members         ForumChannelMember[]
+  messages        ForumMessage[]
 
   @@unique([id, communityId])
   @@index([communityId, rtId])
+  @@index([communityId, kind])
   @@map("forum_channels")
 }
 
+/// Invitation + membership for a PRIVATE forum. A row in PENDING is an
+/// outstanding invitation the invitee can accept or decline; only ACCEPTED
+/// rows may read or post in the channel.
+model ForumChannelMember {
+  id              String            @id @default(uuid()) @db.Uuid
+  communityId     String            @map("community_id") @db.Uuid
+  channelId       String            @map("channel_id") @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  status          ForumMemberStatus @default(PENDING)
+  isOwner         Boolean           @default(false) @map("is_owner")
+  invitedByUserId String?           @map("invited_by_user_id") @db.Uuid
+  invitedAt       DateTime          @default(now()) @map("invited_at") @db.Timestamptz(3)
+  respondedAt     DateTime?         @map("responded_at") @db.Timestamptz(3)
+  community       Community         @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  channel         ForumChannel      @relation(fields: [channelId, communityId], references: [id, communityId], onDelete: Cascade)
+  user            User              @relation("ForumChannelMemberUser", fields: [userId], references: [id], onDelete: Restrict)
+  invitedBy       User?             @relation("ForumChannelMemberInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([channelId, userId])
+  @@index([communityId, userId, status])
+  @@map("forum_channel_members")
+}
+
 model ForumMessage {
-  id           String       @id @default(uuid()) @db.Uuid
-  communityId  String       @map("community_id") @db.Uuid
-  channelId    String       @map("channel_id") @db.Uuid
-  authorUserId String       @map("author_user_id") @db.Uuid
-  body         String       @db.Text
-  imageUrls    String[]     @default([]) @map("image_urls")
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(3)
-  community    Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
-  channel      ForumChannel @relation(fields: [channelId, communityId], references: [id, communityId], onDelete: Restrict)
-  author       User         @relation("ForumMessageAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  id               String         @id @default(uuid()) @db.Uuid
+  communityId      String         @map("community_id") @db.Uuid
+  channelId        String         @map("channel_id") @db.Uuid
+  authorUserId     String         @map("author_user_id") @db.Uuid
+  replyToMessageId String?        @map("reply_to_message_id") @db.Uuid
+  body             String         @db.Text
+  imageUrls        String[]       @default([]) @map("image_urls")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  editedAt         DateTime?      @map("edited_at") @db.Timestamptz(3)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  community        Community      @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  channel          ForumChannel   @relation(fields: [channelId, communityId], references: [id, communityId], onDelete: Restrict)
+  author           User           @relation("ForumMessageAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  replyTo          ForumMessage?  @relation("ForumMessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies          ForumMessage[] @relation("ForumMessageReply")
 
   @@unique([id, communityId])
   @@index([communityId, channelId, createdAt])

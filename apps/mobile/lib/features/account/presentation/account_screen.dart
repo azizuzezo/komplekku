@@ -78,7 +78,35 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 ],
                 if (snapshot.permissions.contains('resident.manage')) ...[
                   const SizedBox(height: 16),
-                  const _AdminTaskCard(),
+                  const _AdminTaskCard(
+                    icon: Icons.fact_check_outlined,
+                    title: 'Tugas pengurus',
+                    description: 'Tinjau permohonan tempat tinggal.',
+                    route: '/akun/permohonan-warga',
+                  ),
+                  const SizedBox(height: 10),
+                  const _AdminTaskCard(
+                    icon: Icons.house_outlined,
+                    title: 'Kelola Rumah',
+                    description: 'Tambah rumah dan atur RT-nya.',
+                    route: '/akun/rumah',
+                  ),
+                  const SizedBox(height: 10),
+                  const _AdminTaskCard(
+                    icon: Icons.manage_accounts_outlined,
+                    title: 'Kelola Pengguna',
+                    description: 'Atur peran warga dan pengurus.',
+                    route: '/akun/pengguna',
+                  ),
+                ],
+                if (snapshot.permissions.contains('community.manage')) ...[
+                  const SizedBox(height: 10),
+                  const _AdminTaskCard(
+                    icon: Icons.location_city_outlined,
+                    title: 'Kelola Komunitas',
+                    description: 'Ubah identitas komunitas dan struktur RT.',
+                    route: '/akun/komunitas',
+                  ),
                 ],
                 const SizedBox(height: 16),
                 _SessionCard(isLoggingOut: _isLoggingOut, onLogout: _logout),
@@ -182,29 +210,37 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
             color: KomplekkuColors.textPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const KomplekkuLogo(width: 34),
-                if (statusLabel != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tone.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: tone.withValues(alpha: 0.4)),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        color: tone,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: statusLabel == null
+                      ? const SizedBox.shrink()
+                      : Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tone.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: tone.withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                              statusLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: tone,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
               ],
             ),
           ),
@@ -439,7 +475,17 @@ class _InfoCell extends StatelessWidget {
 }
 
 class _AdminTaskCard extends StatelessWidget {
-  const _AdminTaskCard();
+  const _AdminTaskCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.route,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final String route;
 
   @override
   Widget build(BuildContext context) {
@@ -452,7 +498,7 @@ class _AdminTaskCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('/akun/permohonan-warga'),
+        onTap: () => context.push(route),
         child: Row(
           children: [
             Container(
@@ -462,10 +508,7 @@ class _AdminTaskCard extends StatelessWidget {
                 color: KomplekkuColors.surfaceSoft,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.fact_check_outlined,
-                color: KomplekkuColors.primary,
-              ),
+              child: Icon(icon, color: KomplekkuColors.primary),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -473,14 +516,14 @@ class _AdminTaskCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Tugas pengurus',
+                    title,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontSize: 15,
                         ),
                   ),
-                  const Text(
-                    'Tinjau permohonan tempat tinggal.',
-                    style: TextStyle(
+                  Text(
+                    description,
+                    style: const TextStyle(
                       color: KomplekkuColors.textSecondary,
                       fontSize: 12,
                     ),

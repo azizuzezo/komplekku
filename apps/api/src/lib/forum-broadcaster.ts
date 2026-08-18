@@ -2,6 +2,7 @@ import type { ServerResponse } from "node:http";
 
 export type ForumBroadcastEvent =
   | { type: "message.created"; channelId: string; messageId: string }
+  | { type: "message.updated"; channelId: string; messageId: string }
   | { type: "message.deleted"; channelId: string; messageId: string };
 
 /**

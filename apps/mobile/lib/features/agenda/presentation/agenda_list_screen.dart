@@ -26,7 +26,16 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
     final canManage = permissions.contains('agenda.manage');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Agenda')),
+      appBar: AppBar(
+        title: const Text('Agenda'),
+        actions: [
+          IconButton(
+            tooltip: 'Tampilan kalender',
+            icon: const Icon(Icons.calendar_month_outlined),
+            onPressed: () => context.push('/aktivitas/kalender'),
+          ),
+        ],
+      ),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
               onPressed: () async {

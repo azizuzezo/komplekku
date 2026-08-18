@@ -1,6 +1,10 @@
 import {
+  createForumChannelInputSchema,
   createForumMessageInputSchema,
   forumMessageListQuerySchema,
+  inviteForumMembersInputSchema,
+  respondForumInvitationInputSchema,
+  updateForumMessageInputSchema,
 } from "@komplekku/contracts";
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
@@ -15,7 +19,11 @@ import type { PushNotificationProvider } from "../lib/push-notification-provider
 const idParamsSchema = z.object({ id: z.string().uuid() });
 
 function publicMessage(message: ForumMessageRecord) {
-  return { ...message, createdAt: message.createdAt.toISOString() };
+  return {
+    ...message,
+    createdAt: message.createdAt.toISOString(),
+    editedAt: message.editedAt?.toISOString() ?? null,
+  };
 }
 
 export async function registerForumRoutes(
@@ -32,58 +40,164 @@ export async function registerForumRoutes(
     meta: responseMeta(request),
   }));
 
-  app.get(
-    "/api/v1/forum/channels/:id/messages",
-    { preHandler: readGuards },
+  // Opening a forum is a posting action, not a moderation one: any warga who
+  // may speak in the forum may start one and invite the neighbours they want.
+  app.post("/api/v1/forum/channels", { preHandler: postGuards }, async (request, reply) => {
+    const input = createForumChannelInputSchema.parse(request.body);
+    const auth = getAuthContext(request);
+    const result = await repository.createForumChannel({
+      auth,
+      name: input.name,
+      description: input.description,
+      invitedUserIds: input.invitedUserIds,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+    });
+    if (result.outcome !== "OK") {
+      throw new AppError(409, "FORUM_NO_COMMUNITY", "Akunmu belum terhubung ke komunitas.");
+    }
+
+    if (pushNotificationProvider && result.invitedUserIds.length > 0) {
+      await pushNotificationProvider
+        .sendToUsers(result.invitedUserIds, {
+          title: "Undangan forum baru",
+          body: `Kamu diundang ke forum "${result.channel.name}".`.slice(0, 160),
+          data: { type: "FORUM_INVITATION", channelId: result.channel.id },
+        })
+        .catch(() => {});
+    }
+
+    return reply
+      .status(201)
+      .send({ data: { channel: result.channel }, meta: responseMeta(request) });
+  });
+
+  /** Residents who can be invited into a private forum. */
+  app.get("/api/v1/forum/member-candidates", { preHandler: postGuards }, async (request) => ({
+    data: { items: await repository.listForumMemberCandidates(getAuthContext(request)) },
+    meta: responseMeta(request),
+  }));
+
+  app.get("/api/v1/forum/channels/:id/members", { preHandler: readGuards }, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+    const result = await repository.listForumChannelMembers({
+      auth: getAuthContext(request),
+      channelId: id,
+    });
+    if (result.outcome !== "OK") {
+      throw new AppError(404, "FORUM_CHANNEL_NOT_FOUND", "Channel forum tidak ditemukan.");
+    }
+    return { data: { items: result.items }, meta: responseMeta(request) };
+  });
+
+  app.post(
+    "/api/v1/forum/channels/:id/invitations",
+    { preHandler: postGuards },
     async (request) => {
       const { id } = idParamsSchema.parse(request.params);
-      const query = forumMessageListQuerySchema.parse(request.query);
-      const result = await repository.listForumMessages({
+      const input = inviteForumMembersInputSchema.parse(request.body);
+      const result = await repository.inviteForumMembers({
         auth: getAuthContext(request),
         channelId: id,
-        cursor: query.cursor,
-        limit: query.limit,
+        userIds: input.userIds,
+        now: new Date(),
+        audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
       });
-      if (result.outcome === "INVALID_CURSOR") {
-        throw new AppError(422, "CURSOR_INVALID", "Kursor halaman tidak valid.");
+      if (result.outcome === "CHANNEL_NOT_FOUND") {
+        throw new AppError(404, "FORUM_CHANNEL_NOT_FOUND", "Channel forum tidak ditemukan.");
       }
-      return {
-        data: { items: result.items.map(publicMessage) },
-        meta: responseMeta(request, {
-          total: result.total,
-          ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
-        }),
-      };
+      if (result.outcome === "FORBIDDEN") {
+        throw new AppError(
+          403,
+          "FORUM_INVITE_FORBIDDEN",
+          "Terima undangan forum ini dulu sebelum mengundang warga lain.",
+        );
+      }
+
+      if (pushNotificationProvider && result.invitedUserIds.length > 0) {
+        await pushNotificationProvider
+          .sendToUsers(result.invitedUserIds, {
+            title: "Undangan forum baru",
+            body: `Kamu diundang ke forum "${result.channel.name}".`.slice(0, 160),
+            data: { type: "FORUM_INVITATION", channelId: result.channel.id },
+          })
+          .catch(() => {});
+      }
+
+      return { data: { channel: result.channel }, meta: responseMeta(request) };
     },
   );
 
-  app.get("/api/v1/forum/channels/:id/stream", { preHandler: readGuards }, async (request, reply) => {
+  /** Accept or decline an invitation. Guarded by `forum.read` rather than
+   * `forum.post` — answering an invitation is not posting. */
+  app.post("/api/v1/forum/channels/:id/invitation", { preHandler: readGuards }, async (request) => {
     const { id } = idParamsSchema.parse(request.params);
-    // Confirm the caller can actually see this channel before opening the
-    // stream — reuses the same access check as listing messages, just
-    // discarding the page of history.
-    const access = await repository.listForumMessages({
+    const input = respondForumInvitationInputSchema.parse(request.body);
+    const result = await repository.respondToForumInvitation({
       auth: getAuthContext(request),
       channelId: id,
-      limit: 1,
+      accept: input.accept,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
     });
-    if (access.outcome === "INVALID_CURSOR") {
+    if (result.outcome !== "OK") {
+      throw new AppError(404, "FORUM_INVITATION_NOT_FOUND", "Undangan forum tidak ditemukan.");
+    }
+    return { data: { channel: result.channel }, meta: responseMeta(request) };
+  });
+
+  app.get("/api/v1/forum/channels/:id/messages", { preHandler: readGuards }, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+    const query = forumMessageListQuerySchema.parse(request.query);
+    const result = await repository.listForumMessages({
+      auth: getAuthContext(request),
+      channelId: id,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    if (result.outcome === "INVALID_CURSOR") {
       throw new AppError(422, "CURSOR_INVALID", "Kursor halaman tidak valid.");
     }
-
-    reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    reply.raw.write(": connected\n\n");
-
-    const unsubscribe = forumBroadcaster.subscribe(id, reply.raw);
-    request.raw.on("close", unsubscribe);
-    await new Promise<void>((resolve) => {
-      request.raw.on("close", resolve);
-    });
+    return {
+      data: { items: result.items.map(publicMessage) },
+      meta: responseMeta(request, {
+        total: result.total,
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+      }),
+    };
   });
+
+  app.get(
+    "/api/v1/forum/channels/:id/stream",
+    { preHandler: readGuards },
+    async (request, reply) => {
+      const { id } = idParamsSchema.parse(request.params);
+      // Confirm the caller can actually see this channel before opening the
+      // stream — reuses the same access check as listing messages, just
+      // discarding the page of history.
+      const access = await repository.listForumMessages({
+        auth: getAuthContext(request),
+        channelId: id,
+        limit: 1,
+      });
+      if (access.outcome === "INVALID_CURSOR") {
+        throw new AppError(422, "CURSOR_INVALID", "Kursor halaman tidak valid.");
+      }
+
+      reply.raw.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+      reply.raw.write(": connected\n\n");
+
+      const unsubscribe = forumBroadcaster.subscribe(id, reply.raw);
+      request.raw.on("close", unsubscribe);
+      await new Promise<void>((resolve) => {
+        request.raw.on("close", resolve);
+      });
+    },
+  );
 
   app.post(
     "/api/v1/forum/channels/:id/messages",
@@ -97,9 +211,13 @@ export async function registerForumRoutes(
         channelId: id,
         body: input.body,
         imageUrls: input.imageUrls,
+        replyToMessageId: input.replyToMessageId,
         now: new Date(),
         audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
       });
+      if (result.outcome === "REPLY_NOT_FOUND") {
+        throw new AppError(404, "FORUM_MESSAGE_NOT_FOUND", "Pesan yang dibalas tidak ditemukan.");
+      }
       if (result.outcome !== "OK") {
         throw new AppError(404, "FORUM_CHANNEL_NOT_FOUND", "Channel forum tidak ditemukan.");
       }
@@ -125,6 +243,30 @@ export async function registerForumRoutes(
         .send({ data: { message: publicMessage(result.message) }, meta: responseMeta(request) });
     },
   );
+
+  app.patch("/api/v1/forum/messages/:id", { preHandler: postGuards }, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+    const input = updateForumMessageInputSchema.parse(request.body);
+    const result = await repository.updateForumMessage({
+      auth: getAuthContext(request),
+      messageId: id,
+      body: input.body,
+      imageUrls: input.imageUrls,
+      now: new Date(),
+      audit: { ipAddress: request.ip, userAgent: requestUserAgent(request) },
+    });
+    if (result.outcome !== "OK") {
+      throw new AppError(404, "FORUM_MESSAGE_NOT_FOUND", "Pesan forum tidak ditemukan.");
+    }
+
+    forumBroadcaster.emit({
+      type: "message.updated",
+      channelId: result.channelId,
+      messageId: result.message.id,
+    });
+
+    return { data: { message: publicMessage(result.message) }, meta: responseMeta(request) };
+  });
 
   app.delete("/api/v1/forum/messages/:id", { preHandler: postGuards }, async (request) => {
     const { id } = idParamsSchema.parse(request.params);

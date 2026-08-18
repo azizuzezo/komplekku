@@ -225,8 +225,7 @@ export type UpdateCommunityResult =
   { outcome: "OK"; community: CommunityAdminRecord } | { outcome: "NOT_FOUND" };
 
 export type CreateCommunityResult =
-  | { outcome: "OK"; community: CommunityAdminRecord }
-  | { outcome: "SLUG_CONFLICT" };
+  { outcome: "OK"; community: CommunityAdminRecord } | { outcome: "SLUG_CONFLICT" };
 
 export interface RtRecord {
   id: string;
@@ -234,8 +233,7 @@ export interface RtRecord {
   name: string;
 }
 
-export type CreateRtResult =
-  { outcome: "OK"; rt: RtRecord } | { outcome: "CODE_CONFLICT" };
+export type CreateRtResult = { outcome: "OK"; rt: RtRecord } | { outcome: "CODE_CONFLICT" };
 
 export type UpdateRtResult =
   { outcome: "OK"; rt: RtRecord } | { outcome: "NOT_FOUND" | "CODE_CONFLICT" };
@@ -254,12 +252,10 @@ export interface HouseRecord {
 }
 
 export type CreateHouseResult =
-  | { outcome: "OK"; house: HouseRecord }
-  | { outcome: "CODE_CONFLICT" | "RT_NOT_FOUND" };
+  { outcome: "OK"; house: HouseRecord } | { outcome: "CODE_CONFLICT" | "RT_NOT_FOUND" };
 
 export type UpdateHouseResult =
-  | { outcome: "OK"; house: HouseRecord }
-  | { outcome: "NOT_FOUND" | "RT_NOT_FOUND" };
+  { outcome: "OK"; house: HouseRecord } | { outcome: "NOT_FOUND" | "RT_NOT_FOUND" };
 
 export interface AnnouncementRecord {
   id: string;
@@ -722,10 +718,35 @@ export type SetMemberRoleResult =
         | "FORBIDDEN";
     };
 
+export type ForumChannelKind = "SYSTEM" | "PRIVATE";
+export type ForumMemberStatus = "PENDING" | "ACCEPTED" | "DECLINED";
+
 export interface ForumChannelRecord {
   id: string;
   rtId: string | null;
+  kind: ForumChannelKind;
   name: string;
+  description: string | null;
+  createdByUserId: string | null;
+  /** The viewer's own membership; null on SYSTEM channels, which need no
+   * invitation. */
+  membershipStatus: ForumMemberStatus | null;
+  isOwner: boolean;
+  memberCount: number;
+}
+
+export interface ForumChannelMemberRecord {
+  userId: string;
+  displayName: string;
+  houseLabel: string | null;
+  status: ForumMemberStatus;
+  isOwner: boolean;
+}
+
+export interface ForumMemberCandidateRecord {
+  userId: string;
+  displayName: string;
+  houseLabel: string | null;
 }
 
 export interface ForumMessageRecord {
@@ -736,15 +757,38 @@ export interface ForumMessageRecord {
   body: string;
   imageUrls: string[];
   createdAt: Date;
+  editedAt: Date | null;
+  replyToMessageId: string | null;
+  replyToAuthorName: string | null;
+  replyToBody: string | null;
 }
+
+export type CreateForumChannelResult =
+  | { outcome: "OK"; channel: ForumChannelRecord; invitedUserIds: string[] }
+  | { outcome: "NO_COMMUNITY" };
+
+export type InviteForumMembersResult =
+  | { outcome: "OK"; channel: ForumChannelRecord; invitedUserIds: string[] }
+  | { outcome: "CHANNEL_NOT_FOUND" }
+  | { outcome: "FORBIDDEN" };
+
+export type RespondForumInvitationResult =
+  | { outcome: "OK"; channel: ForumChannelRecord; status: ForumMemberStatus }
+  | { outcome: "INVITATION_NOT_FOUND" };
+
+export type ListForumChannelMembersResult =
+  { outcome: "OK"; items: ForumChannelMemberRecord[] } | { outcome: "CHANNEL_NOT_FOUND" };
 
 export type CreateForumMessageResult =
   | { outcome: "OK"; message: ForumMessageRecord; recipientUserIds: string[] }
-  | { outcome: "CHANNEL_NOT_FOUND" };
+  | { outcome: "CHANNEL_NOT_FOUND" }
+  | { outcome: "REPLY_NOT_FOUND" };
+
+export type UpdateForumMessageResult =
+  { outcome: "OK"; message: ForumMessageRecord; channelId: string } | { outcome: "NOT_FOUND" };
 
 export type DeleteForumMessageResult =
-  | { outcome: "DELETED"; messageId: string; channelId: string }
-  | { outcome: "NOT_FOUND" };
+  { outcome: "DELETED"; messageId: string; channelId: string } | { outcome: "NOT_FOUND" };
 
 export interface AppRepository {
   healthCheck(): Promise<void>;
@@ -1259,6 +1303,33 @@ export interface AppRepository {
   }): Promise<{ displayName: string | null; allowResidentContact: boolean }>;
 
   listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]>;
+  createForumChannel(input: {
+    auth: AuthSessionRecord;
+    name: string;
+    description?: string;
+    invitedUserIds: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateForumChannelResult>;
+  listForumChannelMembers(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+  }): Promise<ListForumChannelMembersResult>;
+  listForumMemberCandidates(auth: AuthSessionRecord): Promise<ForumMemberCandidateRecord[]>;
+  inviteForumMembers(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    userIds: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<InviteForumMembersResult>;
+  respondToForumInvitation(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    accept: boolean;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<RespondForumInvitationResult>;
   listForumMessages(input: {
     auth: AuthSessionRecord;
     channelId: string;
@@ -1270,9 +1341,18 @@ export interface AppRepository {
     channelId: string;
     body: string;
     imageUrls: string[];
+    replyToMessageId?: string;
     now: Date;
     audit: RequestAuditContext;
   }): Promise<CreateForumMessageResult>;
+  updateForumMessage(input: {
+    auth: AuthSessionRecord;
+    messageId: string;
+    body: string;
+    imageUrls?: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateForumMessageResult>;
   deleteForumMessage(input: {
     auth: AuthSessionRecord;
     messageId: string;

@@ -18,6 +18,12 @@ class AktivitasHubScreen extends StatelessWidget {
       route: '/aktivitas/agenda',
     ),
     HubMenuEntry(
+      icon: Icons.calendar_month_outlined,
+      label: 'Kalender',
+      description: 'Lihat agenda lingkungan per bulan dalam bentuk kalender.',
+      route: '/aktivitas/kalender',
+    ),
+    HubMenuEntry(
       icon: Icons.forum_outlined,
       label: 'Forum Warga',
       description: 'Obrolan realtime dengan warga RT-mu dan seluruh komunitas.',

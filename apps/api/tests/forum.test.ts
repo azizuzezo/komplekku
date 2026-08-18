@@ -1,5 +1,8 @@
 import {
   forumChannelListResponseSchema,
+  forumChannelMemberListResponseSchema,
+  forumChannelMutationResponseSchema,
+  forumMemberCandidateListResponseSchema,
   forumMessageMutationResponseSchema,
   forumMessagePageResponseSchema,
 } from "@komplekku/contracts";
@@ -194,5 +197,219 @@ describe("Forum Warga", () => {
       headers: { cookie: rtTwoAdmin.cookie },
     });
     expect(allowedOwnRt.statusCode).toBe(200);
+  });
+
+  it("menyembunyikan forum privat dari warga yang tidak diundang", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+
+    const owner = await loginWeb(app);
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: owner.cookie },
+      payload: { name: "Panitia 17 Agustus", description: "Persiapan lomba" },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(forumChannelMutationResponseSchema.safeParse(created.json()).success).toBe(true);
+    const channelId = created.json().data.channel.id as string;
+    expect(created.json().data.channel.kind).toBe("PRIVATE");
+    expect(created.json().data.channel.isOwner).toBe(true);
+
+    // An uninvited warga must not see the forum at all, nor post into it.
+    const outsider = await loginWeb(app, "0812 0000 0003");
+    repository.setPermissions(demoIds.securityUser, ["forum.read", "forum.post"]);
+    const outsiderChannels = await app.inject({
+      method: "GET",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: outsider.cookie },
+    });
+    const outsiderIds = outsiderChannels.json().data.items.map((item: { id: string }) => item.id);
+    expect(outsiderIds).not.toContain(channelId);
+
+    const outsiderPost = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/messages`,
+      headers: { cookie: outsider.cookie },
+      payload: { body: "Menyusup" },
+    });
+    expect(outsiderPost.statusCode).toBe(404);
+  });
+
+  it("hanya membuka forum privat setelah undangan diterima", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+
+    const owner = await loginWeb(app);
+    const candidates = await app.inject({
+      method: "GET",
+      url: "/api/v1/forum/member-candidates",
+      headers: { cookie: owner.cookie },
+    });
+    expect(candidates.statusCode).toBe(200);
+    expect(forumMemberCandidateListResponseSchema.safeParse(candidates.json()).success).toBe(true);
+    const candidateIds = candidates
+      .json()
+      .data.items.map((item: { userId: string }) => item.userId);
+    expect(candidateIds).toContain(demoIds.securityUser);
+    expect(candidateIds).not.toContain(demoIds.user);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: owner.cookie },
+      payload: { name: "Arisan Blok F", invitedUserIds: [demoIds.securityUser] },
+    });
+    const channelId = created.json().data.channel.id as string;
+
+    const invitee = await loginWeb(app, "0812 0000 0003");
+    repository.setPermissions(demoIds.securityUser, ["forum.read", "forum.post"]);
+
+    // Pending: the forum is listed as an invitation, but still unreadable.
+    const pendingChannels = await app.inject({
+      method: "GET",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: invitee.cookie },
+    });
+    const pending = pendingChannels
+      .json()
+      .data.items.find((item: { id: string }) => item.id === channelId);
+    expect(pending.membershipStatus).toBe("PENDING");
+    const beforeAccept = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/messages`,
+      headers: { cookie: invitee.cookie },
+      payload: { body: "Belum diterima" },
+    });
+    expect(beforeAccept.statusCode).toBe(404);
+
+    const accept = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/invitation`,
+      headers: { cookie: invitee.cookie },
+      payload: { accept: true },
+    });
+    expect(accept.statusCode).toBe(200);
+    expect(accept.json().data.channel.membershipStatus).toBe("ACCEPTED");
+
+    const afterAccept = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/messages`,
+      headers: { cookie: invitee.cookie },
+      payload: { body: "Halo semua" },
+    });
+    expect(afterAccept.statusCode).toBe(201);
+
+    const members = await app.inject({
+      method: "GET",
+      url: `/api/v1/forum/channels/${channelId}/members`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(members.statusCode).toBe(200);
+    expect(forumChannelMemberListResponseSchema.safeParse(members.json()).success).toBe(true);
+    expect(members.json().data.items).toHaveLength(2);
+  });
+
+  it("menolak undangan menutup forum dari daftar channel warga tersebut", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+
+    const owner = await loginWeb(app);
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: owner.cookie },
+      payload: { name: "Ronda Malam", invitedUserIds: [demoIds.securityUser] },
+    });
+    const channelId = created.json().data.channel.id as string;
+
+    const invitee = await loginWeb(app, "0812 0000 0003");
+    repository.setPermissions(demoIds.securityUser, ["forum.read", "forum.post"]);
+    const decline = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/invitation`,
+      headers: { cookie: invitee.cookie },
+      payload: { accept: false },
+    });
+    expect(decline.statusCode).toBe(200);
+    expect(decline.json().data.channel.membershipStatus).toBe("DECLINED");
+
+    const channels = await app.inject({
+      method: "GET",
+      url: "/api/v1/forum/channels",
+      headers: { cookie: invitee.cookie },
+    });
+    const ids = channels.json().data.items.map((item: { id: string }) => item.id);
+    expect(ids).not.toContain(channelId);
+
+    // Answering twice is not a way back in.
+    const again = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${channelId}/invitation`,
+      headers: { cookie: invitee.cookie },
+      payload: { accept: true },
+    });
+    expect(again.statusCode).toBe(404);
+  });
+
+  it("membalas dan mengedit pesan sendiri, menolak mengedit pesan orang lain", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+    const resident = await loginWeb(app);
+
+    const original = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${demoIds.forumChannelCommunity}/messages`,
+      headers: { cookie: resident.cookie },
+      payload: { body: "Pesan asli" },
+    });
+    const originalId = original.json().data.message.id as string;
+
+    const reply = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${demoIds.forumChannelCommunity}/messages`,
+      headers: { cookie: resident.cookie },
+      payload: { body: "Balasan", replyToMessageId: originalId },
+    });
+    expect(reply.statusCode).toBe(201);
+    expect(reply.json().data.message.replyToMessageId).toBe(originalId);
+    expect(reply.json().data.message.replyToBody).toBe("Pesan asli");
+
+    const edited = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/forum/messages/${originalId}`,
+      headers: { cookie: resident.cookie },
+      payload: { body: "Pesan asli (diperbarui)" },
+    });
+    expect(edited.statusCode).toBe(200);
+    expect(edited.json().data.message.body).toBe("Pesan asli (diperbarui)");
+    expect(edited.json().data.message.editedAt).toBeTruthy();
+
+    // `forum.manage` lets a moderator take a message down, never rewrite it.
+    const moderator = await loginWeb(app, "0812 0000 0003");
+    repository.setPermissions(demoIds.securityUser, ["forum.read", "forum.post", "forum.manage"]);
+    const foreignEdit = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/forum/messages/${originalId}`,
+      headers: { cookie: moderator.cookie },
+      payload: { body: "Diubah orang lain" },
+    });
+    expect(foreignEdit.statusCode).toBe(404);
+  });
+
+  it("menolak balasan ke pesan yang tidak ada di channel tersebut", async () => {
+    const { app } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+    const resident = await loginWeb(app);
+
+    const strayMessageId = "00000000-0000-4000-8000-0000000009f9";
+    const rejected = await app.inject({
+      method: "POST",
+      url: `/api/v1/forum/channels/${demoIds.forumChannelCommunity}/messages`,
+      headers: { cookie: resident.cookie },
+      payload: { body: "Balasan liar", replyToMessageId: strayMessageId },
+    });
+    expect(rejected.statusCode).toBe(404);
+    expect(rejected.json().error.code).toBe("FORUM_MESSAGE_NOT_FOUND");
   });
 });

@@ -84,13 +84,14 @@ export function AgendaList({ view }: { view: AgendaView }) {
         </div>
       )}
 
-      <nav className="agenda-view-switcher" aria-label="Rentang agenda">
+      <nav className="agenda-view-switcher" aria-label="Tampilan agenda">
         <Link href="/agenda?view=upcoming" aria-current={view === "upcoming" ? "page" : undefined}>
           Mendatang
         </Link>
         <Link href="/agenda?view=past" aria-current={view === "past" ? "page" : undefined}>
           Lampau
         </Link>
+        <Link href="/agenda/kalender">Kalender</Link>
       </nav>
 
       {events.length === 0 ? (

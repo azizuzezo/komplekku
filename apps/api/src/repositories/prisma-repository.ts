@@ -64,6 +64,7 @@ import type {
   CreateLetterRequestResult,
   CreatePackageResult,
   CreatePaymentResult,
+  CreateForumChannelResult,
   CreateForumMessageResult,
   CreateReportResult,
   CreateResidencyRequestResult,
@@ -74,8 +75,15 @@ import type {
   CursorPageResult,
   DeleteForumMessageResult,
   DirectoryRecord,
+  ForumChannelKind,
   ForumChannelRecord,
+  ForumMemberCandidateRecord,
+  ForumMemberStatus,
   ForumMessageRecord,
+  InviteForumMembersResult,
+  ListForumChannelMembersResult,
+  RespondForumInvitationResult,
+  UpdateForumMessageResult,
   DuesTypeRecord,
   EmergencyRecord,
   EmergencyTransitionResult,
@@ -431,10 +439,12 @@ export class PrismaRepository implements AppRepository {
       currentCommunityId: session.currentCommunityId,
       currentHouseholdId: session.currentHouseholdId,
       permissions,
-      rtScopeId: computeRtScopeId(userRoles.map((userRole) => ({
-        roleCode: userRole.role.code,
-        rtId: userRole.rtId,
-      }))),
+      rtScopeId: computeRtScopeId(
+        userRoles.map((userRole) => ({
+          roleCode: userRole.role.code,
+          rtId: userRole.rtId,
+        })),
+      ),
     };
   }
 
@@ -1505,9 +1515,7 @@ export class PrismaRepository implements AppRepository {
         where: {
           id: input.requestId,
           communityId: input.auth.currentCommunityId ?? undefined,
-          ...(input.auth.rtScopeId
-            ? { requestedHouse: { rtId: input.auth.rtScopeId } }
-            : {}),
+          ...(input.auth.rtScopeId ? { requestedHouse: { rtId: input.auth.rtScopeId } } : {}),
         },
         include: { requestedHouse: true },
       });
@@ -1666,9 +1674,7 @@ export class PrismaRepository implements AppRepository {
         where: {
           id: input.requestId,
           communityId: input.auth.currentCommunityId ?? undefined,
-          ...(input.auth.rtScopeId
-            ? { requestedHouse: { rtId: input.auth.rtScopeId } }
-            : {}),
+          ...(input.auth.rtScopeId ? { requestedHouse: { rtId: input.auth.rtScopeId } } : {}),
         },
       });
       if (!request) return { outcome: "NOT_FOUND" };
@@ -5090,8 +5096,18 @@ export class PrismaRepository implements AppRepository {
     body: string;
     imageUrls: string[];
     createdAt: Date;
+    editedAt: Date | null;
+    replyToMessageId: string | null;
     author: { displayName: string | null; phoneE164: string };
+    replyTo?: {
+      body: string;
+      deletedAt: Date | null;
+      author: { displayName: string | null; phoneE164: string };
+    } | null;
   }): ForumMessageRecord {
+    // A reply whose parent was deleted keeps its own text but loses the quote,
+    // so the thread never resurrects removed content.
+    const parent = message.replyTo && !message.replyTo.deletedAt ? message.replyTo : null;
     return {
       id: message.id,
       channelId: message.channelId,
@@ -5100,7 +5116,43 @@ export class PrismaRepository implements AppRepository {
       body: message.body,
       imageUrls: message.imageUrls,
       createdAt: message.createdAt,
+      editedAt: message.editedAt,
+      replyToMessageId: message.replyToMessageId,
+      replyToAuthorName: parent ? displayNameOf(parent.author) : null,
+      replyToBody: parent ? parent.body : null,
     };
+  }
+
+  private mapForumChannel(
+    channel: {
+      id: string;
+      rtId: string | null;
+      kind: ForumChannelKind;
+      name: string;
+      description: string | null;
+      createdByUserId: string | null;
+    },
+    viewer: { membershipStatus: ForumMemberStatus | null; isOwner: boolean; memberCount: number },
+  ): ForumChannelRecord {
+    return {
+      id: channel.id,
+      rtId: channel.rtId,
+      kind: channel.kind,
+      name: channel.name,
+      description: channel.description,
+      createdByUserId: channel.createdByUserId,
+      membershipStatus: viewer.membershipStatus,
+      isOwner: viewer.isOwner,
+      memberCount: viewer.memberCount,
+    };
+  }
+
+  /** Channels are listed community-wide first, then per-RT, then the private
+   * forums warga opened themselves — the same order both clients render as
+   * tabs, so the shared "Forum Warga" is always the default. */
+  private static forumChannelRank(channel: { kind: ForumChannelKind; rtId: string | null }) {
+    if (channel.kind === "PRIVATE") return 2;
+    return channel.rtId === null ? 0 : 1;
   }
 
   async listForumChannels(auth: AuthSessionRecord): Promise<ForumChannelRecord[]> {
@@ -5114,23 +5166,395 @@ export class PrismaRepository implements AppRepository {
     const channels = await this.prisma.forumChannel.findMany({
       where: {
         communityId,
-        ...(canSeeAllChannels
-          ? {}
-          : { OR: [{ rtId: null }, { rtId: { in: [...allowedRtIds] } }] }),
+        OR: [
+          {
+            kind: "SYSTEM",
+            ...(canSeeAllChannels
+              ? {}
+              : { OR: [{ rtId: null }, { rtId: { in: [...allowedRtIds] } }] }),
+          },
+          // Private forums are invitation-only for everyone, admins included —
+          // a declined invitation drops the forum out of the list entirely.
+          {
+            kind: "PRIVATE",
+            members: { some: { userId: auth.userId, status: { in: ["PENDING", "ACCEPTED"] } } },
+          },
+        ],
       },
-      orderBy: [{ rtId: "asc" }, { name: "asc" }],
+      include: {
+        members: { where: { OR: [{ userId: auth.userId }, { status: "ACCEPTED" }] } },
+      },
+      orderBy: [{ name: "asc" }],
     });
-    return channels.map((channel) => ({ id: channel.id, rtId: channel.rtId, name: channel.name }));
+
+    const records = channels.map((channel) => {
+      const viewerMembership = channel.members.find((member) => member.userId === auth.userId);
+      return this.mapForumChannel(channel, {
+        membershipStatus: viewerMembership?.status ?? null,
+        isOwner: viewerMembership?.isOwner ?? false,
+        memberCount: channel.members.filter((member) => member.status === "ACCEPTED").length,
+      });
+    });
+
+    return records.sort((left, right) => {
+      const rankDelta =
+        PrismaRepository.forumChannelRank(left) - PrismaRepository.forumChannelRank(right);
+      return rankDelta !== 0 ? rankDelta : left.name.localeCompare(right.name);
+    });
   }
 
   private async canAccessForumChannel(
     auth: AuthSessionRecord,
-    channel: { rtId: string | null },
+    channel: { id: string; rtId: string | null; kind: ForumChannelKind },
   ): Promise<boolean> {
+    if (channel.kind === "PRIVATE") {
+      const membership = await this.prisma.forumChannelMember.findUnique({
+        where: { channelId_userId: { channelId: channel.id, userId: auth.userId } },
+        select: { status: true },
+      });
+      return membership?.status === "ACCEPTED";
+    }
     if (channel.rtId === null) return true;
     if (auth.permissions.includes("community.manage")) return true;
     if (auth.rtScopeId === channel.rtId) return true;
     return (await this.viewerHouseRtId(auth)) === channel.rtId;
+  }
+
+  /** Active residents of the community with a linked account, minus the
+   * viewer — the pool a private forum can invite from. */
+  async listForumMemberCandidates(auth: AuthSessionRecord): Promise<ForumMemberCandidateRecord[]> {
+    const communityId = auth.currentCommunityId;
+    if (!communityId) return [];
+
+    const residents = await this.prisma.resident.findMany({
+      where: {
+        communityId,
+        status: "ACTIVE",
+        userId: { not: auth.userId },
+      },
+      include: {
+        user: true,
+        householdMemberships: {
+          where: { endedAt: null },
+          include: { household: { include: { house: true } } },
+          take: 1,
+        },
+      },
+    });
+
+    const byUserId = new Map<string, ForumMemberCandidateRecord>();
+    for (const resident of residents) {
+      if (byUserId.has(resident.userId)) continue;
+      const house = resident.householdMemberships[0]?.household.house;
+      byUserId.set(resident.userId, {
+        userId: resident.userId,
+        displayName: displayNameOf(resident.user),
+        houseLabel: house ? addressLabel(house.block, house.number) : null,
+      });
+    }
+
+    return [...byUserId.values()].sort((left, right) =>
+      left.displayName.localeCompare(right.displayName),
+    );
+  }
+
+  /** Filters requested invitees down to real, active, linked residents of the
+   * viewer's community so an invitation can never leak a forum outside it. */
+  private async resolveInvitableUserIds(
+    communityId: string,
+    userIds: string[],
+    excludeUserId: string,
+  ): Promise<string[]> {
+    const wanted = [...new Set(userIds)].filter((userId) => userId !== excludeUserId);
+    if (wanted.length === 0) return [];
+    const residents = await this.prisma.resident.findMany({
+      where: { communityId, status: "ACTIVE", userId: { in: wanted } },
+      select: { userId: true },
+    });
+    return [...new Set(residents.map((resident) => resident.userId))];
+  }
+
+  async createForumChannel(input: {
+    auth: AuthSessionRecord;
+    name: string;
+    description?: string;
+    invitedUserIds: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<CreateForumChannelResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NO_COMMUNITY" };
+
+    const invitedUserIds = await this.resolveInvitableUserIds(
+      communityId,
+      input.invitedUserIds,
+      input.auth.userId,
+    );
+
+    const channel = await this.prisma.forumChannel.create({
+      data: {
+        communityId,
+        rtId: null,
+        kind: "PRIVATE",
+        name: input.name,
+        description: input.description ?? null,
+        createdByUserId: input.auth.userId,
+        // `communityId` is supplied by the composite channel relation, so the
+        // nested creates must not set it themselves.
+        members: {
+          create: [
+            {
+              userId: input.auth.userId,
+              status: "ACCEPTED",
+              isOwner: true,
+              invitedAt: input.now,
+              respondedAt: input.now,
+            },
+            ...invitedUserIds.map((userId) => ({
+              userId,
+              status: "PENDING" as const,
+              invitedByUserId: input.auth.userId,
+              invitedAt: input.now,
+            })),
+          ],
+        },
+      },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.channel.created",
+      entityType: "ForumChannel",
+      entityId: channel.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    return {
+      outcome: "OK",
+      channel: this.mapForumChannel(channel, {
+        membershipStatus: "ACCEPTED",
+        isOwner: true,
+        // Only the creator has accepted so far; invitees still have to answer.
+        memberCount: 1,
+      }),
+      invitedUserIds,
+    };
+  }
+
+  async listForumChannelMembers(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+  }): Promise<ListForumChannelMembersResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const channel = await this.prisma.forumChannel.findFirst({
+      where: { id: input.channelId, communityId },
+      include: {
+        members: {
+          include: {
+            user: true,
+            // Anyone the viewer already shares the forum with; the house label
+            // is what tells two warga with the same first name apart.
+          },
+        },
+      },
+    });
+    if (!channel) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    if (channel.kind === "PRIVATE") {
+      // A pending invitee may look at the roster before deciding, but nobody
+      // outside the invitation list can.
+      const viewer = channel.members.find((member) => member.userId === input.auth.userId);
+      if (!viewer || viewer.status === "DECLINED") return { outcome: "CHANNEL_NOT_FOUND" };
+    } else if (!(await this.canAccessForumChannel(input.auth, channel))) {
+      return { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    const houseLabels = await this.houseLabelsByUserId(
+      communityId,
+      channel.members.map((member) => member.userId),
+    );
+
+    const items = channel.members
+      .filter((member) => member.status !== "DECLINED")
+      .map((member) => ({
+        userId: member.userId,
+        displayName: displayNameOf(member.user),
+        houseLabel: houseLabels.get(member.userId) ?? null,
+        status: member.status,
+        isOwner: member.isOwner,
+      }))
+      .sort((left, right) => {
+        if (left.isOwner !== right.isOwner) return left.isOwner ? -1 : 1;
+        return left.displayName.localeCompare(right.displayName);
+      });
+
+    return { outcome: "OK", items };
+  }
+
+  private async houseLabelsByUserId(
+    communityId: string,
+    userIds: string[],
+  ): Promise<Map<string, string>> {
+    if (userIds.length === 0) return new Map();
+    const residents = await this.prisma.resident.findMany({
+      where: { communityId, userId: { in: [...new Set(userIds)] } },
+      include: {
+        householdMemberships: {
+          where: { endedAt: null },
+          include: { household: { include: { house: true } } },
+          take: 1,
+        },
+      },
+    });
+    const labels = new Map<string, string>();
+    for (const resident of residents) {
+      const house = resident.householdMemberships[0]?.household.house;
+      if (house && !labels.has(resident.userId)) {
+        labels.set(resident.userId, addressLabel(house.block, house.number));
+      }
+    }
+    return labels;
+  }
+
+  async inviteForumMembers(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    userIds: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<InviteForumMembersResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const channel = await this.prisma.forumChannel.findFirst({
+      where: { id: input.channelId, communityId, kind: "PRIVATE" },
+      include: { members: true },
+    });
+    if (!channel) return { outcome: "CHANNEL_NOT_FOUND" };
+
+    const viewer = channel.members.find((member) => member.userId === input.auth.userId);
+    if (!viewer || viewer.status !== "ACCEPTED") {
+      // Not a member at all → the forum simply does not exist for them; a
+      // pending invitee exists but may not grow the room before accepting.
+      return viewer ? { outcome: "FORBIDDEN" } : { outcome: "CHANNEL_NOT_FOUND" };
+    }
+
+    const candidates = await this.resolveInvitableUserIds(
+      communityId,
+      input.userIds,
+      input.auth.userId,
+    );
+    // Re-inviting someone who already accepted or is still deciding is a no-op;
+    // a previously declined invitation is reopened as PENDING.
+    const existingByUserId = new Map(channel.members.map((member) => [member.userId, member]));
+    const freshUserIds = candidates.filter((userId) => {
+      const existing = existingByUserId.get(userId);
+      return !existing || existing.status === "DECLINED";
+    });
+
+    if (freshUserIds.length > 0) {
+      await this.prisma.$transaction(
+        freshUserIds.map((userId) =>
+          this.prisma.forumChannelMember.upsert({
+            where: { channelId_userId: { channelId: channel.id, userId } },
+            create: {
+              communityId,
+              channelId: channel.id,
+              userId,
+              status: "PENDING",
+              invitedByUserId: input.auth.userId,
+              invitedAt: input.now,
+            },
+            update: {
+              status: "PENDING",
+              invitedByUserId: input.auth.userId,
+              invitedAt: input.now,
+              respondedAt: null,
+            },
+          }),
+        ),
+      );
+
+      await this.recordAudit({
+        communityId,
+        actorUserId: input.auth.userId,
+        sessionId: input.auth.sessionId,
+        action: "forum.channel.invited",
+        entityType: "ForumChannel",
+        entityId: channel.id,
+        ipAddress: input.audit.ipAddress,
+        userAgent: input.audit.userAgent,
+      });
+    }
+
+    const acceptedCount = channel.members.filter((member) => member.status === "ACCEPTED").length;
+    return {
+      outcome: "OK",
+      channel: this.mapForumChannel(channel, {
+        membershipStatus: "ACCEPTED",
+        isOwner: viewer.isOwner,
+        memberCount: acceptedCount,
+      }),
+      invitedUserIds: freshUserIds,
+    };
+  }
+
+  async respondToForumInvitation(input: {
+    auth: AuthSessionRecord;
+    channelId: string;
+    accept: boolean;
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<RespondForumInvitationResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "INVITATION_NOT_FOUND" };
+
+    const channel = await this.prisma.forumChannel.findFirst({
+      where: { id: input.channelId, communityId, kind: "PRIVATE" },
+      include: { members: true },
+    });
+    if (!channel) return { outcome: "INVITATION_NOT_FOUND" };
+
+    const membership = channel.members.find((member) => member.userId === input.auth.userId);
+    if (!membership || membership.status !== "PENDING") {
+      return { outcome: "INVITATION_NOT_FOUND" };
+    }
+
+    const status = input.accept ? "ACCEPTED" : "DECLINED";
+    await this.prisma.forumChannelMember.update({
+      where: { id: membership.id },
+      data: { status, respondedAt: input.now },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: input.accept ? "forum.invitation.accepted" : "forum.invitation.declined",
+      entityType: "ForumChannel",
+      entityId: channel.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
+
+    const acceptedCount =
+      channel.members.filter((member) => member.status === "ACCEPTED").length +
+      (input.accept ? 1 : 0);
+
+    return {
+      outcome: "OK",
+      status,
+      channel: this.mapForumChannel(channel, {
+        membershipStatus: status,
+        isOwner: membership.isOwner,
+        memberCount: acceptedCount,
+      }),
+    };
   }
 
   async listForumMessages(input: {
@@ -5164,7 +5588,7 @@ export class PrismaRepository implements AppRepository {
     const [messages, total] = await this.prisma.$transaction([
       this.prisma.forumMessage.findMany({
         where,
-        include: { author: true },
+        include: { author: true, replyTo: { include: { author: true } } },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit + 1,
         ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
@@ -5186,6 +5610,7 @@ export class PrismaRepository implements AppRepository {
     channelId: string;
     body: string;
     imageUrls: string[];
+    replyToMessageId?: string;
     now: Date;
     audit: RequestAuditContext;
   }): Promise<CreateForumMessageResult> {
@@ -5199,6 +5624,21 @@ export class PrismaRepository implements AppRepository {
       return { outcome: "CHANNEL_NOT_FOUND" };
     }
 
+    if (input.replyToMessageId) {
+      // A reply must point at a live message in the same channel, otherwise a
+      // crafted id could quote a message from a forum the author cannot read.
+      const parent = await this.prisma.forumMessage.findFirst({
+        where: {
+          id: input.replyToMessageId,
+          communityId,
+          channelId: channel.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!parent) return { outcome: "REPLY_NOT_FOUND" };
+    }
+
     const message = await this.prisma.forumMessage.create({
       data: {
         communityId,
@@ -5206,8 +5646,9 @@ export class PrismaRepository implements AppRepository {
         authorUserId: input.auth.userId,
         body: input.body,
         imageUrls: input.imageUrls,
+        replyToMessageId: input.replyToMessageId ?? null,
       },
-      include: { author: true },
+      include: { author: true, replyTo: { include: { author: true } } },
     });
 
     await this.recordAudit({
@@ -5220,12 +5661,32 @@ export class PrismaRepository implements AppRepository {
       userAgent: input.audit.userAgent,
     });
 
-    // Recipients: everyone who can access this channel, excluding the author.
-    // Community-wide channels notify the whole community; RT channels notify
-    // only residents whose household's house sits in that RT.
+    return {
+      outcome: "OK",
+      message: this.mapForumMessage(message),
+      recipientUserIds: await this.forumRecipientUserIds(communityId, channel, input.auth.userId),
+    };
+  }
+
+  /** Everyone who can read the channel, minus the author. Community-wide
+   * channels notify the whole community, RT channels only that RT's residents,
+   * and private forums only the members who accepted. */
+  private async forumRecipientUserIds(
+    communityId: string,
+    channel: { id: string; kind: ForumChannelKind; rtId: string | null },
+    authorUserId: string,
+  ): Promise<string[]> {
+    if (channel.kind === "PRIVATE") {
+      const members = await this.prisma.forumChannelMember.findMany({
+        where: { channelId: channel.id, status: "ACCEPTED", userId: { not: authorUserId } },
+        select: { userId: true },
+      });
+      return members.map((member) => member.userId);
+    }
+
     const recipients = await this.prisma.user.findMany({
       where: {
-        id: { not: input.auth.userId },
+        id: { not: authorUserId },
         residents: {
           some: {
             communityId,
@@ -5242,11 +5703,56 @@ export class PrismaRepository implements AppRepository {
       },
       select: { id: true },
     });
+    return recipients.map((user) => user.id);
+  }
+
+  async updateForumMessage(input: {
+    auth: AuthSessionRecord;
+    messageId: string;
+    body: string;
+    imageUrls?: string[];
+    now: Date;
+    audit: RequestAuditContext;
+  }): Promise<UpdateForumMessageResult> {
+    const communityId = input.auth.currentCommunityId;
+    if (!communityId) return { outcome: "NOT_FOUND" };
+
+    const existing = await this.prisma.forumMessage.findFirst({
+      where: { id: input.messageId, communityId, deletedAt: null },
+      include: { channel: true },
+    });
+    // Editing is author-only on purpose: `forum.manage` lets a moderator take a
+    // message down, never rewrite someone else's words under their name.
+    if (!existing || existing.authorUserId !== input.auth.userId) return { outcome: "NOT_FOUND" };
+    if (!(await this.canAccessForumChannel(input.auth, existing.channel))) {
+      return { outcome: "NOT_FOUND" };
+    }
+
+    const message = await this.prisma.forumMessage.update({
+      where: { id: existing.id },
+      data: {
+        body: input.body,
+        ...(input.imageUrls ? { imageUrls: input.imageUrls } : {}),
+        editedAt: input.now,
+      },
+      include: { author: true, replyTo: { include: { author: true } } },
+    });
+
+    await this.recordAudit({
+      communityId,
+      actorUserId: input.auth.userId,
+      sessionId: input.auth.sessionId,
+      action: "forum.message.edited",
+      entityType: "ForumMessage",
+      entityId: message.id,
+      ipAddress: input.audit.ipAddress,
+      userAgent: input.audit.userAgent,
+    });
 
     return {
       outcome: "OK",
       message: this.mapForumMessage(message),
-      recipientUserIds: recipients.map((user) => user.id),
+      channelId: message.channelId,
     };
   }
 
@@ -5262,20 +5768,27 @@ export class PrismaRepository implements AppRepository {
     return this.prisma.$transaction(async (transaction) => {
       const message = await transaction.forumMessage.findFirst({
         where: { id: input.messageId, communityId, deletedAt: null },
-        include: { channel: true },
+        include: { channel: { include: { members: true } } },
       });
       if (!message) return { outcome: "NOT_FOUND" as const };
 
       const isOwnMessage = message.authorUserId === input.auth.userId;
-      const canModerate = input.auth.permissions.includes("forum.manage");
-      if (!isOwnMessage && !canModerate) return { outcome: "NOT_FOUND" as const };
-      if (
-        canModerate &&
-        !isOwnMessage &&
-        input.auth.rtScopeId &&
-        message.channel.rtId !== input.auth.rtScopeId
-      ) {
-        return { outcome: "NOT_FOUND" as const };
+      if (!isOwnMessage) {
+        if (message.channel.kind === "PRIVATE") {
+          // Private forums are moderated by the warga who opened them, not by
+          // community staff who cannot even read the room.
+          const isChannelOwner = message.channel.members.some(
+            (member) =>
+              member.userId === input.auth.userId && member.isOwner && member.status === "ACCEPTED",
+          );
+          if (!isChannelOwner) return { outcome: "NOT_FOUND" as const };
+        } else {
+          const canModerate = input.auth.permissions.includes("forum.manage");
+          if (!canModerate) return { outcome: "NOT_FOUND" as const };
+          if (input.auth.rtScopeId && message.channel.rtId !== input.auth.rtScopeId) {
+            return { outcome: "NOT_FOUND" as const };
+          }
+        }
       }
 
       await transaction.forumMessage.update({

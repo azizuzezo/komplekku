@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
@@ -102,6 +103,9 @@ class _DashboardBody extends ConsumerWidget {
                   label: 'Darurat terbuka',
                   value: '${snapshot.openEmergencyCount}',
                   isDanger: snapshot.openEmergencyCount > 0,
+                  // The count alone left petugas with nowhere to go; tapping
+                  // opens the triage console that handles the signals.
+                  onTap: () => context.push('/keamanan/darurat-masuk'),
                 ),
                 _StatCard(
                   label: 'Progres patroli',
@@ -287,17 +291,22 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     this.isDanger = false,
+    this.onTap,
   });
 
   final String label;
   final String value;
   final bool isDanger;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      clipBehavior: Clip.antiAlias,
       color: isDanger ? KomplekkuColors.danger.withValues(alpha: 0.08) : null,
-      child: Padding(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +324,27 @@ class _StatCard extends StatelessWidget {
                     color: isDanger ? KomplekkuColors.danger : null,
                   ),
             ),
+            if (onTap != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    'Buka triase',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: KomplekkuColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: KomplekkuColors.primary,
+                  ),
+                ],
+              ),
+            ],
           ],
+        ),
         ),
       ),
     );

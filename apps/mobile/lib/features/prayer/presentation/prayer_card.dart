@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
-import 'package:komplekku/core/notifications/push_notification_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_scheduler_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 
@@ -68,6 +67,27 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
     super.initState();
     _now = DateTime.now();
     _audioPlayer = AudioPlayer();
+    // The on-demand replay is alarm-like rather than UI feedback: route it
+    // through the alarm usage so a manual tap sounds the same as the
+    // scheduled notification does.
+    unawaited(_audioPlayer.setReleaseMode(ReleaseMode.stop));
+    unawaited(
+      _audioPlayer.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: true,
+            contentType: AndroidContentType.music,
+            usageType: AndroidUsageType.alarm,
+            audioFocus: AndroidAudioFocus.gain,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {AVAudioSessionOptions.mixWithOthers},
+          ),
+        ),
+      ),
+    );
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
@@ -78,23 +98,22 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() {
-          _now = DateTime.now();
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _now = DateTime.now();
+      });
     });
 
     ref.read(prayerSchedulerServiceProvider).isAutoAdzanEnabled().then((enabled) {
-      if (mounted) {
-        setState(() => _isMuted = !enabled);
-      }
+      if (!mounted) return;
+      setState(() => _isMuted = !enabled);
     });
   }
 
   Future<void> _toggleAutoAdzan() async {
     final nextMuted = !_isMuted;
     setState(() => _isMuted = nextMuted);
+    if (nextMuted && _isPlayingAudio) await _stopAudio();
     await ref
         .read(prayerSchedulerServiceProvider)
         .setAutoAdzanEnabled(!nextMuted);
@@ -107,23 +126,15 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
     super.dispose();
   }
 
-  Future<void> _playAudio(String asset, {String? prayerName}) async {
-    if (_isMuted && prayerName != null) return;
+  Future<void> _playAudio(String asset) async {
     try {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(asset));
+      if (!mounted) return;
       setState(() {
         _isPlayingAudio = true;
       });
 
-      if (prayerName != null) {
-        ref.read(pushNotificationServiceProvider).showNotification(
-              id: 999,
-              title: '📢 Waktu Adzan $prayerName Tiba',
-              body:
-                  'Kumandang adzan $prayerName telah masuk. Mari persiapkan diri untuk sholat.',
-            );
-      }
     } catch (_) {
       // Audio playback fallback handle
     }
@@ -131,6 +142,7 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
 
   Future<void> _stopAudio() async {
     await _audioPlayer.stop();
+    if (!mounted) return;
     setState(() {
       _isPlayingAudio = false;
     });
@@ -262,10 +274,7 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
                       foreground: Colors.white,
                       onPressed: _isPlayingAudio
                           ? null
-                          : () => _playAudio(
-                              'audio/adzan.mp3',
-                              prayerName: prayerLabels[nextEntry.key],
-                            ),
+                          : () => _playAudio('audio/adzan.mp3'),
                     ),
                     _HeaderButton(
                       label: 'Iqomah',
@@ -398,23 +407,47 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                child: Text(
-                                  '📢 Waktu Adzan ${prayerLabels[adzanState.activePrayer]} Tiba',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: KomplekkuColors.primary,
-                                    fontSize: 13,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '📢 Waktu Adzan ${prayerLabels[adzanState.activePrayer]} Tiba',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: KomplekkuColors.primary,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    Text(
+                                      _isMuted
+                                          ? 'Auto-adzan sedang dimatikan'
+                                          : 'Adzan berbunyi otomatis lewat notifikasi',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: KomplekkuColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_isPlayingAudio)
+                                TextButton.icon(
+                                  onPressed: _stopAudio,
+                                  icon: const Icon(
+                                    Icons.stop_circle_outlined,
+                                    size: 16,
                                   ),
+                                  label: const Text('Hentikan'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: KomplekkuColors.danger,
+                                  ),
+                                )
+                              else
+                                TextButton(
+                                  onPressed: () =>
+                                      _playAudio('audio/adzan.mp3'),
+                                  child: const Text('Putar Adzan'),
                                 ),
-                              ),
-                              TextButton(
-                                onPressed: () => _playAudio(
-                                  'audio/adzan.mp3',
-                                  prayerName:
-                                      prayerLabels[adzanState.activePrayer],
-                                ),
-                                child: const Text('Putar Adzan'),
-                              ),
                             ],
                           ),
                         ],
@@ -435,7 +468,7 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
                                       ),
                                     ),
                                     const Text(
-                                      'Jeda persiapan (5m)',
+                                      'Iqomah otomatis berbunyi dalam 5 menit',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: KomplekkuColors.textSecondary,
@@ -487,11 +520,21 @@ class _PrayerCardState extends ConsumerState<PrayerCard> {
                               ),
                               Row(
                                 children: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        _playAudio('audio/iqomah.wav'),
-                                    child: const Text('Suara Iqomah'),
-                                  ),
+                                  if (_isPlayingAudio)
+                                    TextButton(
+                                      onPressed: _stopAudio,
+                                      style: TextButton.styleFrom(
+                                        foregroundColor:
+                                            KomplekkuColors.danger,
+                                      ),
+                                      child: const Text('Hentikan'),
+                                    )
+                                  else
+                                    TextButton(
+                                      onPressed: () =>
+                                          _playAudio('audio/iqomah.wav'),
+                                      child: const Text('Suara Iqomah'),
+                                    ),
                                   const SizedBox(width: 4),
                                   Text(
                                     formatDurationMMSS(

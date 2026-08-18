@@ -34,6 +34,13 @@ class KeamananHubScreen extends StatelessWidget {
       permission: 'emergency.create',
     ),
     HubMenuEntry(
+      icon: Icons.notifications_active_outlined,
+      label: 'Darurat Masuk',
+      description: 'Terima dan tangani sinyal darurat dari warga.',
+      route: '/keamanan/darurat-masuk',
+      permission: 'emergency.read',
+    ),
+    HubMenuEntry(
       icon: Icons.report_gmailerrorred_outlined,
       label: 'Kejadian',
       description: 'Laporkan dan tinjau kejadian keamanan.',

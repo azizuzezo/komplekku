@@ -26,6 +26,7 @@ dependencies:
 
 dev_dependencies:
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   shared_preferences_platform_interface: ^2.4.2
@@ -41,3 +42,16 @@ flutter:
     - family: Plus Jakarta Sans
       fonts:
         - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+
+# Regenerates android/app/src/main/res/mipmap-*/ic_launcher* from the current
+# brand mark — run `dart run flutter_launcher_icons` after the mark changes.
+# The launcher icon was still the old forest-green "K + houses" placeholder
+# from before the brand asset replacement; this points it at the same
+# komplekku-mark.png used in-app. White background matches design.md's note
+# that the compact mark assumes a light surface.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/brand/komplekku-mark-icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/brand/komplekku-mark.png"

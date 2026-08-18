@@ -7,6 +7,10 @@ class ForumMessage {
     required this.body,
     required this.imageUrls,
     required this.createdAt,
+    required this.editedAt,
+    required this.replyToMessageId,
+    required this.replyToAuthorName,
+    required this.replyToBody,
   });
 
   final String id;
@@ -16,9 +20,21 @@ class ForumMessage {
   final String body;
   final List<String> imageUrls;
   final DateTime createdAt;
+  final DateTime? editedAt;
+
+  final String? replyToMessageId;
+
+  /// Denormalised quote of the parent message so a reply renders without a
+  /// second round-trip; both null when the parent was deleted.
+  final String? replyToAuthorName;
+  final String? replyToBody;
+
+  bool get isReply => replyToMessageId != null;
+  bool get isEdited => editedAt != null;
 
   factory ForumMessage.fromJson(Map<String, dynamic> json) {
     final images = json['imageUrls'];
+    final editedAt = json['editedAt'];
     return ForumMessage(
       id: json['id'] as String,
       channelId: json['channelId'] as String,
@@ -29,6 +45,10 @@ class ForumMessage {
           ? images.map((url) => url as String).toList(growable: false)
           : const [],
       createdAt: DateTime.parse(json['createdAt'] as String),
+      editedAt: editedAt is String ? DateTime.parse(editedAt) : null,
+      replyToMessageId: json['replyToMessageId'] as String?,
+      replyToAuthorName: json['replyToAuthorName'] as String?,
+      replyToBody: json['replyToBody'] as String?,
     );
   }
 }

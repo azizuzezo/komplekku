@@ -24,6 +24,28 @@ final agendaDetailProvider =
   return ref.watch(agendaRepositoryProvider).detail(id);
 });
 
+/// Every agenda the account can see, keyed by its `YYYY-MM-DD` date. The
+/// calendar needs both directions at once — the month being browsed nearly
+/// always straddles the upcoming/past split the list view is built on — so
+/// this merges the two views the API exposes.
+final agendaByDateProvider =
+    FutureProvider.autoDispose<Map<String, List<AgendaEvent>>>((ref) async {
+  final repository = ref.watch(agendaRepositoryProvider);
+  final results = await Future.wait([
+    repository.list(AgendaView.upcoming),
+    repository.list(AgendaView.past),
+  ]);
+
+  final grouped = <String, List<AgendaEvent>>{};
+  for (final event in results.expand((items) => items)) {
+    grouped.putIfAbsent(event.date, () => []).add(event);
+  }
+  for (final bucket in grouped.values) {
+    bucket.sort((left, right) => left.startTime.compareTo(right.startTime));
+  }
+  return grouped;
+});
+
 class AgendaRepository {
   AgendaRepository(this._client);
 
