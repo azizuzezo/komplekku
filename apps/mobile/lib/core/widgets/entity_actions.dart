@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
+import 'package:komplekku/shared/widgets/app_dialog.dart';
 
 /// The "⋮" menu carrying Edit and Hapus for anything a warga or pengurus owns
 /// — announcements, agenda, forum posts.
@@ -32,25 +33,12 @@ class _EntityActionsState extends State<EntityActions> {
   bool _deleting = false;
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(widget.deleteTitle),
-        content: Text(widget.deleteMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: KomplekkuColors.danger,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      title: widget.deleteTitle,
+      message: widget.deleteMessage,
+      confirmLabel: 'Hapus',
+      danger: true,
     );
     if (confirmed != true || widget.onDelete == null) return;
     setState(() => _deleting = true);
@@ -85,7 +73,7 @@ class _EntityActionsState extends State<EntityActions> {
       icon: const Icon(
         Icons.more_vert,
         size: 20,
-        color: KomplekkuColors.textSecondary,
+        color: AppColors.textSecondary,
       ),
       onSelected: (action) {
         if (action == 'edit') widget.onEdit?.call();
@@ -111,11 +99,11 @@ class _EntityActionsState extends State<EntityActions> {
               leading: Icon(
                 Icons.delete_outline,
                 size: 20,
-                color: KomplekkuColors.danger,
+                color: AppColors.danger,
               ),
               title: Text(
                 'Hapus',
-                style: TextStyle(color: KomplekkuColors.danger),
+                style: TextStyle(color: AppColors.danger),
               ),
             ),
           ),

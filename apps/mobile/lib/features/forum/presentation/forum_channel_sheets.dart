@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/forum/data/forum_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_channel.dart';
@@ -46,7 +46,7 @@ class _ResidentPickerState extends ConsumerState<_ResidentPicker> {
         error is ApiException
             ? error.message
             : 'Daftar warga belum dapat dimuat.',
-        style: const TextStyle(color: KomplekkuColors.danger),
+        style: const TextStyle(color: AppColors.danger),
       ),
       data: (items) {
         final invitable = items
@@ -268,7 +268,7 @@ class _CreateForumChannelSheetState
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: const TextStyle(color: KomplekkuColors.danger),
+              style: const TextStyle(color: AppColors.danger),
             ),
           ],
           const SizedBox(height: 16),
@@ -306,7 +306,7 @@ class ForumMembersSheet extends ConsumerWidget {
           error is ApiException
               ? error.message
               : 'Daftar anggota belum dapat dimuat.',
-          style: const TextStyle(color: KomplekkuColors.danger),
+          style: const TextStyle(color: AppColors.danger),
         ),
         data: (items) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +434,7 @@ class _InviteForumMembersSheetState
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: const TextStyle(color: KomplekkuColors.danger),
+              style: const TextStyle(color: AppColors.danger),
             ),
           ],
           const SizedBox(height: 16),

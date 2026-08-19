@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -110,7 +110,7 @@ class _PatrolScreenState extends ConsumerState<PatrolScreen> {
                   ListTile(
                     leading: CircleAvatar(
                       radius: 14,
-                      backgroundColor: KomplekkuColors.surfaceSoft,
+                      backgroundColor: AppColors.surfaceSoft,
                       child: Text(
                         '${checkpoint.displayOrder}',
                         style: const TextStyle(fontSize: 12),
@@ -215,7 +215,7 @@ class _SessionCard extends StatelessWidget {
               if (sessionState.submissionError != null) ...[
                 Text(
                   sessionState.submissionError!.message,
-                  style: const TextStyle(color: KomplekkuColors.danger),
+                  style: const TextStyle(color: AppColors.danger),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -253,7 +253,7 @@ class _SessionCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   sessionState.submissionError!.message,
-                  style: const TextStyle(color: KomplekkuColors.danger),
+                  style: const TextStyle(color: AppColors.danger),
                 ),
               ],
               const SizedBox(height: 6),
@@ -272,7 +272,7 @@ class _SessionCard extends StatelessWidget {
                     child: Row(
                       children: [
                         const Icon(Icons.check_circle_outline,
-                            size: 16, color: KomplekkuColors.success),
+                            size: 16, color: AppColors.success),
                         const SizedBox(width: 8),
                         Expanded(child: Text(scan.checkpointName)),
                         Text(
@@ -308,7 +308,7 @@ class _SectionSkeleton extends StatelessWidget {
       child: Container(
         height: 72,
         decoration: BoxDecoration(
-          color: KomplekkuColors.surfaceSoft,
+          color: AppColors.surfaceSoft,
           borderRadius: BorderRadius.circular(10),
         ),
       ),

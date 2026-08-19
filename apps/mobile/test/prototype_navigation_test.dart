@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/features/community_admin/data/community_admin_repository.dart';
 import 'package:komplekku/features/community_admin/domain/community_detail.dart';
 import 'package:komplekku/features/prayer/presentation/shalat_screen.dart';
@@ -42,7 +42,7 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          theme: buildKomplekkuTheme(),
+          theme: buildAppTheme(),
           home: const ShalatScreen(),
         ),
       ),

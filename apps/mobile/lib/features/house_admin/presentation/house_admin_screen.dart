@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/community_admin/data/community_admin_repository.dart';
 import 'package:komplekku/features/house_admin/data/house_admin_repository.dart';
 import 'package:komplekku/features/house_admin/domain/house_admin.dart';
 import 'package:komplekku/features/onboarding/domain/community_option.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_text_field.dart';
 
 class HouseAdminScreen extends ConsumerStatefulWidget {
   const HouseAdminScreen({super.key});
@@ -91,10 +95,10 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
       appBar: AppBar(title: const Text('Kelola Rumah')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.base),
           children: [
             _buildForm(rts),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.base),
             _buildList(houses, rts),
           ],
         ),
@@ -103,43 +107,40 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
   }
 
   Widget _buildForm(AsyncValue<List<RtOption>> rts) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        border: Border.all(color: KomplekkuColors.border),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Tambah rumah', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          const Text(
+          Text('Tambah rumah', style: AppTypography.title),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
             'Nama blok mendukung format apa pun, misalnya blok bertingkat seperti "F2D2 No.17".',
-            style: TextStyle(color: KomplekkuColors.textSecondary, fontSize: 12),
+            style: AppTypography.caption,
           ),
-          const SizedBox(height: 14),
-          TextField(
+          const SizedBox(height: AppSpacing.base),
+          AppTextField(
             controller: _codeController,
-            decoration: const InputDecoration(labelText: 'Kode rumah', hintText: 'F2D2-17'),
+            label: 'Kode rumah',
+            hint: 'F2D2-17',
           ),
-          const SizedBox(height: 10),
-          TextField(
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
             controller: _blockController,
-            decoration: const InputDecoration(labelText: 'Blok', hintText: 'F2D2'),
+            label: 'Blok',
+            hint: 'F2D2',
           ),
-          const SizedBox(height: 10),
-          TextField(
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
             controller: _numberController,
-            decoration: const InputDecoration(labelText: 'Nomor rumah', hintText: '17'),
+            label: 'Nomor rumah',
+            hint: '17',
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm),
           rts.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, _) => const Text(
+            error: (_, _) => Text(
               'Daftar RT belum bisa dimuat.',
-              style: TextStyle(color: KomplekkuColors.danger, fontSize: 12),
+              style: AppTypography.caption.copyWith(color: AppColors.danger),
             ),
             data: (items) => DropdownButtonFormField<String>(
               initialValue: _rtId,
@@ -150,7 +151,7 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
               onChanged: (value) => setState(() => _rtId = value),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<OccupancyStatus>(
             initialValue: _occupancy,
             decoration: const InputDecoration(labelText: 'Status hunian'),
@@ -165,13 +166,14 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
             },
           ),
           if (_createError != null) ...[
-            const SizedBox(height: 8),
-            Text(_createError!, style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12)),
+            const SizedBox(height: AppSpacing.xs),
+            Text(_createError!, style: AppTypography.caption.copyWith(color: AppColors.danger)),
           ],
-          const SizedBox(height: 12),
-          FilledButton(
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            label: _creating ? 'Menyimpan…' : 'Tambah rumah',
+            isLoading: _creating,
             onPressed: _creating ? null : _create,
-            child: Text(_creating ? 'Menyimpan…' : 'Tambah rumah'),
           ),
         ],
       ),
@@ -179,18 +181,12 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
   }
 
   Widget _buildList(AsyncValue<List<HouseAdmin>> houses, AsyncValue<List<RtOption>> rts) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        border: Border.all(color: KomplekkuColors.border),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Daftar rumah', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 14),
+          Text('Daftar rumah', style: AppTypography.title),
+          const SizedBox(height: AppSpacing.base),
           houses.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => StatePanel(
@@ -210,9 +206,13 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
               }
               final rtOptions = rts.maybeWhen(data: (v) => v, orElse: () => const <RtOption>[]);
               return Column(
-                children: items
-                    .map((house) => _houseRow(house, rtOptions))
-                    .toList(),
+                children: [
+                  for (final house in items) ...[
+                    _houseRow(house, rtOptions),
+                    if (house != items.last)
+                      const Divider(height: AppSpacing.lg, color: AppColors.border),
+                  ],
+                ],
               );
             },
           ),
@@ -221,51 +221,58 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
     );
   }
 
+  AppBadgeTone _occupancyTone(OccupancyStatus status) => switch (status) {
+        OccupancyStatus.ownerOccupied => AppBadgeTone.success,
+        OccupancyStatus.rented => AppBadgeTone.brand,
+        OccupancyStatus.vacant => AppBadgeTone.warning,
+      };
+
   Widget _houseRow(HouseAdmin house, List<RtOption> rts) {
     final isBusy = _reassigning[house.id] ?? false;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: KomplekkuColors.surfaceSoft,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(house.addressLabel, style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Row(
                 children: [
-                  Text(house.addressLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text(
-                    'Kode ${house.code} · ${occupancyStatusLabel(house.occupancyStatus)}'
-                    '${house.hasHousehold ? ' · Sudah ada rumah tangga' : ''}',
-                    style: const TextStyle(color: KomplekkuColors.textSecondary, fontSize: 12),
+                  AppBadge(
+                    label: occupancyStatusLabel(house.occupancyStatus),
+                    tone: _occupancyTone(house.occupancyStatus),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text('Kode ${house.code}', style: AppTypography.tabular(AppTypography.caption)),
                 ],
               ),
-            ),
-            if (rts.length > 1)
-              isBusy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : DropdownButton<String>(
-                      value: house.rtId,
-                      underline: const SizedBox.shrink(),
-                      items: rts
-                          .map((rt) => DropdownMenuItem(value: rt.id, child: Text(rt.name)))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) _reassign(house.id, value);
-                      },
-                    ),
-          ],
+              if (house.hasHousehold) ...[
+                const SizedBox(height: 4),
+                Text('Sudah ada rumah tangga', style: AppTypography.caption),
+              ],
+            ],
+          ),
         ),
-      ),
+        if (rts.length > 1)
+          isBusy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : DropdownButton<String>(
+                  value: house.rtId,
+                  underline: const SizedBox.shrink(),
+                  items: rts
+                      .map((rt) => DropdownMenuItem(value: rt.id, child: Text(rt.name)))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) _reassign(house.id, value);
+                  },
+                ),
+      ],
     );
   }
 }

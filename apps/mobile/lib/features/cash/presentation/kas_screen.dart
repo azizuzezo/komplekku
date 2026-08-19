@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -9,6 +9,10 @@ import 'package:komplekku/features/cash/data/cash_repository.dart';
 import 'package:komplekku/features/cash/domain/cash_transaction.dart';
 import 'package:komplekku/features/cash/presentation/cash_entry_controller.dart';
 import 'package:komplekku/features/cash/presentation/format.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
+import 'package:komplekku/shared/widgets/app_text_field.dart';
 
 /// Dual-mode Transparansi Kas screen mounted at `/layanan/kas`, mirroring
 /// `cash-ledger-panel.tsx` (treasurer, `cash.manage`) and
@@ -54,17 +58,22 @@ class _TransparansiKasScreenState extends ConsumerState<TransparansiKasScreen> {
           onRefresh: () => ref.refresh(cashLedgerProvider(_period).future),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              AppSpacing.md,
+              AppSpacing.base,
+              AppSpacing.xl,
+            ),
             children: [
               if (canManage) ...[
                 _CashEntryForm(period: _period),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
               ],
               _PeriodPicker(
                 period: _period,
                 onChanged: (next) => setState(() => _period = next),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               ledger.when(
                 loading: () => const _LedgerSkeleton(),
                 error: (error, _) {
@@ -124,7 +133,7 @@ class _PeriodPicker extends StatelessWidget {
         ),
         Text(
           formatPeriodLabel(period),
-          style: Theme.of(context).textTheme.titleMedium,
+          style: AppTypography.tabular(AppTypography.title),
         ),
         IconButton(
           onPressed: () => onChanged(shiftPeriod(period, 1)),
@@ -148,8 +157,8 @@ class _LedgerSkeleton extends StatelessWidget {
         child: Container(
           height: 220,
           decoration: BoxDecoration(
-            color: KomplekkuColors.surfaceSoft,
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.surfaceSoft,
+            borderRadius: BorderRadius.circular(AppRadius.medium),
           ),
         ),
       ),
@@ -171,27 +180,26 @@ class _LedgerView extends StatelessWidget {
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
           childAspectRatio: 2.4,
           children: [
             _SummaryCard(label: 'Saldo awal', value: snapshot.openingBalance),
             _SummaryCard(
               label: 'Pemasukan',
               value: snapshot.totalIncome,
-              color: KomplekkuColors.success,
+              color: AppColors.success,
             ),
             _SummaryCard(
               label: 'Pengeluaran',
               value: snapshot.totalExpense,
-              color: KomplekkuColors.danger,
+              color: AppColors.danger,
             ),
             _SummaryCard(label: 'Saldo akhir', value: snapshot.closingBalance),
           ],
         ),
-        const SizedBox(height: 20),
-        Text('Transaksi', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.lg),
+        const AppSectionHeader(title: 'Transaksi'),
         if (snapshot.items.isEmpty)
           const StatePanel(
             icon: Icons.receipt_long_outlined,
@@ -204,7 +212,7 @@ class _LedgerView extends StatelessWidget {
             children: [
               for (final transaction in snapshot.items)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: _TransactionRow(transaction: transaction),
                 ),
             ],
@@ -223,29 +231,20 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: KomplekkuColors.textSecondary,
-                  ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            formatRupiah(value),
+            style: AppTypography.tabular(
+              AppTypography.bodyLarge.copyWith(color: color, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 4),
-            Text(
-              formatRupiah(value),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -259,43 +258,41 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.type == CashTransactionType.income;
-    final color = isIncome ? KomplekkuColors.success : KomplekkuColors.danger;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    transaction.visibility == CashVisibility.adminOnly
-                        ? '${transaction.category} · Khusus pengurus'
-                        : transaction.category,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatDateOnly(transaction.date)} · ${transaction.description}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  Text(
-                    'Dicatat oleh ${transaction.recordedByName}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KomplekkuColors.textSecondary,
-                        ),
-                  ),
-                ],
-              ),
+    final color = isIncome ? AppColors.success : AppColors.danger;
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  transaction.visibility == CashVisibility.adminOnly
+                      ? '${transaction.category} · Khusus pengurus'
+                      : transaction.category,
+                  style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${formatDateOnly(transaction.date)} · ${transaction.description}',
+                  style: AppTypography.tabular(AppTypography.body),
+                ),
+                Text(
+                  'Dicatat oleh ${transaction.recordedByName}',
+                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
             ),
-            Text(
-              '${isIncome ? '+' : '-'}${formatRupiah(transaction.amount.abs())}',
-              style: TextStyle(color: color, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            '${isIncome ? '+' : '-'}${formatRupiah(transaction.amount.abs())}',
+            style: AppTypography.tabular(
+              AppTypography.bodyLarge.copyWith(color: color, fontWeight: FontWeight.w700),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -471,14 +468,14 @@ class _CashEntryFormState extends ConsumerState<_CashEntryForm> {
               Text(
                 'Transaksi khusus pengurus tidak akan muncul di halaman transparansi kas warga.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: KomplekkuColors.textSecondary,
+                      color: AppColors.textSecondary,
                     ),
               ),
               if (submissionError != null) ...[
                 const SizedBox(height: 10),
                 Text(
                   submissionError.message,
-                  style: TextStyle(color: KomplekkuColors.danger),
+                  style: TextStyle(color: AppColors.danger),
                 ),
               ],
               const SizedBox(height: 16),

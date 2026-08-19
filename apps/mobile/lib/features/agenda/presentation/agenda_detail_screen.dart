@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/agenda/data/agenda_repository.dart';
@@ -49,41 +49,35 @@ class AgendaDetailScreen extends ConsumerWidget {
             );
           },
           data: (event) => SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  event.title,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 16),
+                Text(event.title, style: AppTypography.heading),
+                const SizedBox(height: AppSpacing.base),
                 _DetailRow(
                   icon: Icons.calendar_today_outlined,
                   label: event.dateLabel,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 _DetailRow(
                   icon: Icons.schedule_outlined,
                   label: event.timeRangeLabel,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 _DetailRow(
                   icon: Icons.place_outlined,
                   label: event.location,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 _DetailRow(
                   icon: Icons.person_outline,
                   label: 'Penyelenggara: ${event.organizer}',
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 const Divider(),
-                const SizedBox(height: 20),
-                Text(
-                  event.description,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(event.description, style: AppTypography.bodyLarge),
               ],
             ),
           ),
@@ -104,15 +98,10 @@ class _DetailRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: KomplekkuColors.textSecondary),
-        const SizedBox(width: 10),
+        Icon(icon, size: 20, color: AppColors.textSecondary),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-          ),
+          child: Text(label, style: AppTypography.tabular(AppTypography.bodyLarge)),
         ),
       ],
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -10,6 +10,8 @@ import 'package:komplekku/features/incident/domain/incident.dart';
 import 'package:komplekku/features/incident/presentation/incident_list_screen.dart'
     show formatIncidentDateTime;
 import 'package:komplekku/features/incident/presentation/incident_update_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 /// Detail view for a single incident report, mirroring
 /// `apps/web/features/incident/incident-detail.tsx`. Accounts with
@@ -60,32 +62,26 @@ class IncidentDetailScreen extends ConsumerWidget {
             );
           },
           data: (incident) => SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   incident.category.label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.textSecondary,
-                        letterSpacing: 0.3,
-                      ),
+                  style: AppTypography.caption.copyWith(letterSpacing: 0.3),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.xs),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        incident.title,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
+                      child: Text(incident.title, style: AppTypography.heading),
                     ),
-                    const SizedBox(width: 8),
-                    _StatusPill(status: incident.status),
+                    const SizedBox(width: AppSpacing.sm),
+                    _StatusBadge(status: incident.status),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.base),
                 _FactRow(
                   icon: Icons.calendar_today_outlined,
                   label: 'Waktu kejadian',
@@ -102,43 +98,28 @@ class IncidentDetailScreen extends ConsumerWidget {
                   label: 'Pelapor',
                   value: incident.reporterName,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 const Divider(),
-                const SizedBox(height: 20),
-                Text('Deskripsi', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                  incident.description,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text('Deskripsi', style: AppTypography.title),
+                const SizedBox(height: AppSpacing.sm),
+                Text(incident.description, style: AppTypography.bodyLarge),
                 if (incident.peopleInvolved != null) ...[
-                  const SizedBox(height: 20),
-                  Text(
-                    'Pihak yang terlibat',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    incident.peopleInvolved!,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text('Pihak yang terlibat', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(incident.peopleInvolved!, style: AppTypography.bodyLarge),
                 ],
                 if (incident.actionTaken != null) ...[
-                  const SizedBox(height: 20),
-                  Text(
-                    'Tindakan yang diambil',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    incident.actionTaken!,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text('Tindakan yang diambil', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(incident.actionTaken!, style: AppTypography.bodyLarge),
                 ],
                 if (canManage) ...[
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSpacing.xl),
                   const Divider(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   _UpdatePanel(incidentId: id, incident: incident),
                 ],
               ],
@@ -160,15 +141,16 @@ class _FactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: KomplekkuColors.textSecondary),
-          const SizedBox(width: 10),
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text.rich(
               TextSpan(
+                style: AppTypography.body,
                 children: [
                   TextSpan(
                     text: '$label: ',
@@ -185,31 +167,21 @@ class _FactRow extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
+AppBadgeTone _incidentStatusTone(IncidentStatus status) => switch (status) {
+  IncidentStatus.open => AppBadgeTone.danger,
+  IncidentStatus.inReview => AppBadgeTone.warning,
+  IncidentStatus.resolved => AppBadgeTone.success,
+  IncidentStatus.closed => AppBadgeTone.neutral,
+};
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
 
   final IncidentStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      IncidentStatus.open => KomplekkuColors.danger,
-      IncidentStatus.inReview => KomplekkuColors.accent,
-      IncidentStatus.resolved => KomplekkuColors.success,
-      IncidentStatus.closed => KomplekkuColors.textSecondary,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
-      ),
-    );
+    return AppBadge(label: status.label, tone: _incidentStatusTone(status));
   }
 }
 
@@ -266,8 +238,8 @@ class _UpdatePanelState extends ConsumerState<_UpdatePanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Perbarui laporan', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
+        Text('Perbarui laporan', style: AppTypography.title),
+        const SizedBox(height: AppSpacing.base),
         DropdownButtonFormField<IncidentStatus>(
           key: const ValueKey('incident-update-status'),
           initialValue: _status,
@@ -286,7 +258,7 @@ class _UpdatePanelState extends ConsumerState<_UpdatePanel> {
                   if (value != null) setState(() => _status = value);
                 },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.base),
         TextFormField(
           key: const ValueKey('incident-update-action'),
           controller: _actionController,
@@ -298,32 +270,31 @@ class _UpdatePanelState extends ConsumerState<_UpdatePanel> {
           ),
         ),
         if (updateState.submissionError != null) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
           Semantics(
             liveRegion: true,
             child: Text(
               updateState.submissionError!.message,
-              style: const TextStyle(color: KomplekkuColors.danger),
+              style: AppTypography.body.copyWith(color: AppColors.danger),
             ),
           ),
         ],
         if (justSucceeded) ...[
-          const SizedBox(height: 14),
-          const Text(
+          const SizedBox(height: AppSpacing.md),
+          Text(
             'Laporan berhasil diperbarui.',
-            style: TextStyle(
-              color: KomplekkuColors.success,
+            style: AppTypography.body.copyWith(
+              color: AppColors.success,
               fontWeight: FontWeight.w600,
             ),
           ),
         ],
-        const SizedBox(height: 20),
-        FilledButton(
+        const SizedBox(height: AppSpacing.lg),
+        AppButton(
           key: const ValueKey('submit-incident-update'),
+          label: updateState.isSubmitting ? 'Menyimpan…' : 'Simpan perubahan',
+          isLoading: updateState.isSubmitting,
           onPressed: updateState.isSubmitting ? null : _submit,
-          child: Text(
-            updateState.isSubmitting ? 'Menyimpan…' : 'Simpan perubahan',
-          ),
         ),
       ],
     );

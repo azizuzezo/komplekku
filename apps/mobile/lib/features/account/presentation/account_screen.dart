@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
-import 'package:komplekku/core/widgets/prototype_header.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_dialog.dart';
+import 'package:komplekku/shared/widgets/app_header.dart';
+import 'package:komplekku/shared/widgets/app_text_field.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/account/data/account_repository.dart';
 import 'package:komplekku/features/account/domain/account_snapshot.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/household/data/household_repository.dart';
+import 'package:komplekku/features/household/domain/household.dart';
 import 'package:komplekku/features/onboarding/domain/residency_request.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -42,12 +48,12 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final profileContext = snapshot?.context;
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         toolbarHeight: 92,
         titleSpacing: 20,
         automaticallyImplyLeading: false,
-        title: PrototypeHeader(
+        title: AppHeader(
           title: 'Profil',
           subtitle: profileContext == null
               ? 'Akun warga Komplekku'
@@ -81,16 +87,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             );
           },
           data: (snapshot) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              AppSpacing.sm,
+              AppSpacing.base,
+              AppSpacing.xxl,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _CredentialCard(snapshot: snapshot),
                 if (snapshot.hasActiveResidency) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.base),
                   const _HouseholdSection(),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.base),
                 _SessionCard(isLoggingOut: _isLoggingOut, onLogout: _logout),
               ],
             ),
@@ -101,18 +112,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 }
 
-Color _statusTone(AccountResidentStatus? status) {
+AppBadgeTone _statusBadgeTone(AccountResidentStatus? status) {
   switch (status) {
     case AccountResidentStatus.active:
-      return KomplekkuColors.success;
+      return AppBadgeTone.success;
     case AccountResidentStatus.pending:
-      return KomplekkuColors.primary;
+      return AppBadgeTone.brand;
     case AccountResidentStatus.rejected:
     case AccountResidentStatus.suspended:
-      return KomplekkuColors.danger;
+      return AppBadgeTone.danger;
     case AccountResidentStatus.movedOut:
     case null:
-      return KomplekkuColors.textSecondary;
+      return AppBadgeTone.neutral;
   }
 }
 
@@ -171,48 +182,19 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
     final snapshot = widget.snapshot;
     final context_ = snapshot.context;
     final displayName = snapshot.displayName ?? 'Pengguna Komplekku';
-    final tone = _statusTone(snapshot.residentStatus);
+    final tone = _statusBadgeTone(snapshot.residentStatus);
     final statusLabel = snapshot.residentStatus != null
         ? residentStatusLabel(snapshot.residentStatus!)
         : null;
 
-    final initial = displayName.trim().isEmpty
-        ? '?'
-        : displayName.trim()[0].toUpperCase();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: KomplekkuColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101119),
-            blurRadius: 18,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: KomplekkuColors.surfaceMuted,
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: KomplekkuColors.primaryDark,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,54 +203,19 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
                       displayName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: AppTypography.title,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       snapshot.phoneMasked,
-                      style: const TextStyle(
-                        color: KomplekkuColors.textSecondary,
-                        fontSize: 13,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
+                      style: AppTypography.tabular(AppTypography.body),
                     ),
                     if (statusLabel != null) ...[
-                      const SizedBox(height: 9),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tone.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.verified_outlined,
-                              size: 15,
-                              color: tone,
-                            ),
-                            const SizedBox(width: 5),
-                            Flexible(
-                              child: Text(
-                                statusLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: tone,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(height: AppSpacing.sm),
+                      AppBadge(
+                        label: statusLabel,
+                        tone: tone,
+                        icon: Icons.verified_outlined,
                       ),
                     ],
                   ],
@@ -284,35 +231,33 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
                   }),
                   icon: const Icon(Icons.edit_outlined),
                   style: IconButton.styleFrom(
-                    backgroundColor: KomplekkuColors.surfaceSoft,
-                    foregroundColor: KomplekkuColors.primary,
+                    backgroundColor: AppColors.surfaceSoft,
+                    foregroundColor: AppColors.primary,
                   ),
                 ),
             ],
           ),
           if (_isEditing) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.base),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: TextField(
+                  child: AppTextField(
                     controller: _controller,
+                    label: 'Nama warga',
                     autofocus: true,
                     textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _save(),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      labelText: 'Nama warga',
-                    ),
+                    onFieldSubmitted: (_) => _save(),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 IconButton.filled(
                   tooltip: 'Simpan nama',
                   onPressed: _isSaving ? null : _save,
                   icon: const Icon(Icons.check, size: 18),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.outlined(
                   tooltip: 'Batal',
                   onPressed: () => setState(() => _isEditing = false),
@@ -321,40 +266,37 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
               ],
             ),
             if (_error != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: KomplekkuColors.danger,
-                  fontSize: 12,
-                ),
+                style: AppTypography.caption.copyWith(color: AppColors.danger),
               ),
             ],
           ],
           if (!snapshot.hasActiveResidency &&
               snapshot.residentStatus != null) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md),
             Text(
               _statusDescription(snapshot.residentStatus!),
-              style: const TextStyle(color: KomplekkuColors.textSecondary),
+              style: AppTypography.body,
             ),
           ],
           if (snapshot.hasActiveResidency && context_ != null) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.lg),
             const Divider(),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md),
             _ProfileLocationRow(
               icon: Icons.location_on_outlined,
               label: 'Lingkungan',
               value: context_.communityName,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _ProfileLocationRow(
               icon: Icons.home_outlined,
               label: context_.house.code,
               value: context_.house.addressLabel,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _ProfileLocationRow(
               icon: Icons.groups_outlined,
               label: 'Rumah tangga',
@@ -400,35 +342,24 @@ class _ProfileLocationRow extends StatelessWidget {
         Container(
           width: 38,
           height: 38,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: KomplekkuColors.surfaceMuted,
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(AppRadius.small),
           ),
-          child: Icon(icon, size: 19, color: KomplekkuColors.primary),
+          child: Icon(icon, size: 19, color: AppColors.primary),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: KomplekkuColors.textSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 1),
+              Text(label, style: AppTypography.caption),
               Text(
                 value,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: KomplekkuColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
+                style: AppTypography.label,
               ),
             ],
           ),
@@ -444,30 +375,37 @@ class _SessionCard extends StatelessWidget {
   final bool isLoggingOut;
   final Future<void> Function() onLogout;
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showAppDialog(
+      context: context,
+      title: 'Keluar dari akun?',
+      message: 'Kamu perlu masuk kembali untuk mengakses akun ini.',
+      confirmLabel: 'Keluar',
+      danger: true,
+    );
+    if (confirmed == true) onLogout();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        border: Border.all(color: KomplekkuColors.border),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sesi akun', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 6),
-          const Text('Keluar jika perangkat ini dipakai bersama orang lain.'),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: isLoggingOut ? null : onLogout,
-            icon: const Icon(Icons.logout),
-            label: Text(isLoggingOut ? 'Mengakhiri sesi…' : 'Keluar dari akun'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: KomplekkuColors.danger,
-              side: const BorderSide(color: KomplekkuColors.danger),
-            ),
+          Text('Sesi akun', style: AppTypography.title),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Keluar jika perangkat ini dipakai bersama orang lain.',
+            style: AppTypography.body,
+          ),
+          const SizedBox(height: AppSpacing.base),
+          AppButton(
+            label: 'Keluar dari akun',
+            icon: Icons.logout,
+            variant: AppButtonVariant.danger,
+            isLoading: isLoggingOut,
+            onPressed: isLoggingOut ? null : () => _confirmLogout(context),
           ),
         ],
       ),
@@ -526,6 +464,17 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
     }
   }
 
+  Future<void> _confirmRemove(String residentId, String displayName) async {
+    final confirmed = await showAppDialog(
+      context: context,
+      title: 'Hapus $displayName?',
+      message: 'Anggota ini akan dihapus dari rumah tangga.',
+      confirmLabel: 'Hapus',
+      danger: true,
+    );
+    if (confirmed == true) _remove(residentId);
+  }
+
   Future<void> _remove(String residentId) async {
     setState(() => _removingResidentId = residentId);
     try {
@@ -547,13 +496,8 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
     final account = ref.watch(accountSnapshotProvider).value;
     final household = ref.watch(currentHouseholdProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        border: Border.all(color: KomplekkuColors.surfaceMuted),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -566,17 +510,18 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
                     Container(
                       width: 36,
                       height: 36,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: KomplekkuColors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(AppRadius.small),
                       ),
                       child: const Icon(
                         Icons.groups_outlined,
-                        color: KomplekkuColors.primary,
+                        color: AppColors.primary,
                         size: 18,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,18 +530,13 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
                             'Anggota Keluarga',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(fontSize: 15),
+                            style: AppTypography.title.copyWith(fontSize: 16),
                           ),
-                          const Text(
+                          Text(
                             'Penghuni rumah tangga ini',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: KomplekkuColors.textSecondary,
-                              fontSize: 12,
-                            ),
+                            style: AppTypography.caption,
                           ),
                         ],
                       ),
@@ -605,285 +545,218 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
                 ),
               ),
               if (!_isAdding) ...[
-                const SizedBox(width: 10),
-                FilledButton.icon(
+                const SizedBox(width: AppSpacing.sm),
+                AppButton(
+                  label: 'Tambah',
+                  icon: Icons.add,
+                  variant: AppButtonVariant.secondary,
+                  expand: false,
                   onPressed: () => setState(() => _isAdding = true),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Tambah'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
                 ),
               ],
             ],
           ),
           if (_isAdding) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: KomplekkuColors.background,
-                border: Border.all(color: KomplekkuColors.border),
-                borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: AppSpacing.md),
+            const Divider(),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                const Icon(
+                  Icons.person_add_alt_outlined,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text('Anggota Baru', style: AppTypography.label.copyWith(color: AppColors.primary)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(controller: _nameController, hint: 'Nama lengkap'),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(
+              controller: _phoneController,
+              hint: 'Nomor HP (08xxxxxxxxxx)',
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<HouseholdRelationship>(
+              initialValue: _relationship,
+              items: HouseholdRelationship.values
+                  .where((r) => r != HouseholdRelationship.head)
+                  .map(
+                    (r) => DropdownMenuItem(value: r, child: Text(r.label)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => _relationship = value);
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Anggota baru akan mendapatkan akun sendiri dan bisa masuk memakai nomor HP ini.',
+              style: AppTypography.caption,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                _error!,
+                style: AppTypography.caption.copyWith(color: AppColors.danger),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: const [
-                      Icon(
-                        Icons.person_add_alt_outlined,
-                        size: 14,
-                        color: KomplekkuColors.primary,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Anggota Baru',
-                        style: TextStyle(
-                          color: KomplekkuColors.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      hintText: 'Nama lengkap',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      hintText: 'Nomor HP (08xxxxxxxxxx)',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<HouseholdRelationship>(
-                    initialValue: _relationship,
-                    decoration: const InputDecoration(isDense: true),
-                    items: HouseholdRelationship.values
-                        .where((r) => r != HouseholdRelationship.head)
-                        .map(
-                          (r) =>
-                              DropdownMenuItem(value: r, child: Text(r.label)),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) setState(() => _relationship = value);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Anggota baru akan mendapatkan akun sendiri dan bisa masuk memakai nomor HP ini.',
-                    style: TextStyle(
-                      color: KomplekkuColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: KomplekkuColors.danger,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _isAdding = false;
-                          _error = null;
-                        }),
-                        child: const Text('Batal'),
-                      ),
-                      const SizedBox(width: 4),
-                      FilledButton(
-                        onPressed: _isSaving ? null : _submitAdd,
-                        style: FilledButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                        child: Text(_isSaving ? 'Menyimpan...' : 'Simpan'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                AppButton(
+                  label: 'Batal',
+                  variant: AppButtonVariant.ghost,
+                  expand: false,
+                  onPressed: () => setState(() {
+                    _isAdding = false;
+                    _error = null;
+                  }),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                AppButton(
+                  label: 'Simpan',
+                  variant: AppButtonVariant.primary,
+                  expand: false,
+                  isLoading: _isSaving,
+                  onPressed: _isSaving ? null : _submitAdd,
+                ),
+              ],
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(),
+          const SizedBox(height: AppSpacing.sm),
           household.when(
             loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Text(
                 'Memuat anggota rumah tangga...',
-                style: TextStyle(
-                  color: KomplekkuColors.textSecondary,
-                  fontSize: 12,
-                ),
+                style: AppTypography.caption,
               ),
             ),
             error: (_, _) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Belum dapat memuat anggota rumah tangga.',
-                      style: TextStyle(
-                        color: KomplekkuColors.danger,
-                        fontSize: 12,
-                      ),
+                      style: AppTypography.caption.copyWith(color: AppColors.danger),
                     ),
                   ),
-                  TextButton(
+                  AppButton(
+                    label: 'Coba lagi',
+                    variant: AppButtonVariant.ghost,
+                    expand: false,
                     onPressed: () => ref.invalidate(currentHouseholdProvider),
-                    child: const Text('Coba lagi'),
                   ),
                 ],
               ),
             ),
             data: (data) => Column(
-              children: data.members.map((member) {
-                final isSelf = account != null && member.userId == account.id;
-                final isRemoving = _removingResidentId == member.residentId;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isSelf
-                          ? KomplekkuColors.surfaceSoft
-                          : KomplekkuColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: isSelf
-                          ? null
-                          : Border.all(color: KomplekkuColors.surfaceMuted),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: isSelf
-                              ? KomplekkuColors.primary
-                              : KomplekkuColors.surfaceSoft,
-                          child: Text(
-                            member.displayName.length >= 2
-                                ? member.displayName
-                                      .substring(0, 2)
-                                      .toUpperCase()
-                                : member.displayName.toUpperCase(),
-                            style: TextStyle(
-                              color: isSelf
-                                  ? KomplekkuColors.surface
-                                  : KomplekkuColors.textSecondary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      member.displayName,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontWeight: isSelf
-                                            ? FontWeight.w800
-                                            : FontWeight.w700,
-                                        fontSize: 14,
-                                        color: KomplekkuColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isSelf) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: KomplekkuColors.textPrimary,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        'Saya',
-                                        style: TextStyle(
-                                          color: KomplekkuColors.borderStrong,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              Text(
-                                [
-                                  member.relationship.label,
-                                  if (member.phoneMasked != null)
-                                    member.phoneMasked!,
-                                ].join(' · '),
-                                style: const TextStyle(
-                                  color: KomplekkuColors.textSecondary,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!isSelf)
-                          IconButton(
-                            onPressed: isRemoving
-                                ? null
-                                : () => _remove(member.residentId),
-                            icon: isRemoving
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.delete_outline, size: 18),
-                            color: KomplekkuColors.textSecondary,
-                            tooltip: 'Hapus ${member.displayName}',
-                          ),
-                      ],
+              children: [
+                for (var i = 0; i < data.members.length; i++) ...[
+                  if (i != 0) const Divider(),
+                  _HouseholdMemberRow(
+                    member: data.members[i],
+                    isSelf: account != null && data.members[i].userId == account.id,
+                    isRemoving: _removingResidentId == data.members[i].residentId,
+                    onRemove: () => _confirmRemove(
+                      data.members[i].residentId,
+                      data.members[i].displayName,
                     ),
                   ),
-                );
-              }).toList(),
+                ],
+              ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HouseholdMemberRow extends StatelessWidget {
+  const _HouseholdMemberRow({
+    required this.member,
+    required this.isSelf,
+    required this.isRemoving,
+    required this.onRemove,
+  });
+
+  final HouseholdMember member;
+  final bool isSelf;
+  final bool isRemoving;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(AppRadius.small),
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              size: 19,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        member.displayName,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.label,
+                      ),
+                    ),
+                    if (isSelf) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      const AppBadge(label: 'Saya', tone: AppBadgeTone.brand),
+                    ],
+                  ],
+                ),
+                Text(
+                  [
+                    member.relationship.label,
+                    if (member.phoneMasked != null) member.phoneMasked!,
+                  ].join(' · '),
+                  style: AppTypography.caption,
+                ),
+              ],
+            ),
+          ),
+          if (!isSelf)
+            IconButton(
+              onPressed: isRemoving ? null : onRemove,
+              icon: isRemoving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.delete_outline, size: 18),
+              color: AppColors.textSecondary,
+              tooltip: 'Hapus ${member.displayName}',
+            ),
         ],
       ),
     );

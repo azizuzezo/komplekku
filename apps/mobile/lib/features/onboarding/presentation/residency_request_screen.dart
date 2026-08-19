@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/onboarding/domain/community_option.dart';
 import 'package:komplekku/features/onboarding/domain/residency_request.dart';
 import 'package:komplekku/features/onboarding/presentation/widgets/onboarding_scaffold.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 typedef ResidencySubmitCallback = Future<void> Function({
   required String fullName,
@@ -13,6 +15,7 @@ typedef ResidencySubmitCallback = Future<void> Function({
   required HouseholdRelationship relationship,
 });
 
+/// Step 2 of onboarding — the resident's house/household details form.
 class ResidencyRequestScreen extends StatefulWidget {
   const ResidencyRequestScreen({
     super.key,
@@ -75,29 +78,26 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
       onLogout: widget.onLogout,
       isLoggingOut: widget.isLoggingOut,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: KomplekkuColors.surfaceSoft,
-            border: Border.all(color: KomplekkuColors.border),
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
-          ),
+        AppCard(
           child: Row(
             children: [
-              const Icon(Icons.holiday_village_outlined, size: 22),
-              const SizedBox(width: 12),
+              const Icon(
+                Icons.holiday_village_outlined,
+                size: 22,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Lingkungan',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text('Lingkungan', style: AppTypography.caption),
                     const SizedBox(height: 2),
                     Text(
                       widget.community.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
@@ -105,7 +105,7 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: AppSpacing.xl),
         Form(
           key: _formKey,
           child: Column(
@@ -131,7 +131,7 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               DropdownButtonFormField<RtOption>(
                 key: const ValueKey('rt'),
                 initialValue: _rt,
@@ -150,7 +150,7 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
                 validator: (value) =>
                     value == null ? 'Pilih RT tempat rumahmu berada.' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               TextFormField(
                 key: const ValueKey('house-code'),
                 controller: _houseCodeController,
@@ -175,7 +175,7 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               DropdownButtonFormField<HouseholdRelationship>(
                 key: const ValueKey('relationship'),
                 initialValue: _relationship,
@@ -198,32 +198,30 @@ class _ResidencyRequestScreenState extends State<ResidencyRequestScreen> {
                     : null,
               ),
               if (widget.submissionError != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Semantics(
                   liveRegion: true,
                   child: Text(
                     widget.submissionError!.message,
-                    style: const TextStyle(
-                      color: KomplekkuColors.danger,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.danger,
                       height: 1.4,
                     ),
                   ),
                 ),
               ],
-              const SizedBox(height: 22),
-              FilledButton(
+              const SizedBox(height: AppSpacing.xl),
+              AppButton(
                 key: const ValueKey('submit-residency'),
-                onPressed: widget.isSubmitting ? null : _submit,
-                child: Text(
-                  widget.isSubmitting
-                      ? 'Mengirim permohonan…'
-                      : 'Kirim untuk diverifikasi',
-                ),
+                label: 'Kirim untuk diverifikasi',
+                onPressed: _submit,
+                isLoading: widget.isSubmitting,
               ),
-              const SizedBox(height: 10),
-              TextButton(
+              const SizedBox(height: AppSpacing.sm),
+              AppButton(
+                variant: AppButtonVariant.ghost,
+                label: 'Kembali pilih lingkungan',
                 onPressed: widget.isSubmitting ? null : widget.onBack,
-                child: const Text('Kembali pilih lingkungan'),
               ),
             ],
           ),

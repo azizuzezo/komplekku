@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -132,7 +132,7 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: KomplekkuColors.danger,
+              backgroundColor: AppColors.danger,
             ),
             child: const Text('Hapus'),
           ),
@@ -222,7 +222,7 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
         .maybeWhen(data: (session) => session?.userId, orElse: () => null);
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Diskusi'),
         actions: [
@@ -251,7 +251,7 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(
                         Icons.delete_outline,
-                        color: KomplekkuColors.danger,
+                        color: AppColors.danger,
                       ),
                       title: Text('Hapus diskusi'),
                     ),
@@ -326,9 +326,9 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: KomplekkuColors.surfaceSoft,
+                            color: AppColors.surfaceSoft,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: KomplekkuColors.border),
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: Text(
                             'Belum ada balasan. Jadilah yang pertama menanggapi.',
@@ -396,9 +396,9 @@ class _PostCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: KomplekkuColors.border),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,7 +410,7 @@ class _PostCard extends StatelessWidget {
                 height: 44,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: KomplekkuColors.primary,
+                  color: AppColors.primary,
                 ),
                 child: const Icon(
                   Icons.forum_outlined,
@@ -482,14 +482,14 @@ class _PostCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 14),
-          const Divider(height: 1, color: KomplekkuColors.border),
+          const Divider(height: 1, color: AppColors.border),
           const SizedBox(height: 10),
           Row(
             children: [
               const Icon(
                 Icons.mode_comment_outlined,
                 size: 17,
-                color: KomplekkuColors.primary,
+                color: AppColors.primary,
               ),
               const SizedBox(width: 6),
               Text(
@@ -572,7 +572,7 @@ class _ReplyTile extends StatelessWidget {
                         decoration: const BoxDecoration(
                           border: Border(
                             left: BorderSide(
-                              color: KomplekkuColors.borderStrong,
+                              color: AppColors.borderStrong,
                               width: 3,
                             ),
                           ),
@@ -585,7 +585,7 @@ class _ReplyTile extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: KomplekkuColors.textSecondary,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             Text(
@@ -595,7 +595,7 @@ class _ReplyTile extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: KomplekkuColors.textSecondary,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -632,7 +632,7 @@ class _ReplyTile extends StatelessWidget {
                             iconSize: 16,
                             visualDensity: VisualDensity.compact,
                             icon: const Icon(Icons.edit_outlined),
-                            color: KomplekkuColors.textSecondary,
+                            color: AppColors.textSecondary,
                           ),
                         if (isOwn || canModerate)
                           IconButton(
@@ -641,7 +641,7 @@ class _ReplyTile extends StatelessWidget {
                             iconSize: 16,
                             visualDensity: VisualDensity.compact,
                             icon: const Icon(Icons.delete_outline),
-                            color: KomplekkuColors.textSecondary,
+                            color: AppColors.textSecondary,
                           ),
                         const Spacer(),
                         ForumLikeButton(
@@ -657,7 +657,7 @@ class _ReplyTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          const Divider(height: 1, color: KomplekkuColors.border),
+          const Divider(height: 1, color: AppColors.border),
         ],
       ),
     );
@@ -692,8 +692,8 @@ class _ReplyComposer extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         decoration: const BoxDecoration(
-          color: KomplekkuColors.surface,
-          border: Border(top: BorderSide(color: KomplekkuColors.border)),
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -704,7 +704,7 @@ class _ReplyComposer extends StatelessWidget {
                 child: Text(
                   errorMessage!,
                   style: const TextStyle(
-                    color: KomplekkuColors.danger,
+                    color: AppColors.danger,
                     fontSize: 12,
                   ),
                 ),
@@ -714,10 +714,10 @@ class _ReplyComposer extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
                 decoration: BoxDecoration(
-                  color: KomplekkuColors.surfaceSoft,
+                  color: AppColors.surfaceSoft,
                   borderRadius: BorderRadius.circular(10),
                   border: const Border(
-                    left: BorderSide(color: KomplekkuColors.primary, width: 3),
+                    left: BorderSide(color: AppColors.primary, width: 3),
                   ),
                 ),
                 child: Row(
@@ -741,7 +741,7 @@ class _ReplyComposer extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: KomplekkuColors.textSecondary,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -792,7 +792,7 @@ class _ReplyComposer extends StatelessWidget {
                         )
                       : Icon(editing != null ? Icons.check : Icons.send),
                   style: IconButton.styleFrom(
-                    backgroundColor: KomplekkuColors.primary,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
                 ),

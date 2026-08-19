@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/finance_dashboard/data/finance_dashboard_repository.dart';
 import 'package:komplekku/features/finance_dashboard/presentation/format.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
 
 /// Read-only finance summary for staff with `finance.dashboard.read`,
 /// mirroring `finance-dashboard-panel.tsx`'s stat grid.
@@ -71,14 +73,14 @@ class FinanceDashboardScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(financeDashboardProvider.future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.base),
               children: [
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
+                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: AppSpacing.md,
                   childAspectRatio: 1.5,
                   children: [
                     _StatCard(
@@ -100,15 +102,14 @@ class FinanceDashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Text('Alat keuangan', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.xl),
+                const AppSectionHeader(title: 'Alat keuangan'),
                 _MenuLink(
                   label: 'Iuran',
                   icon: Icons.receipt_long_outlined,
                   onTap: () => context.push('/layanan/iuran'),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.md),
                 _MenuLink(
                   label: 'Transparansi Kas',
                   icon: Icons.account_balance_wallet_outlined,
@@ -132,35 +133,19 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: KomplekkuColors.textSecondary,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            if (sub != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                sub!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: KomplekkuColors.textSecondary,
-                    ),
-              ),
-            ],
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: AppTypography.caption),
+          const SizedBox(height: AppSpacing.xs),
+          Text(value, style: AppTypography.tabular(AppTypography.title)),
+          if (sub != null) ...[
+            const SizedBox(height: 2),
+            Text(sub!, style: AppTypography.tabular(AppTypography.caption)),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -175,28 +160,20 @@ class _MenuLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Icon(icon, color: KomplekkuColors.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: KomplekkuColors.textSecondary),
-            ],
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
-        ),
+          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        ],
       ),
     );
   }
@@ -212,12 +189,12 @@ class _DashboardSkeleton extends StatelessWidget {
       liveRegion: true,
       child: ExcludeSemantics(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.base),
           child: Container(
             height: 220,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.card),
             ),
           ),
         ),

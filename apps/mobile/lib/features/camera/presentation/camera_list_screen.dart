@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/camera/data/camera_repository.dart';
 import 'package:komplekku/features/camera/domain/camera.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 /// Resident-facing CCTV list. Mirrors `apps/web/features/camera/camera-list.tsx`:
 /// the whole page is an explicitly simulated (mock) feed, never a real
@@ -24,14 +27,19 @@ class CameraListScreen extends ConsumerWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.md,
+                AppSpacing.base,
+                AppSpacing.xs,
+              ),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: KomplekkuColors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: KomplekkuColors.border),
+                  color: AppColors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.small),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,14 +47,14 @@ class CameraListScreen extends ConsumerWidget {
                     const Icon(
                       Icons.info_outline,
                       size: 18,
-                      color: KomplekkuColors.textSecondary,
+                      color: AppColors.textSecondary,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         'Tayangan pada halaman ini bersifat simulasi (mode mock), '
                         'belum menampilkan aliran video sungguhan.',
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: AppTypography.caption,
                       ),
                     ),
                   ],
@@ -96,10 +104,15 @@ class CameraListScreen extends ConsumerWidget {
                     onRefresh: () => ref.refresh(cameraListProvider.future),
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.base,
+                        AppSpacing.md,
+                        AppSpacing.base,
+                        AppSpacing.xl,
+                      ),
                       itemCount: items.length,
                       separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
+                          const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) =>
                           _CameraCard(camera: items[index]),
                     ),
@@ -140,63 +153,58 @@ class _CameraCardState extends ConsumerState<_CameraCard> {
   @override
   Widget build(BuildContext context) {
     final camera = widget.camera;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        camera.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      if (camera.location != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          camera.location!,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _StatusBadge(status: camera.status),
-                    const SizedBox(height: 6),
                     Text(
-                      _accessLevelLabels[camera.accessLevel]!,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      camera.name,
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+                    if (camera.location != null) ...[
+                      const SizedBox(height: 4),
+                      Text(camera.location!, style: AppTypography.caption),
+                    ],
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton(
-                onPressed: () => setState(() => _isOpen = !_isOpen),
-                child: Text(_isOpen ? 'Tutup' : 'Lihat'),
               ),
-            ),
-            if (_isOpen) ...[
-              const SizedBox(height: 12),
-              _CameraViewer(cameraId: camera.id),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _StatusBadge(status: camera.status),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    _accessLevelLabels[camera.accessLevel]!,
+                    style: AppTypography.caption,
+                  ),
+                ],
+              ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              label: _isOpen ? 'Tutup' : 'Lihat',
+              variant: AppButtonVariant.secondary,
+              expand: false,
+              onPressed: () => setState(() => _isOpen = !_isOpen),
+            ),
+          ),
+          if (_isOpen) ...[
+            const SizedBox(height: AppSpacing.md),
+            _CameraViewer(cameraId: camera.id),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -210,18 +218,9 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOnline = status == CameraStatus.online;
-    final color = isOnline ? KomplekkuColors.success : KomplekkuColors.textSecondary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        _statusLabels[status]!,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
-      ),
+    return AppBadge(
+      label: _statusLabels[status]!,
+      tone: isOnline ? AppBadgeTone.success : AppBadgeTone.neutral,
     );
   }
 }
@@ -236,22 +235,22 @@ class _CameraViewer extends ConsumerWidget {
     final ticket = ref.watch(cameraStreamTicketProvider(cameraId));
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: KomplekkuColors.border),
+        color: AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        border: Border.all(color: AppColors.border),
       ),
       child: ticket.when(
-        loading: () => const Row(
+        loading: () => Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 10),
-            Text('Menyiapkan tontonan simulasi…'),
+            const SizedBox(width: AppSpacing.sm),
+            Text('Menyiapkan tontonan simulasi…', style: AppTypography.body),
           ],
         ),
         error: (error, _) {
@@ -260,7 +259,7 @@ class _CameraViewer extends ConsumerWidget {
               : ApiException.malformedResponse();
           return Text(
             failure.message,
-            style: const TextStyle(color: KomplekkuColors.danger),
+            style: AppTypography.body.copyWith(color: AppColors.danger),
           );
         },
         data: (data) {
@@ -272,31 +271,31 @@ class _CameraViewer extends ConsumerWidget {
                 height: 96,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: KomplekkuColors.primaryDark,
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.primaryDark,
+                  borderRadius: BorderRadius.circular(AppRadius.small),
                 ),
                 child: const Icon(
                   Icons.videocam_outlined,
-                  color: Colors.white,
+                  color: AppColors.surface,
                   size: 28,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Tayangan simulasi (mode mock)',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: AppTypography.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               _Fact(label: 'Tiket mock', value: data.ticket ?? 'Tidak tersedia'),
               _Fact(label: 'Ditonton oleh', value: data.watermark.viewerName),
               _Fact(label: 'Label', value: data.watermark.label),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Belum ada aliran video sungguhan — kartu ini hanya mensimulasikan '
                 'tontonan kamera.',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: AppTypography.caption,
               ),
             ],
           );
@@ -321,12 +320,12 @@ class _Fact extends StatelessWidget {
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             TextSpan(text: value),
           ],
         ),
-        style: Theme.of(context).textTheme.bodySmall,
+        style: AppTypography.caption,
       ),
     );
   }
@@ -341,15 +340,16 @@ class _CameraListSkeleton extends StatelessWidget {
       label: 'Memuat kamera',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 96,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.small),
             ),
           ),
         ),

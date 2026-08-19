@@ -4,9 +4,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_settings_repository.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 const _monthNames = [
   'Januari',
@@ -118,85 +120,70 @@ class _PrayerSummaryCardState extends ConsumerState<PrayerSummaryCard> {
       iqomahDelayMinutes: iqomahDelayMinutes,
     );
 
-    return Material(
-      color: KomplekkuColors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: () => context.go('/shalat'),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: KomplekkuColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: () => context.go('/shalat'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: KomplekkuColors.primary,
-                    ),
-                    child: const Icon(
-                      Icons.mosque_outlined,
-                      color: Colors.white,
-                      size: 19,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Jadwal Shalat Hari Ini',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        Text(
-                          '${_weekdayNames[_now.weekday - 1]}, ${_now.day} '
-                          '${_monthNames[_now.month - 1]} ${_now.year}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: KomplekkuColors.textSecondary,
-                  ),
-                ],
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary,
+                ),
+                child: const Icon(
+                  Icons.mosque_outlined,
+                  color: AppColors.surface,
+                  size: 19,
+                ),
               ),
-              const SizedBox(height: 14),
-              if (adzanState.kind == AdzanStateKind.iqomahCountdown)
-                _CompactIqomahRow(state: adzanState)
-              else
-                Row(
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final prayer in _summaryPrayers)
-                      Expanded(
-                        child: _PrayerColumn(
-                          prayer: prayer,
-                          at: times[prayer]!,
-                          isNext: prayer == nextPrayer,
-                          countdown: prayer == nextPrayer
-                              ? _formatCountdown(secondsToNext)
-                              : null,
-                        ),
-                      ),
+                    Text(
+                      'Jadwal Shalat Hari Ini',
+                      style: AppTypography.label,
+                    ),
+                    Text(
+                      '${_weekdayNames[_now.weekday - 1]}, ${_now.day} '
+                      '${_monthNames[_now.month - 1]} ${_now.year}',
+                      style: AppTypography.caption,
+                    ),
                   ],
                 ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.textSecondary,
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+          if (adzanState.kind == AdzanStateKind.iqomahCountdown)
+            _CompactIqomahRow(state: adzanState)
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final prayer in _summaryPrayers)
+                  Expanded(
+                    child: _PrayerColumn(
+                      prayer: prayer,
+                      at: times[prayer]!,
+                      isNext: prayer == nextPrayer,
+                      countdown: prayer == nextPrayer
+                          ? _formatCountdown(secondsToNext)
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -218,31 +205,33 @@ class _CompactIqomahRow extends StatelessWidget {
           'Menuju iqomah ${prayerLabels[prayer]}, tersisa '
           '${formatDurationMMSS(state.iqomahSecondsRemaining)}',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
-          color: KomplekkuColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: KomplekkuColors.primary),
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+          border: Border.all(color: AppColors.primary),
         ),
         child: Row(
           children: [
-            const Icon(Icons.mosque, color: KomplekkuColors.primary, size: 18),
-            const SizedBox(width: 8),
+            const Icon(Icons.mosque, color: AppColors.primary, size: 18),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 'Menuju Iqomah ${prayerLabels[prayer]}',
-                style: const TextStyle(
+                style: AppTypography.body.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: KomplekkuColors.primary,
+                  color: AppColors.primary,
                 ),
               ),
             ),
             Text(
               formatDurationMMSS(state.iqomahSecondsRemaining),
-              style: const TextStyle(
+              style: AppTypography.tabular(AppTypography.bodyLarge).copyWith(
                 fontWeight: FontWeight.w800,
-                color: KomplekkuColors.primary,
-                fontFeatures: [FontFeature.tabularFigures()],
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -269,65 +258,48 @@ class _PrayerColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.sm,
+        horizontal: 2,
+      ),
       decoration: BoxDecoration(
-        color: isNext ? KomplekkuColors.surfaceMuted : null,
-        borderRadius: BorderRadius.circular(10),
+        color: isNext ? AppColors.surfaceMuted : null,
+        borderRadius: BorderRadius.circular(AppRadius.medium),
         border: Border.all(
-          color: isNext ? KomplekkuColors.primary : Colors.transparent,
+          color: isNext ? AppColors.primary : Colors.transparent,
         ),
       ),
       child: Column(
         children: [
           if (isNext)
-            Container(
-              margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: KomplekkuColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'NANTI',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.4,
-                ),
-              ),
+            const Padding(
+              padding: EdgeInsets.only(bottom: AppSpacing.xs),
+              child: AppBadge(label: 'NANTI', tone: AppBadgeTone.brand),
             ),
           Text(
             prayerLabels[prayer]!,
-            style: TextStyle(
-              fontSize: 11,
+            style: AppTypography.caption.copyWith(
               fontWeight: FontWeight.w600,
               color: isNext
-                  ? KomplekkuColors.primary
-                  : KomplekkuColors.textSecondary,
+                  ? AppColors.primary
+                  : AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             formatTime24(at),
-            style: TextStyle(
-              fontSize: 13,
+            style: AppTypography.tabular(AppTypography.label).copyWith(
               fontWeight: FontWeight.w800,
               color: isNext
-                  ? KomplekkuColors.primary
-                  : KomplekkuColors.textPrimary,
-              fontFeatures: const [FontFeature.tabularFigures()],
+                  ? AppColors.primary
+                  : AppColors.textPrimary,
             ),
           ),
           if (countdown != null) ...[
-            const SizedBox(height: 2),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               countdown!,
-              style: const TextStyle(
-                fontSize: 9,
-                color: KomplekkuColors.textSecondary,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: AppTypography.tabular(AppTypography.caption),
             ),
           ],
         ],

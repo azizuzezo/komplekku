@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -8,6 +8,8 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/report/data/report_repository.dart';
 import 'package:komplekku/features/report/domain/report.dart';
 import 'package:komplekku/features/report/presentation/report_list_screen.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 class ReportDetailScreen extends ConsumerStatefulWidget {
   const ReportDetailScreen({super.key, required this.id});
@@ -60,7 +62,12 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen> {
             );
           },
           data: (report) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.xxl,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -70,14 +77,14 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen> {
                     Expanded(
                       child: Text(
                         reportCategoryLabels[report.category]!,
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: AppTypography.heading,
                       ),
                     ),
                     _DetailStatusBadge(status: report.status),
                   ],
                 ),
                 if (report.location != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   _FactRow(
                     icon: Icons.location_on_outlined,
                     label: 'Lokasi',
@@ -85,35 +92,29 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen> {
                   ),
                 ],
                 if (canManage) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   _FactRow(
                     icon: Icons.person_outline,
                     label: 'Pelapor',
                     value: '${report.reporterName} · ${report.houseCode}',
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 const Divider(),
-                const SizedBox(height: 20),
-                Text('Deskripsi', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                  report.description,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Riwayat status',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.lg),
+                Text('Deskripsi', style: AppTypography.title),
+                const SizedBox(height: AppSpacing.sm),
+                Text(report.description, style: AppTypography.bodyLarge),
+                const SizedBox(height: AppSpacing.xl),
+                Text('Riwayat status', style: AppTypography.title),
+                const SizedBox(height: AppSpacing.md),
                 ...report.updates.map(
                   (update) => _UpdateTile(update: update),
                 ),
                 if (canManage) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xl),
                   const Divider(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   _UpdateForm(reportId: widget.id, currentStatus: report.status),
                 ],
               ],
@@ -135,17 +136,14 @@ class _FactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: KomplekkuColors.textSecondary),
-          const SizedBox(width: 8),
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              '$label: $value',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text('$label: $value', style: AppTypography.body),
           ),
         ],
       ),
@@ -160,19 +158,12 @@ class _DetailStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = statusToneColor(reportStatusTone(status));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        reportStatusLabels[status]!,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700),
-      ),
-    );
+    final tone = switch (reportStatusTone(status)) {
+      ReportStatusTone.success => AppBadgeTone.success,
+      ReportStatusTone.warning => AppBadgeTone.warning,
+      ReportStatusTone.muted => AppBadgeTone.neutral,
+    };
+    return AppBadge(label: reportStatusLabels[status]!, tone: tone);
   }
 }
 
@@ -184,34 +175,27 @@ class _UpdateTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               _DetailStatusBadge(status: update.status),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 formatReportDateTime(update.createdAt),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: KomplekkuColors.textSecondary,
-                    ),
+                style: AppTypography.tabular(AppTypography.caption),
               ),
             ],
           ),
           if (update.note != null) ...[
-            const SizedBox(height: 6),
-            Text(update.note!, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: AppSpacing.sm),
+            Text(update.note!, style: AppTypography.body),
           ],
           if (update.actorName != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Oleh ${update.actorName}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: KomplekkuColors.textSecondary,
-                  ),
-            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text('Oleh ${update.actorName}', style: AppTypography.caption),
           ],
         ],
       ),
@@ -275,11 +259,8 @@ class _UpdateFormState extends ConsumerState<_UpdateForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Perbarui status laporan',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 12),
+        Text('Perbarui status laporan', style: AppTypography.title),
+        const SizedBox(height: AppSpacing.md),
         DropdownButtonFormField<ReportStatus>(
           initialValue: _status,
           decoration: const InputDecoration(labelText: 'Status'),
@@ -295,7 +276,7 @@ class _UpdateFormState extends ConsumerState<_UpdateForm> {
             if (value != null) setState(() => _status = value);
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           controller: _noteController,
           decoration: const InputDecoration(
@@ -305,22 +286,17 @@ class _UpdateFormState extends ConsumerState<_UpdateForm> {
           maxLines: 3,
         ),
         if (_error != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Text(
             _error!.message,
-            style: const TextStyle(color: KomplekkuColors.danger),
+            style: AppTypography.body.copyWith(color: AppColors.danger),
           ),
         ],
-        const SizedBox(height: 16),
-        FilledButton(
+        const SizedBox(height: AppSpacing.base),
+        AppButton(
+          label: 'Simpan perubahan',
+          isLoading: _isSubmitting,
           onPressed: _isSubmitting ? null : _submit,
-          child: _isSubmitting
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Simpan perubahan'),
         ),
       ],
     );

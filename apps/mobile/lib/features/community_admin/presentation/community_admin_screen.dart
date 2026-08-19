@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/community_admin/data/community_admin_repository.dart';
 import 'package:komplekku/features/onboarding/domain/community_option.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_text_field.dart';
 
 class CommunityAdminScreen extends ConsumerWidget {
   const CommunityAdminScreen({super.key});
@@ -15,12 +19,12 @@ class CommunityAdminScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Kelola Komunitas')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.base),
           children: const [
             _CommunityIdentityCard(),
-            SizedBox(height: 16),
+            SizedBox(height: AppSpacing.base),
             _PrayerSettingsCard(),
-            SizedBox(height: 16),
+            SizedBox(height: AppSpacing.base),
             _RtManagementCard(),
           ],
         ),
@@ -42,23 +46,17 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        border: Border.all(color: KomplekkuColors.border),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
+          Text(title, style: AppTypography.title),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             description,
-            style: const TextStyle(color: KomplekkuColors.textSecondary, fontSize: 12),
+            style: AppTypography.caption,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.base),
           child,
         ],
       ),
@@ -117,7 +115,7 @@ class _CommunityIdentityCardState extends ConsumerState<_CommunityIdentityCard> 
       description: 'RW saat ini menaungi beberapa RT. Ubah label RW di sini bila strukturnya berubah.',
       child: community.when(
         loading: () => const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Center(child: CircularProgressIndicator()),
         ),
         error: (error, _) => StatePanel(
@@ -137,28 +135,30 @@ class _CommunityIdentityCardState extends ConsumerState<_CommunityIdentityCard> 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
+              AppTextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nama komunitas'),
+                label: 'Nama komunitas',
               ),
-              const SizedBox(height: 10),
-              TextField(
+              const SizedBox(height: AppSpacing.sm),
+              AppTextField(
                 controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Alamat'),
+                label: 'Alamat',
               ),
-              const SizedBox(height: 10),
-              TextField(
+              const SizedBox(height: AppSpacing.sm),
+              AppTextField(
                 controller: _rwController,
-                decoration: const InputDecoration(labelText: 'Label RW', hintText: 'RW 13'),
+                label: 'Label RW',
+                hint: 'RW 13',
               ),
               if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!, style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12)),
+                const SizedBox(height: AppSpacing.xs),
+                Text(_error!, style: AppTypography.caption.copyWith(color: AppColors.danger)),
               ],
-              const SizedBox(height: 12),
-              FilledButton(
+              const SizedBox(height: AppSpacing.md),
+              AppButton(
+                label: _saving ? 'Menyimpan…' : 'Simpan identitas',
+                isLoading: _saving,
                 onPressed: _saving ? null : _save,
-                child: Text(_saving ? 'Menyimpan…' : 'Simpan identitas'),
               ),
             ],
           );
@@ -248,17 +248,18 @@ class _PrayerSettingsCardState extends ConsumerState<_PrayerSettingsCard> {
                 ),
               ),
               if (_error != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   _error!,
-                  style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12),
+                  style: AppTypography.caption.copyWith(color: AppColors.danger),
                 ),
               ],
-              const SizedBox(height: 12),
-              FilledButton.icon(
+              const SizedBox(height: AppSpacing.md),
+              AppButton(
+                label: _saving ? 'Menyimpan…' : 'Simpan pengaturan shalat',
+                icon: Icons.schedule_outlined,
+                isLoading: _saving,
                 onPressed: _saving ? null : _save,
-                icon: const Icon(Icons.schedule_outlined),
-                label: Text(_saving ? 'Menyimpan…' : 'Simpan pengaturan shalat'),
               ),
             ],
           );
@@ -342,7 +343,7 @@ class _RtManagementCardState extends ConsumerState<_RtManagementCard> {
         children: [
           rts.when(
             loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (error, _) => StatePanel(
@@ -361,32 +362,40 @@ class _RtManagementCardState extends ConsumerState<_RtManagementCard> {
                 );
               }
               return Column(
-                children: items.map((rt) => _rtRow(rt)).toList(),
+                children: [
+                  for (final rt in items) ...[
+                    _rtRow(rt),
+                    if (rt != items.last) const Divider(height: AppSpacing.lg, color: AppColors.border),
+                  ],
+                ],
               );
             },
           ),
-          const SizedBox(height: 14),
-          const Divider(),
-          const SizedBox(height: 10),
-          Text('Tambah RT baru', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 10),
-          TextField(
+          const SizedBox(height: AppSpacing.md),
+          const Divider(color: AppColors.border),
+          const SizedBox(height: AppSpacing.sm),
+          Text('Tambah RT baru', style: AppTypography.title),
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
             controller: _codeController,
-            decoration: const InputDecoration(labelText: 'Kode RT baru', hintText: 'RT 03'),
+            label: 'Kode RT baru',
+            hint: 'RT 03',
           ),
-          const SizedBox(height: 10),
-          TextField(
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nama RT baru', hintText: 'RT 03'),
+            label: 'Nama RT baru',
+            hint: 'RT 03',
           ),
           if (_createError != null) ...[
-            const SizedBox(height: 8),
-            Text(_createError!, style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12)),
+            const SizedBox(height: AppSpacing.xs),
+            Text(_createError!, style: AppTypography.caption.copyWith(color: AppColors.danger)),
           ],
-          const SizedBox(height: 12),
-          FilledButton(
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            label: _creating ? 'Menyimpan…' : 'Tambah RT',
+            isLoading: _creating,
             onPressed: _creating ? null : _create,
-            child: Text(_creating ? 'Menyimpan…' : 'Tambah RT'),
           ),
         ],
       ),
@@ -395,58 +404,46 @@ class _RtManagementCardState extends ConsumerState<_RtManagementCard> {
 
   Widget _rtRow(RtOption rt) {
     final isEditing = _editingId == rt.id;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: KomplekkuColors.surfaceSoft,
-          borderRadius: BorderRadius.circular(12),
+    if (isEditing) {
+      return Row(
+        children: [
+          Expanded(
+            child: AppTextField(
+              controller: _editController,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          IconButton(
+            onPressed: _renaming ? null : () => _rename(rt.id),
+            icon: const Icon(Icons.check),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _editingId = null),
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(rt.name, style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              AppBadge(label: rt.code, tone: AppBadgeTone.brand),
+            ],
+          ),
         ),
-        child: isEditing
-            ? Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _editController,
-                      decoration: const InputDecoration(isDense: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _renaming ? null : () => _rename(rt.id),
-                    icon: const Icon(Icons.check),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() => _editingId = null),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(rt.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        Text(
-                          'Kode ${rt.code}',
-                          style: const TextStyle(color: KomplekkuColors.textSecondary, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _editingId = rt.id;
-                      _editController.text = rt.name;
-                    }),
-                    child: const Text('Ubah nama'),
-                  ),
-                ],
-              ),
-      ),
+        TextButton(
+          onPressed: () => setState(() {
+            _editingId = rt.id;
+            _editController.text = rt.name;
+          }),
+          child: const Text('Ubah nama'),
+        ),
+      ],
     );
   }
 }

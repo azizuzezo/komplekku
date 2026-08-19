@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -9,6 +9,7 @@ import 'package:komplekku/features/invoice/data/invoice_repository.dart';
 import 'package:komplekku/features/invoice/domain/invoice.dart';
 import 'package:komplekku/features/invoice/presentation/format.dart';
 import 'package:komplekku/features/invoice/presentation/payment_submit_form.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
 
 /// Detail view for a single invoice, mirroring `invoice-detail.tsx`: shows
 /// invoice facts, a receipt when paid, the waiver reason when waived, and a
@@ -57,51 +58,42 @@ class InvoiceDetailScreen extends ConsumerWidget {
             );
           },
           data: (invoice) => SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  invoice.duesTypeName,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 4),
+                Text(invoice.duesTypeName, style: AppTypography.body),
+                const SizedBox(height: AppSpacing.xs),
                 Row(
                   children: [
                     Expanded(
                       child: Text(
                         'Periode ${invoice.period}',
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: AppTypography.heading,
                       ),
                     ),
                     _StatusBadge(status: invoice.status),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 _FactRow(label: 'Jumlah', value: formatRupiah(invoice.amount)),
                 _FactRow(
                   label: 'Jatuh tempo',
                   value: formatDateOnly(invoice.dueDate),
                 ),
                 _FactRow(label: 'Rumah', value: invoice.houseCode),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 const Divider(),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 if (invoice.status == InvoiceStatus.waived &&
                     invoice.waivedReason != null) ...[
-                  Text(
-                    'Alasan pembebasan',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(invoice.waivedReason!),
+                  Text('Alasan pembebasan', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(invoice.waivedReason!, style: AppTypography.bodyLarge),
                 ],
                 if (invoice.status == InvoiceStatus.paid) ...[
-                  Text(
-                    'Bukti pembayaran',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
+                  Text('Bukti pembayaran', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.md),
                   _FactRow(label: 'Status', value: 'LUNAS'),
                   _FactRow(label: 'Periode', value: invoice.period),
                   _FactRow(
@@ -120,11 +112,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     ),
                 ],
                 if (invoice.canSubmitPayment) ...[
-                  Text(
-                    'Kirim bukti pembayaran',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
+                  Text('Kirim bukti pembayaran', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.md),
                   if (hasPermission(permissions, 'payment.create'))
                     PaymentSubmitForm(
                       invoiceId: invoice.id,
@@ -135,13 +124,13 @@ class InvoiceDetailScreen extends ConsumerWidget {
                   else
                     Text(
                       'Akunmu tidak memiliki izin untuk mengirim bukti pembayaran.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: AppTypography.body,
                     ),
                 ],
                 if (invoice.status == InvoiceStatus.pendingVerification)
                   Text(
                     'Bukti pembayaran sudah dikirim dan sedang menunggu verifikasi bendahara.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: AppTypography.body,
                   ),
               ],
             ),
@@ -161,28 +150,39 @@ class _FactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 130,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(label, style: AppTypography.body),
           ),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: AppTypography.tabular(
+                AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+AppBadgeTone _invoiceStatusTone(InvoiceStatus status) {
+  switch (status) {
+    case InvoiceStatus.paid:
+      return AppBadgeTone.success;
+    case InvoiceStatus.pendingVerification:
+      return AppBadgeTone.warning;
+    case InvoiceStatus.overdue:
+      return AppBadgeTone.danger;
+    case InvoiceStatus.waived:
+    case InvoiceStatus.unpaid:
+      return AppBadgeTone.neutral;
   }
 }
 
@@ -193,32 +193,9 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _colorFor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        invoiceStatusLabel(status),
-        style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
-      ),
+    return AppBadge(
+      label: invoiceStatusLabel(status),
+      tone: _invoiceStatusTone(status),
     );
-  }
-
-  Color _colorFor(InvoiceStatus status) {
-    switch (status) {
-      case InvoiceStatus.paid:
-        return KomplekkuColors.success;
-      case InvoiceStatus.pendingVerification:
-        return KomplekkuColors.accent;
-      case InvoiceStatus.overdue:
-        return KomplekkuColors.danger;
-      case InvoiceStatus.waived:
-      case InvoiceStatus.unpaid:
-        return KomplekkuColors.textSecondary;
-    }
   }
 }

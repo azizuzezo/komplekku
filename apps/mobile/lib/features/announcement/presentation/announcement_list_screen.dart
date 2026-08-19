@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/entity_actions.dart';
-import 'package:komplekku/core/widgets/prototype_header.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_header.dart';
 import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/data/announcement_repository.dart';
@@ -45,7 +48,7 @@ class _AnnouncementListScreenState
               },
               icon: const Icon(Icons.add),
               label: const Text('Buat Pengumuman'),
-              backgroundColor: KomplekkuColors.primary,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             )
           : null,
@@ -53,8 +56,13 @@ class _AnnouncementListScreenState
         child: Column(
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: PrototypeHeader(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              child: AppHeader(
                 title: 'Pengumuman',
                 subtitle: 'RT 05 / RW 03 • Billabong',
                 showAccount: true,
@@ -158,9 +166,14 @@ class _AnnouncementListScreenState
               ref.refresh(announcementListProvider(_filter).future),
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              AppSpacing.md,
+              AppSpacing.base,
+              AppSpacing.xxxl,
+            ),
             itemCount: items.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final item = items[index];
               return _AnnouncementCard(
@@ -193,7 +206,7 @@ class _FilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.base, AppSpacing.xs, AppSpacing.base, AppSpacing.md),
       child: Row(
         children: [
           for (final value in AnnouncementFilter.values)
@@ -204,23 +217,20 @@ class _FilterChips extends StatelessWidget {
                   showCheckmark: value == AnnouncementFilter.all,
                   labelPadding: const EdgeInsets.symmetric(horizontal: 2),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 8,
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.sm,
                   ),
                   label: Text(announcementFilterLabels[value]!),
                   selected: filter == value,
                   onSelected: (_) => onChanged(value),
-                  selectedColor: KomplekkuColors.primary,
+                  selectedColor: AppColors.primary,
                   side: BorderSide(
                     color: filter == value
-                        ? KomplekkuColors.primary
-                        : KomplekkuColors.borderStrong,
+                        ? AppColors.primary
+                        : AppColors.borderStrong,
                   ),
-                  labelStyle: TextStyle(
-                    color: filter == value
-                        ? Colors.white
-                        : KomplekkuColors.textPrimary,
-                    fontSize: 12,
+                  labelStyle: AppTypography.caption.copyWith(
+                    color: filter == value ? AppColors.surface : AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -232,36 +242,16 @@ class _FilterChips extends StatelessWidget {
   }
 }
 
-class _BadgeChip extends StatelessWidget {
-  const _BadgeChip({required this.badge});
+AppBadgeTone _announcementBadgeTone(AnnouncementBadge badge) => switch (badge) {
+  AnnouncementBadge.important => AppBadgeTone.danger,
+  AnnouncementBadge.event => AppBadgeTone.brand,
+  AnnouncementBadge.info => AppBadgeTone.neutral,
+};
 
-  final AnnouncementBadge badge;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (badge) {
-      AnnouncementBadge.important => KomplekkuColors.danger,
-      AnnouncementBadge.event => KomplekkuColors.primary,
-      AnnouncementBadge.info => KomplekkuColors.textSecondary,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        announcementBadgeLabels[badge]!,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
+Widget _badgeChip(AnnouncementBadge badge) => AppBadge(
+  label: announcementBadgeLabels[badge]!,
+  tone: _announcementBadgeTone(badge),
+);
 
 /// The announcement's cover photo, or a category-tinted placeholder when the
 /// author did not upload one — so every row keeps the same shape.
@@ -275,17 +265,17 @@ class _CoverThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     final coverUrl = url;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppRadius.small),
       child: SizedBox(
         width: 72,
         height: 72,
         child: coverUrl == null
             ? ColoredBox(
-                color: KomplekkuColors.surfaceMuted,
+                color: AppColors.surfaceMuted,
                 child: Center(
                   child: Icon(
                     _badgeIcons[badge],
-                    color: KomplekkuColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               )
@@ -293,11 +283,11 @@ class _CoverThumbnail extends StatelessWidget {
                 coverUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => ColoredBox(
-                  color: KomplekkuColors.surfaceMuted,
+                  color: AppColors.surfaceMuted,
                   child: Center(
                     child: Icon(
                       _badgeIcons[badge],
-                      color: KomplekkuColors.primary,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -451,7 +441,13 @@ class __CreateAnnouncementDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(_isEditing ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.modal),
+      ),
+      title: Text(
+        _isEditing ? 'Edit Pengumuman' : 'Buat Pengumuman Baru',
+        style: AppTypography.title,
+      ),
       content: _loadingExisting
           ? const SizedBox(
               height: 80,
@@ -466,10 +462,10 @@ class __CreateAnnouncementDialogState
                   children: [
                     if (_errorMessage != null)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: KomplekkuColors.danger),
+                          style: AppTypography.body.copyWith(color: AppColors.danger),
                         ),
                       ),
                     TextFormField(
@@ -482,7 +478,7 @@ class __CreateAnnouncementDialogState
                           ? 'Judul minimal 3 karakter'
                           : null,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _summaryController,
                       decoration: const InputDecoration(
@@ -493,7 +489,7 @@ class __CreateAnnouncementDialogState
                           ? 'Ringkasan minimal 5 karakter'
                           : null,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<AnnouncementCategory>(
                       initialValue: _category,
                       decoration: const InputDecoration(
@@ -515,14 +511,14 @@ class __CreateAnnouncementDialogState
                         if (val != null) setState(() => _category = val);
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     _CoverPickerField(
                       coverImageUrl: _coverImageUrl,
                       isUploading: _uploadingCover,
                       onPick: _pickCover,
                       onRemove: () => setState(() => _coverImageUrl = null),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
                       initialValue: _priority,
                       decoration: const InputDecoration(
@@ -548,7 +544,7 @@ class __CreateAnnouncementDialogState
                         if (val != null) setState(() => _priority = val);
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _bodyController,
                       maxLines: 4,
@@ -565,21 +561,20 @@ class __CreateAnnouncementDialogState
               ),
             ),
       actions: [
-        TextButton(
+        AppButton(
+          label: 'Batal',
+          variant: AppButtonVariant.ghost,
+          expand: false,
           onPressed: _submitting
               ? null
               : () => Navigator.of(context).pop(false),
-          child: const Text('Batal'),
         ),
-        ElevatedButton(
+        AppButton(
+          label: _isEditing ? 'Simpan Perubahan' : 'Terbitkan',
+          variant: AppButtonVariant.primary,
+          expand: false,
+          isLoading: _submitting,
           onPressed: _submitting || _loadingExisting ? null : _submit,
-          child: Text(
-            _submitting
-                ? 'Menyimpan...'
-                : _isEditing
-                ? 'Simpan Perubahan'
-                : 'Terbitkan',
-          ),
         ),
       ],
     );
@@ -603,78 +598,67 @@ class _AnnouncementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _CoverThumbnail(
-                url: announcement.coverImageUrl,
-                badge: announcement.badge,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          _BadgeChip(badge: announcement.badge),
-                          if (!announcement.isRead) ...[
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.circle,
-                              size: 8,
-                              color: KomplekkuColors.primary,
-                              semanticLabel: 'Belum dibaca',
-                            ),
-                          ],
-                          const Spacer(),
-                          if (canManage)
-                            EntityActions(
-                              onEdit: onEdit,
-                              onDelete: onDelete,
-                              deleteTitle: 'Hapus pengumuman?',
-                              deleteMessage:
-                                  '"${announcement.title}" tidak akan terlihat lagi di papan warga.',
-                              tooltip: 'Kelola pengumuman',
-                            ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      announcement.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      announcement.summary,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      formatIndonesianDateTime(announcement.publishedAt),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CoverThumbnail(
+            url: announcement.coverImageUrl,
+            badge: announcement.badge,
           ),
-        ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      _badgeChip(announcement.badge),
+                      if (!announcement.isRead) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        const Icon(
+                          Icons.circle,
+                          size: 8,
+                          color: AppColors.primary,
+                          semanticLabel: 'Belum dibaca',
+                        ),
+                      ],
+                      const Spacer(),
+                      if (canManage)
+                        EntityActions(
+                          onEdit: onEdit,
+                          onDelete: onDelete,
+                          deleteTitle: 'Hapus pengumuman?',
+                          deleteMessage:
+                              '"${announcement.title}" tidak akan terlihat lagi di papan warga.',
+                          tooltip: 'Kelola pengumuman',
+                        ),
+                    ],
+                  ),
+                ),
+                Text(
+                  announcement.title,
+                  style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  announcement.summary,
+                  style: AppTypography.body,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  formatIndonesianDateTime(announcement.publishedAt),
+                  style: AppTypography.tabular(AppTypography.caption),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -700,7 +684,7 @@ class _CoverPickerField extends StatelessWidget {
       children: [
         if (url != null)
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.small),
             child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
           )
         else
@@ -708,9 +692,9 @@ class _CoverPickerField extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: KomplekkuColors.border),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.small),
+              border: Border.all(color: AppColors.border),
             ),
             child: isUploading
                 ? const Center(
@@ -722,19 +706,17 @@ class _CoverPickerField extends StatelessWidget {
                   )
                 : const Icon(
                     Icons.image_outlined,
-                    color: KomplekkuColors.textSecondary,
+                    color: AppColors.textSecondary,
                   ),
           ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Gambar sampul (opsional)',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
               ),
               Row(
                 children: [
@@ -746,7 +728,7 @@ class _CoverPickerField extends StatelessWidget {
                     TextButton(
                       onPressed: onRemove,
                       style: TextButton.styleFrom(
-                        foregroundColor: KomplekkuColors.danger,
+                        foregroundColor: AppColors.danger,
                       ),
                       child: const Text('Hapus'),
                     ),
@@ -769,15 +751,15 @@ class _AnnouncementListSkeleton extends StatelessWidget {
       label: 'Memuat pengumuman',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 110,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.card),
             ),
           ),
         ),

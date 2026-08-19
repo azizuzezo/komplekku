@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 
 enum KomplekkuLogoVariant { lockup, mark }
 
@@ -48,12 +48,12 @@ class _LogoFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: KomplekkuColors.primary),
+      decoration: const BoxDecoration(color: AppColors.primary),
       child: Center(
         child: Text(
           compact ? 'K' : 'Komplekku',
           style: TextStyle(
-            color: KomplekkuColors.surface,
+            color: AppColors.surface,
             fontSize: compact ? 20 : 18,
             fontWeight: FontWeight.w700,
           ),

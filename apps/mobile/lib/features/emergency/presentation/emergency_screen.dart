@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/emergency/domain/emergency.dart';
 import 'package:komplekku/features/emergency/presentation/emergency_controller.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 const _kindOptions = [
   (EmergencyKind.security, 'Keamanan'),
@@ -128,23 +130,26 @@ class _EmergencyFormState extends ConsumerState<_EmergencyForm> {
   Widget build(BuildContext context) {
     final state = widget.state;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.md,
+        AppSpacing.base,
+        AppSpacing.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'Kirim sinyal darurat untuk memberi tahu petugas keamanan '
             'lingkungan secara instan.',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: AppTypography.body,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             'Jenis kedaruratan',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: AppTypography.label,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<EmergencyKind>(
             initialValue: state.kind,
             decoration: const InputDecoration(),
@@ -166,7 +171,7 @@ class _EmergencyFormState extends ConsumerState<_EmergencyForm> {
                     }
                   },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.base),
           TextFormField(
             controller: _noteController,
             enabled: !state.isSubmitting,
@@ -181,40 +186,27 @@ class _EmergencyFormState extends ConsumerState<_EmergencyForm> {
             ),
           ),
           if (state.submissionError != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Semantics(
               liveRegion: true,
               child: Text(
                 state.submissionError!.message,
-                style: const TextStyle(
-                  color: KomplekkuColors.danger,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.danger,
                   height: 1.4,
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 20),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: KomplekkuColors.danger,
-            ),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            label: state.isSubmitting ? 'Mengirim sinyal…' : 'Kirim Sinyal Darurat',
+            icon: state.isSubmitting ? null : Icons.warning_amber_rounded,
+            isLoading: state.isSubmitting,
+            variant: AppButtonVariant.danger,
             onPressed: state.isSubmitting
                 ? null
                 : () => ref.read(emergencyControllerProvider.notifier).submit(),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!state.isSubmitting) ...[
-                  const Icon(Icons.warning_amber_rounded, size: 18),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  state.isSubmitting
-                      ? 'Mengirim sinyal…'
-                      : 'Kirim Sinyal Darurat',
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -230,38 +222,39 @@ class _EmergencyConfirmation extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.md,
+        AppSpacing.base,
+        AppSpacing.xl,
+      ),
       child: Semantics(
         liveRegion: true,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: KomplekkuColors.surfaceSoft,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: KomplekkuColors.borderStrong),
-          ),
+        child: AppCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Sinyal darurat terkirim',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: AppTypography.title,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _Fact(label: 'Status', value: _statusLabels[emergency.status]!),
               _Fact(label: 'Rumah', value: emergency.houseLabel),
               _Fact(
                 label: 'Waktu kirim',
                 value: _formatSentAt(emergency.sentAt),
               ),
-              const SizedBox(height: 10),
-              const Text('Petugas keamanan telah diberi tahu.'),
-              const SizedBox(height: 16),
-              OutlinedButton(
+              const SizedBox(height: AppSpacing.sm),
+              Text('Petugas keamanan telah diberi tahu.', style: AppTypography.body),
+              const SizedBox(height: AppSpacing.base),
+              AppButton(
+                label: 'Kirim sinyal baru',
+                variant: AppButtonVariant.secondary,
+                expand: false,
                 onPressed: () =>
                     ref.read(emergencyControllerProvider.notifier).sendAnother(),
-                child: const Text('Kirim sinyal baru'),
               ),
             ],
           ),
@@ -280,15 +273,16 @@ class _Fact extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Text.rich(
         TextSpan(
+          style: AppTypography.body,
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            TextSpan(text: value),
+            TextSpan(text: value, style: AppTypography.tabular(AppTypography.body)),
           ],
         ),
       ),

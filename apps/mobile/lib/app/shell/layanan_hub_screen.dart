@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/widgets/hub_menu_screen.dart';
-import 'package:komplekku/core/widgets/prototype_header.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_header.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
 
 class _LayananSection {
   const _LayananSection({required this.title, required this.entries});
@@ -136,27 +138,26 @@ class LayananHubScreen extends ConsumerWidget {
         .toList(growable: false);
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+          ),
           children: [
-            const PrototypeHeader(
+            const AppHeader(
               title: 'Layanan',
               subtitle: 'RT 05 / RW 03 • Billabong',
               showAccount: true,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             for (final section in visibleSections) ...[
-              Text(
-                section.title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 10),
+              AppSectionHeader(title: section.title),
               _SectionCard(entries: section.entries),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ],
         ),
@@ -165,6 +166,8 @@ class LayananHubScreen extends ConsumerWidget {
   }
 }
 
+/// One bordered surface per section holding its rows, separated by a rule —
+/// `/design.md` prefers this over wrapping every row in its own card.
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.entries});
 
@@ -172,28 +175,23 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: KomplekkuColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: KomplekkuColors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
+    return AppCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           for (final entry in entries) ...[
             ListTile(
-              leading: Icon(entry.icon, color: KomplekkuColors.primary),
+              leading: Icon(entry.icon, color: AppColors.primary),
               title: Text(
                 entry.label,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
               ),
-              subtitle: Text(entry.description),
-              trailing: const Icon(Icons.chevron_right),
+              subtitle: Text(entry.description, style: AppTypography.body),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
               onTap: () => context.push(entry.route),
             ),
             if (entry != entries.last)
-              const Divider(height: 1, color: KomplekkuColors.border),
+              const Divider(height: 1, color: AppColors.border),
           ],
         ],
       ),

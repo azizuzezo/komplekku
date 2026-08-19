@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/onboarding/domain/residency_request.dart';
@@ -9,6 +9,7 @@ import 'package:komplekku/features/onboarding/presentation/community_selection_s
 import 'package:komplekku/features/onboarding/presentation/onboarding_controller.dart';
 import 'package:komplekku/features/onboarding/presentation/residency_request_screen.dart';
 import 'package:komplekku/features/onboarding/presentation/widgets/onboarding_scaffold.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 class OnboardingFlowScreen extends ConsumerStatefulWidget {
   const OnboardingFlowScreen({super.key});
@@ -161,11 +162,13 @@ class _OnboardingSkeleton extends StatelessWidget {
               Container(
                 height: 62,
                 decoration: const BoxDecoration(
-                  color: KomplekkuColors.surfaceSoft,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  color: AppColors.surfaceSoft,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(AppRadius.medium),
+                  ),
                 ),
               ),
-              if (index < 2) const SizedBox(height: 10),
+              if (index < 2) const SizedBox(height: AppSpacing.sm),
             ],
           ],
         ),
@@ -210,13 +213,14 @@ class _OnboardingLoadError extends StatelessWidget {
                     ? Icons.cloud_off_outlined
                     : Icons.info_outline,
             size: 34,
+            color: AppColors.primary,
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.lg),
         if (!mustSignIn)
-          FilledButton(onPressed: onRetry, child: const Text('Coba lagi'))
+          AppButton(label: 'Coba lagi', onPressed: onRetry)
         else
-          FilledButton(onPressed: onLogout, child: const Text('Masuk kembali')),
+          AppButton(label: 'Masuk kembali', onPressed: onLogout),
       ],
     );
   }

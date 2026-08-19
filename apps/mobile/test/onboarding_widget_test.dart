@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/features/onboarding/domain/community_option.dart';
 import 'package:komplekku/features/onboarding/domain/residency_request.dart';
 import 'package:komplekku/features/onboarding/presentation/community_selection_screen.dart';
@@ -125,6 +125,6 @@ class _TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(theme: buildKomplekkuTheme(), home: child);
+    return MaterialApp(theme: buildAppTheme(), home: child);
   }
 }

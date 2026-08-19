@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:latlong2/latlong.dart';
 
 class KomplekMapScreen extends StatefulWidget {
@@ -62,8 +62,8 @@ class _KomplekMapScreenState extends State<KomplekMapScreen> {
                       polygons: [
                         Polygon(
                           points: _boundaryPoints,
-                          color: KomplekkuColors.primary.withValues(alpha: 0.15),
-                          borderColor: KomplekkuColors.primary,
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderColor: AppColors.primary,
                           borderStrokeWidth: 2.5,
                         ),
                       ],
@@ -76,7 +76,7 @@ class _KomplekMapScreenState extends State<KomplekMapScreen> {
                           height: 44,
                           child: Container(
                             decoration: const BoxDecoration(
-                              color: KomplekkuColors.danger,
+                              color: AppColors.danger,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -99,12 +99,12 @@ class _KomplekMapScreenState extends State<KomplekMapScreen> {
                 ),
                 // Recenter Floating Button
                 Positioned(
-                  bottom: 16,
-                  right: 16,
+                  bottom: AppSpacing.base,
+                  right: AppSpacing.base,
                   child: FloatingActionButton.small(
                     onPressed: _recenter,
-                    backgroundColor: KomplekkuColors.primary,
-                    child: const Icon(Icons.center_focus_strong, color: Colors.white),
+                    backgroundColor: AppColors.primary,
+                    child: const Icon(Icons.center_focus_strong, color: AppColors.surface),
                   ),
                 ),
               ],
@@ -112,43 +112,48 @@ class _KomplekMapScreenState extends State<KomplekMapScreen> {
           ),
           // Info Panel
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.base),
             decoration: const BoxDecoration(
-              color: KomplekkuColors.surface,
-              border: Border(top: BorderSide(color: KomplekkuColors.border)),
+              color: AppColors.surface,
+              border: Border(top: BorderSide(color: AppColors.border)),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.location_on, color: KomplekkuColors.danger, size: 20),
-                    SizedBox(width: 8),
+                    const Icon(Icons.location_on, color: AppColors.danger, size: 20),
+                    const SizedBox(width: AppSpacing.sm),
                     Text(
                       'Pintu Gerbang Utama & Pos Security',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: KomplekkuColors.textPrimary,
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.sm),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Wilayah:', style: TextStyle(fontSize: 12, color: KomplekkuColors.textSecondary)),
-                    Text('Billabong Blok F', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text('Wilayah:', style: AppTypography.caption),
+                    Text(
+                      'Billabong Blok F',
+                      style: AppTypography.caption.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ],
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Koordinat Pusat:', style: TextStyle(fontSize: 12, color: KomplekkuColors.textSecondary)),
-                    Text('-6.509707, 106.772959', style: TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                    Text('Koordinat Pusat:', style: AppTypography.caption),
+                    Text(
+                      '-6.509707, 106.772959',
+                      style: AppTypography.tabular(AppTypography.caption),
+                    ),
                   ],
                 ),
               ],

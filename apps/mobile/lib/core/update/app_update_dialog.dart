@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/update/app_changelog_screen.dart';
 import 'package:komplekku/core/update/app_update_service.dart';
 
@@ -177,7 +177,7 @@ class _AppUpdateDialogState extends ConsumerState<AppUpdateDialog>
         icon: const Icon(
           Icons.system_update_alt,
           size: 32,
-          color: KomplekkuColors.primary,
+          color: AppColors.primary,
         ),
         title: Text(
           release.versionName == null
@@ -223,7 +223,7 @@ class _AppUpdateDialogState extends ConsumerState<AppUpdateDialog>
                 child: LinearProgressIndicator(
                   value: _installing || _readyToInstall ? null : progress,
                   minHeight: 8,
-                  backgroundColor: KomplekkuColors.surfaceSoft,
+                  backgroundColor: AppColors.surfaceSoft,
                 ),
               ),
               const SizedBox(height: 6),
@@ -242,7 +242,7 @@ class _AppUpdateDialogState extends ConsumerState<AppUpdateDialog>
               const SizedBox(height: 12),
               Text(
                 _error!,
-                style: const TextStyle(color: KomplekkuColors.danger),
+                style: const TextStyle(color: AppColors.danger),
               ),
             ],
             const SizedBox(height: 12),
@@ -250,7 +250,7 @@ class _AppUpdateDialogState extends ConsumerState<AppUpdateDialog>
               'Unduhan berjalan di latar belakang lewat sistem Android, lalu Android menampilkan konfirmasi pemasangan.',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: KomplekkuColors.textSecondary),
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),

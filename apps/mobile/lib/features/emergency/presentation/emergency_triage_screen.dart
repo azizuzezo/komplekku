@@ -2,13 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/emergency/data/emergency_repository.dart';
 import 'package:komplekku/features/emergency/domain/emergency.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 const _kindLabels = {
   EmergencyKind.security: 'Keamanan',
@@ -25,11 +27,15 @@ const _statusLabels = {
   EmergencyStatus.resolved: 'Selesai ditangani',
 };
 
-const _statusColors = {
-  EmergencyStatus.sent: KomplekkuColors.danger,
-  EmergencyStatus.acknowledged: KomplekkuColors.accent,
-  EmergencyStatus.responding: KomplekkuColors.primary,
-  EmergencyStatus.resolved: KomplekkuColors.success,
+// Maps each status to one of `AppBadge`'s reserved tones. `acknowledged` and
+// `responding` previously used raw accent/primary colors that aren't part of
+// the badge's tone system — warning/brand keep them visually distinct from
+// the `sent` (danger) and `resolved` (success) endpoints.
+const _statusTones = {
+  EmergencyStatus.sent: AppBadgeTone.danger,
+  EmergencyStatus.acknowledged: AppBadgeTone.warning,
+  EmergencyStatus.responding: AppBadgeTone.brand,
+  EmergencyStatus.resolved: AppBadgeTone.success,
 };
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
@@ -152,7 +158,7 @@ class _TriageBody extends ConsumerWidget {
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: const [
-                SizedBox(height: 40),
+                SizedBox(height: AppSpacing.xxxl),
                 StatePanel(
                   icon: Icons.notifications_none_outlined,
                   title: 'Belum ada sinyal darurat',
@@ -167,9 +173,14 @@ class _TriageBody extends ConsumerWidget {
           onRefresh: () => ref.refresh(emergencyInboxProvider.future),
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              AppSpacing.md,
+              AppSpacing.base,
+              AppSpacing.xl,
+            ),
             itemCount: items.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) => _TriageCard(
               emergency: items[index],
               canManage: canManage,
@@ -220,16 +231,15 @@ class _TriageCardState extends ConsumerState<_TriageCard> {
   Widget build(BuildContext context) {
     final emergency = widget.emergency;
     final repository = ref.read(emergencyRepositoryProvider);
-    final statusColor = _statusColors[emergency.status]!;
     final isOpen = emergency.status != EmergencyStatus.resolved;
     final note = emergency.note;
 
     return Card(
       color: emergency.status == EmergencyStatus.sent
-          ? KomplekkuColors.danger.withValues(alpha: 0.06)
+          ? AppColors.danger.withValues(alpha: 0.06)
           : null,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -242,71 +252,49 @@ class _TriageCardState extends ConsumerState<_TriageCard> {
                     children: [
                       Text(
                         _kindLabels[emergency.kind]!.toUpperCase(),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.6,
-                              color: KomplekkuColors.textSecondary,
-                            ),
+                        style: AppTypography.caption.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         emergency.houseLabel,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
                       ),
-                      Text(
-                        emergency.senderName,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      Text(emergency.senderName, style: AppTypography.caption),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: statusColor.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Text(
-                    _statusLabels[emergency.status]!,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
-                  ),
+                const SizedBox(width: AppSpacing.sm),
+                AppBadge(
+                  label: _statusLabels[emergency.status]!,
+                  tone: _statusTones[emergency.status]!,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Terkirim: ${_formatSentAt(emergency.sentAt)}',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: AppTypography.tabular(AppTypography.caption),
             ),
             if (note != null && note.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text('Catatan: $note'),
+              const SizedBox(height: AppSpacing.xs),
+              Text('Catatan: $note', style: AppTypography.body),
             ],
             if (_error != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Semantics(
                 liveRegion: true,
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: KomplekkuColors.danger),
+                  style: AppTypography.body.copyWith(color: AppColors.danger),
                 ),
               ),
             ],
             if (widget.canManage && isOpen) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   if (emergency.status == EmergencyStatus.sent)
@@ -358,30 +346,12 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = isBusy
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                height: 16,
-                width: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(width: 8),
-              Text(busyLabel),
-            ],
-          )
-        : Text(label);
-
-    if (isSecondary) {
-      return OutlinedButton(
-        onPressed: isBusy ? null : onPressed,
-        child: child,
-      );
-    }
-    return FilledButton(
+    return AppButton(
+      label: isBusy ? busyLabel : label,
+      isLoading: isBusy,
+      expand: false,
+      variant: isSecondary ? AppButtonVariant.secondary : AppButtonVariant.primary,
       onPressed: isBusy ? null : onPressed,
-      child: child,
     );
   }
 }
@@ -395,15 +365,15 @@ class _TriageSkeleton extends StatelessWidget {
       label: 'Memuat sinyal darurat',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 3,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 128,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.medium),
             ),
           ),
         ),

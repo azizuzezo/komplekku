@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/package/data/package_repository.dart';
 import 'package:komplekku/features/package/domain/package.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 const _statusLabels = {
   PackageStatus.received: 'Baru diterima',
@@ -14,10 +18,10 @@ const _statusLabels = {
   PackageStatus.collected: 'Sudah diambil',
 };
 
-const _statusColors = {
-  PackageStatus.received: KomplekkuColors.textSecondary,
-  PackageStatus.notified: KomplekkuColors.accent,
-  PackageStatus.collected: KomplekkuColors.success,
+AppBadgeTone _packageBadgeTone(PackageStatus status) => switch (status) {
+  PackageStatus.received => AppBadgeTone.neutral,
+  PackageStatus.notified => AppBadgeTone.warning,
+  PackageStatus.collected => AppBadgeTone.success,
 };
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
@@ -60,7 +64,11 @@ class PackageScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Paket')),
       body: SafeArea(
         child: packages.when(
-          loading: () => const _PackageListSkeleton(),
+          loading: () => const Semantics(
+            label: 'Memuat paket',
+            liveRegion: true,
+            child: AppLoadingState.skeleton(rows: 4),
+          ),
           error: (error, _) {
             final failure = error is ApiException
                 ? error
@@ -93,11 +101,16 @@ class PackageScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(packageListProvider.future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.md,
+                AppSpacing.base,
+                AppSpacing.xl,
+              ),
               children: [
                 if (canManage) ...[
                   const _PackageCreateForm(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
                 if (items.isEmpty)
                   const StatePanel(
@@ -109,7 +122,7 @@ class PackageScreen extends ConsumerWidget {
                 else
                   for (final package in items)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: _PackageCard(
                         package: package,
                         canManage: canManage,
@@ -176,76 +189,68 @@ class _PackageCreateFormState extends ConsumerState<_PackageCreateForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Catat paket baru', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 14),
-              Text('Kode rumah', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _houseCodeController,
-                textCapitalization: TextCapitalization.characters,
-                validator: (value) {
-                  if ((value ?? '').trim().isEmpty) {
-                    return 'Masukkan kode rumah yang valid.';
-                  }
-                  return null;
-                },
+    return AppCard(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Catat paket baru', style: AppTypography.title),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _houseCodeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(labelText: 'Kode rumah'),
+              validator: (value) {
+                if ((value ?? '').trim().isEmpty) {
+                  return 'Masukkan kode rumah yang valid.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _recipientNameController,
+              decoration: const InputDecoration(labelText: 'Nama penerima'),
+              validator: (value) {
+                if ((value ?? '').trim().length < 2) {
+                  return 'Masukkan nama penerima, minimal 2 karakter.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _courierController,
+              decoration: const InputDecoration(labelText: 'Kurir'),
+              validator: (value) {
+                if ((value ?? '').trim().isEmpty) {
+                  return 'Masukkan nama kurir.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _trackingNumberController,
+              decoration: const InputDecoration(
+                labelText: 'Nomor resi (opsional)',
               ),
-              const SizedBox(height: 14),
-              Text('Nama penerima', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _recipientNameController,
-                validator: (value) {
-                  if ((value ?? '').trim().length < 2) {
-                    return 'Masukkan nama penerima, minimal 2 karakter.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              Text('Kurir', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _courierController,
-                validator: (value) {
-                  if ((value ?? '').trim().isEmpty) {
-                    return 'Masukkan nama kurir.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.sm),
               Text(
-                'Nomor resi (opsional)',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 6),
-              TextFormField(controller: _trackingNumberController),
-              if (_error != null) ...[
-                const SizedBox(height: 10),
-                Text(_error!, style: const TextStyle(color: KomplekkuColors.danger)),
-              ],
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _isSaving ? null : _submit,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Catat paket'),
+                _error!,
+                style: AppTypography.body.copyWith(color: AppColors.danger),
               ),
             ],
-          ),
+            const SizedBox(height: AppSpacing.base),
+            AppButton(
+              label: 'Catat paket',
+              isLoading: _isSaving,
+              onPressed: _isSaving ? null : _submit,
+            ),
+          ],
         ),
       ),
     );
@@ -298,140 +303,83 @@ class _PackageCardState extends ConsumerState<_PackageCard> {
   @override
   Widget build(BuildContext context) {
     final package = widget.package;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        package.recipientName,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        package.trackingNumber != null
-                            ? '${package.courier} · ${package.trackingNumber}'
-                            : package.courier,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _statusColors[package.status]!.withValues(
-                      alpha: 0.12,
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusColors[package.status]!.withValues(
-                        alpha: 0.4,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      package.recipientName,
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                  child: Text(
-                    _statusLabels[package.status]!,
-                    style: TextStyle(
-                      color: _statusColors[package.status],
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      package.trackingNumber != null
+                          ? '${package.courier} · ${package.trackingNumber}'
+                          : package.courier,
+                      style: AppTypography.tabular(AppTypography.caption),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Diterima ${_formatDateTime(package.receivedAt)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (package.status == PackageStatus.collected) ...[
-              const SizedBox(height: 4),
-              Text(
-                package.collectedAt != null
-                    ? 'Diambil ${_formatDateTime(package.collectedAt!)}'
-                        '${package.collectedByName != null ? ' oleh ${package.collectedByName}' : ''}'
-                    : 'Sudah diambil',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ] else if (widget.canManage) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _collectedByController,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'Nama pengambil',
+                  ],
                 ),
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12),
-                ),
-              ],
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: _isCollecting ? null : _collect,
-                  icon: const Icon(Icons.check_circle_outline, size: 16),
-                  label: Text(_isCollecting ? 'Menyimpan...' : 'Tandai diambil'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
+              const SizedBox(width: AppSpacing.xs),
+              AppBadge(
+                label: _statusLabels[package.status]!,
+                tone: _packageBadgeTone(package.status),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PackageListSkeleton extends StatelessWidget {
-  const _PackageListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Memuat paket',
-      liveRegion: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
-        itemBuilder: (context, index) => ExcludeSemantics(
-          child: Container(
-            height: 100,
-            decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
-            ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Diterima ${_formatDateTime(package.receivedAt)}',
+            style: AppTypography.tabular(AppTypography.caption),
+          ),
+          if (package.status == PackageStatus.collected) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              package.collectedAt != null
+                  ? 'Diambil ${_formatDateTime(package.collectedAt!)}'
+                      '${package.collectedByName != null ? ' oleh ${package.collectedByName}' : ''}'
+                  : 'Sudah diambil',
+              style: AppTypography.tabular(AppTypography.caption),
+            ),
+          ] else if (widget.canManage) ...[
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _collectedByController,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Nama pengambil',
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                _error!,
+                style: AppTypography.caption.copyWith(color: AppColors.danger),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerRight,
+              child: AppButton(
+                label: 'Tandai diambil',
+                icon: Icons.check_circle_outline,
+                expand: false,
+                isLoading: _isCollecting,
+                onPressed: _isCollecting ? null : _collect,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/features/auth/domain/auth_state.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/onboarding/presentation/onboarding_controller.dart';
 import 'package:komplekku/features/onboarding/presentation/widgets/onboarding_scaffold.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 class AccountStatusScreen extends ConsumerStatefulWidget {
   const AccountStatusScreen({super.key});
@@ -87,33 +89,37 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
       onLogout: _logout,
       isLoggingOut: _isLoggingOut,
       children: [
-        Icon(copy.icon, size: 36, semanticLabel: copy.eyebrow),
-        const SizedBox(height: 24),
+        Icon(
+          copy.icon,
+          size: 36,
+          color: AppColors.primary,
+          semanticLabel: copy.eyebrow,
+        ),
+        const SizedBox(height: AppSpacing.xl),
         if (authState == AuthState.rejected) ...[
-          FilledButton(
+          AppButton(
             key: const ValueKey('resubmit-residency'),
+            label: 'Ajukan kembali',
             onPressed: () {
               ref.invalidate(onboardingControllerProvider);
               context.go('/mulai/komunitas');
             },
-            child: const Text('Ajukan kembali'),
           ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: _isRefreshing ? null : _refresh,
-            icon: const Icon(Icons.refresh),
-            label: Text(
-              _isRefreshing ? 'Memeriksa status…' : 'Periksa status',
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          AppButton(
+            variant: AppButtonVariant.secondary,
+            icon: Icons.refresh,
+            label: 'Periksa status',
+            onPressed: _refresh,
+            isLoading: _isRefreshing,
           ),
         ] else
-          FilledButton.icon(
+          AppButton(
             key: const ValueKey('refresh-account-status'),
-            onPressed: _isRefreshing ? null : _refresh,
-            icon: const Icon(Icons.refresh),
-            label: Text(
-              _isRefreshing ? 'Memeriksa status…' : 'Periksa status',
-            ),
+            icon: Icons.refresh,
+            label: 'Periksa status',
+            onPressed: _refresh,
+            isLoading: _isRefreshing,
           ),
       ],
     );

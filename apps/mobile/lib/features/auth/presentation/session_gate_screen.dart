@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/komplekku_logo.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_error_state.dart';
 
+/// Bootstrap gate — same Split Studio identity language as the login screen
+/// (lockup logo), so the app doesn't switch brand treatment mid-flow.
 class SessionGateScreen extends ConsumerWidget {
   const SessionGateScreen({super.key});
 
@@ -12,26 +16,21 @@ class SessionGateScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionControllerProvider);
     return Scaffold(
-      backgroundColor: KomplekkuColors.brandCanvas,
+      backgroundColor: AppColors.brandCanvas,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: session.when(
-                data: (_) => const _SessionLoading(),
-                loading: () => const _SessionLoading(),
-                error: (error, _) => _SessionFailure(
-                  error: error,
-                  onRetry: () => ref
-                      .read(sessionControllerProvider.notifier)
-                      .retryBootstrap(),
-                  onSignOut: () => ref
-                      .read(sessionControllerProvider.notifier)
-                      .signOut(),
-                ),
-              ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: session.when(
+            data: (_) => const _SessionLoading(),
+            loading: () => const _SessionLoading(),
+            error: (error, _) => _SessionFailure(
+              error: error,
+              onRetry: () => ref
+                  .read(sessionControllerProvider.notifier)
+                  .retryBootstrap(),
+              onSignOut: () => ref
+                  .read(sessionControllerProvider.notifier)
+                  .signOut(),
             ),
           ),
         ),
@@ -45,11 +44,16 @@ class _SessionLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Memeriksa sesi Komplekku',
-      liveRegion: true,
-      child: const ExcludeSemantics(
-        child: KomplekkuLogo(width: 54),
+    return Center(
+      child: Semantics(
+        label: 'Memeriksa sesi Komplekku',
+        liveRegion: true,
+        child: const ExcludeSemantics(
+          child: KomplekkuLogo(
+            variant: KomplekkuLogoVariant.lockup,
+            width: 200,
+          ),
+        ),
       ),
     );
   }
@@ -99,29 +103,31 @@ class _SessionFailureState extends State<_SessionFailure> {
     return Semantics(
       liveRegion: true,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: KomplekkuLogo(width: 48),
+          const Center(
+            child: KomplekkuLogo(
+              variant: KomplekkuLogoVariant.lockup,
+              width: 160,
+            ),
           ),
-          const SizedBox(height: 28),
-          Text(
-            'Sesi belum dapat diperiksa',
-            style: Theme.of(context).textTheme.headlineMedium,
+          Expanded(
+            child: AppErrorState(
+              title: 'Sesi belum dapat diperiksa',
+              message: failure.message,
+              actionLabel: _isWorking ? 'Memeriksa…' : 'Coba lagi',
+              // `_run` already no-ops re-entrant calls while `_isWorking` is
+              // true — never pass `null` here, since `AppErrorState` treats a
+              // null `onRetry` as "hide the action" rather than "disable it".
+              onRetry: () => _run(widget.onRetry),
+            ),
           ),
-          const SizedBox(height: 10),
-          Text(failure.message, style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _isWorking ? null : () => _run(widget.onRetry),
-            child: Text(_isWorking ? 'Memeriksa…' : 'Coba lagi'),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _isWorking ? null : () => _run(widget.onSignOut),
-            child: const Text('Hapus sesi dan masuk kembali'),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.base),
+            child: AppButton(
+              variant: AppButtonVariant.ghost,
+              label: 'Hapus sesi dan masuk kembali',
+              onPressed: _isWorking ? null : () => _run(widget.onSignOut),
+            ),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 /// Shared empty/error placeholder for list and detail screens, mirroring the
 /// web app's `StatePanel` so every feature handles these states the same way
@@ -24,7 +25,7 @@ class StatePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             minHeight:
@@ -33,26 +34,52 @@ class StatePanel extends StatelessWidget {
           child: Center(
             child: Semantics(
               liveRegion: true,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 32, color: KomplekkuColors.textSecondary),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                builder: (context, value, child) => Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, (1 - value) * 8),
+                    child: child,
                   ),
-                  const SizedBox(height: 8),
-                  Text(message, textAlign: TextAlign.center),
-                  if (actionLabel != null && onAction != null) ...[
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: onAction,
-                      child: Text(actionLabel!),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 26, color: AppColors.primaryDark),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      title,
+                      style: AppTypography.title,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      message,
+                      style: AppTypography.body,
+                      textAlign: TextAlign.center,
+                    ),
+                    if (actionLabel != null && onAction != null) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      AppButton(
+                        label: actionLabel!,
+                        onPressed: onAction,
+                        expand: false,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

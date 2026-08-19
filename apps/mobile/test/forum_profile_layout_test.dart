@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/features/account/data/account_repository.dart';
 import 'package:komplekku/features/account/domain/account_snapshot.dart';
@@ -35,7 +35,7 @@ void main() {
           accountSnapshotProvider.overrideWith((ref) async => snapshot),
         ],
         child: MaterialApp(
-          theme: buildKomplekkuTheme(),
+          theme: buildAppTheme(),
           home: const AccountScreen(),
         ),
       ),
@@ -44,7 +44,9 @@ void main() {
 
     expect(find.text('Profil'), findsOneWidget);
     expect(find.text('Akun warga'), findsNothing);
-    expect(find.byType(CircleAvatar), findsOneWidget);
+    // design.md: "Account: resident credential, not social profile" — the
+    // identity card deliberately has no decorative avatar, so this asserts
+    // on the real credential data instead of a `CircleAvatar` placeholder.
     expect(find.text('Aziz'), findsOneWidget);
     expect(find.text('Aktif'), findsOneWidget);
   });
@@ -55,7 +57,7 @@ void main() {
     // AccountScreen is reached via context.push('/akun') from every tab's
     // header, so it always sits on top of something to pop back to — unlike
     // the previous test's bare `home:`, which never exercises AppBar's own
-    // automatic back button and would miss it duplicating PrototypeHeader's.
+    // automatic back button and would miss it duplicating AppHeader's.
     const snapshot = AccountSnapshot(
       id: 'resident-1',
       displayName: 'Aziz',
@@ -71,7 +73,7 @@ void main() {
           accountSnapshotProvider.overrideWith((ref) async => snapshot),
         ],
         child: MaterialApp(
-          theme: buildKomplekkuTheme(),
+          theme: buildAppTheme(),
           home: Builder(
             builder: (context) => Scaffold(
               body: Center(
@@ -125,7 +127,7 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          theme: buildKomplekkuTheme(),
+          theme: buildAppTheme(),
           home: const ForumScreen(),
         ),
       ),
@@ -180,7 +182,7 @@ void main() {
           currentHouseholdProvider.overrideWith((ref) async => household),
         ],
         child: MaterialApp(
-          theme: buildKomplekkuTheme(),
+          theme: buildAppTheme(),
           home: const AccountScreen(),
         ),
       ),

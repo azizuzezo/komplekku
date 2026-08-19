@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/features/onboarding/domain/community_option.dart';
 import 'package:komplekku/features/onboarding/presentation/widgets/onboarding_scaffold.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_empty_state.dart';
 
+/// Step 1 of onboarding — a radio list of open communities, or the
+/// `AppEmptyState` when the pengurus hasn't opened registration anywhere.
 class CommunitySelectionScreen extends StatelessWidget {
   const CommunitySelectionScreen({
     super.key,
@@ -34,14 +38,28 @@ class CommunitySelectionScreen extends StatelessWidget {
       isLoggingOut: isLoggingOut,
       children: [
         if (communities.isEmpty)
-          _EmptyCommunities(onRetry: onRetry)
+          // Bounded height: `AppEmptyState` sizes itself to the available
+          // height via `LayoutBuilder`, which is unbounded inside this
+          // scrollable `ListView` unless it's given an explicit box.
+          SizedBox(
+            height: 340,
+            child: AppEmptyState(
+              icon: Icons.holiday_village_outlined,
+              title: 'Belum ada lingkungan yang membuka pendaftaran warga.',
+              message: 'Coba lagi setelah pengurus mengaktifkan pendaftaran.',
+              actionLabel: 'Muat ulang',
+              onAction: onRetry,
+            ),
+          )
         else ...[
           Material(
-            color: KomplekkuColors.surface,
+            color: AppColors.surface,
             clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
-              side: const BorderSide(color: KomplekkuColors.border),
-              borderRadius: const BorderRadius.all(Radius.circular(10)),
+              side: const BorderSide(color: AppColors.border),
+              borderRadius: const BorderRadius.all(
+                Radius.circular(AppRadius.medium),
+              ),
             ),
             child: RadioGroup<CommunityOption>(
               groupValue: selectedCommunity,
@@ -57,13 +75,16 @@ class CommunitySelectionScreen extends StatelessWidget {
                       key: ValueKey('community-${communities[index].id}'),
                       value: communities[index],
                       selected: communities[index] == selectedCommunity,
-                      activeColor: KomplekkuColors.primary,
+                      activeColor: AppColors.primary,
                       title: Text(
                         communities[index].name,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                     ),
                     if (index < communities.length - 1)
                       const Divider(height: 1, indent: 16, endIndent: 16),
@@ -72,60 +93,14 @@ class CommunitySelectionScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          FilledButton(
+          const SizedBox(height: AppSpacing.xl),
+          AppButton(
             key: const ValueKey('continue-community'),
+            label: 'Lanjutkan',
             onPressed: selectedCommunity == null ? null : onContinue,
-            child: const Text('Lanjutkan'),
           ),
         ],
       ],
-    );
-  }
-}
-
-class _EmptyCommunities extends StatelessWidget {
-  const _EmptyCommunities({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      liveRegion: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: KomplekkuColors.surface,
-          border: Border.all(color: KomplekkuColors.border),
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const Icon(Icons.holiday_village_outlined, size: 30),
-              const SizedBox(height: 12),
-              Text(
-                'Belum ada lingkungan yang membuka pendaftaran warga.',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Coba lagi setelah pengurus mengaktifkan pendaftaran.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 18),
-              OutlinedButton(
-                onPressed: onRetry,
-                child: const Text('Muat ulang'),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

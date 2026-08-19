@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
-import 'package:komplekku/core/widgets/prototype_header.dart';
+import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
+import 'package:komplekku/shared/widgets/app_header.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_channel.dart';
@@ -42,11 +43,11 @@ class _ForumTabsState extends State<ForumScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         toolbarHeight: 76,
         titleSpacing: 20,
-        title: const PrototypeHeader(
+        title: const AppHeader(
           title: 'Forum Warga',
           showNotifications: false,
           showAccount: true,
@@ -54,13 +55,18 @@ class _ForumTabsState extends State<ForumScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              0,
+              AppSpacing.base,
+              AppSpacing.sm,
+            ),
             child: Container(
-              padding: const EdgeInsets.all(3),
+              padding: const EdgeInsets.all(AppSpacing.xs),
               decoration: BoxDecoration(
-                color: KomplekkuColors.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: KomplekkuColors.border),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 children: [
@@ -74,12 +80,14 @@ class _ForumTabsState extends State<ForumScreen> {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           curve: Curves.easeOut,
-                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm,
+                          ),
                           decoration: BoxDecoration(
                             color: _showBoard == entry.$1
-                                ? KomplekkuColors.primary
+                                ? AppColors.primary
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -88,18 +96,16 @@ class _ForumTabsState extends State<ForumScreen> {
                                 entry.$3,
                                 size: 16,
                                 color: _showBoard == entry.$1
-                                    ? Colors.white
-                                    : KomplekkuColors.textSecondary,
+                                    ? AppColors.surface
+                                    : AppColors.textSecondary,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: AppSpacing.sm),
                               Text(
                                 entry.$2,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
+                                style: AppTypography.label.copyWith(
                                   color: _showBoard == entry.$1
-                                      ? Colors.white
-                                      : KomplekkuColors.textSecondary,
+                                      ? AppColors.surface
+                                      : AppColors.textSecondary,
                                 ),
                               ),
                             ],
@@ -254,7 +260,7 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: KomplekkuColors.danger,
+              backgroundColor: AppColors.danger,
             ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Hapus'),
@@ -303,9 +309,8 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
   }
 
   Future<void> _createChannel() async {
-    final created = await showModalBottomSheet<bool>(
+    final created = await showAppBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
       builder: (context) => const CreateForumChannelSheet(),
     );
     if (created == true) ref.invalidate(forumChannelListProvider);
@@ -322,7 +327,7 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
         .maybeWhen(data: (session) => session?.userId, orElse: () => null);
 
     return ColoredBox(
-      color: KomplekkuColors.background,
+      color: AppColors.background,
       child: SafeArea(
         child: Column(
           children: [
@@ -467,15 +472,18 @@ class _ForumCreateBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.sm,
+        AppSpacing.base,
+        AppSpacing.xs,
+      ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               'Ruang obrolan',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: AppTypography.title.copyWith(fontSize: 16),
             ),
           ),
           FilledButton.icon(
@@ -484,9 +492,9 @@ class _ForumCreateBar extends StatelessWidget {
             label: const Text('Buat Forum'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(0, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppRadius.button),
               ),
             ),
           ),
@@ -525,18 +533,17 @@ class _ChannelTabs extends StatelessWidget {
                     Icons.lock_outline,
                     size: 14,
                     color: isActive
-                        ? Colors.white
-                        : KomplekkuColors.textSecondary,
+                        ? AppColors.surface
+                        : AppColors.textSecondary,
                   )
                 : null,
             label: Text(channel.label),
             selected: isActive,
             onSelected: (_) => onSelect(channel.id),
-            selectedColor: KomplekkuColors.primary,
-            checkmarkColor: Colors.white,
-            labelStyle: TextStyle(
-              color: isActive ? Colors.white : KomplekkuColors.textPrimary,
-              fontWeight: FontWeight.w600,
+            selectedColor: AppColors.primary,
+            checkmarkColor: AppColors.surface,
+            labelStyle: AppTypography.label.copyWith(
+              color: isActive ? AppColors.surface : AppColors.textPrimary,
             ),
           );
         },
@@ -557,38 +564,39 @@ class _InvitationBanner extends StatelessWidget {
       children: invitations
           .map(
             (invitation) => Container(
-              margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: KomplekkuColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: KomplekkuColors.primary),
+                color: AppColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: AppColors.primary),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Undangan forum',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    style: AppTypography.caption.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
-                      color: KomplekkuColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    invitation.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
+                  Text(invitation.name, style: AppTypography.label),
                   if (invitation.description != null &&
                       invitation.description!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       invitation.description!,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: AppTypography.caption,
                     ),
                   ],
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
                       FilledButton(
@@ -620,9 +628,14 @@ class _PrivateChannelHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.sm,
+        AppSpacing.base,
+        AppSpacing.sm,
+      ),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: KomplekkuColors.border)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
@@ -630,23 +643,16 @@ class _PrivateChannelHeader extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  channel.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
+                Text(channel.name, style: AppTypography.label),
                 if (channel.description != null &&
                     channel.description!.isNotEmpty)
-                  Text(
-                    channel.description!,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  Text(channel.description!, style: AppTypography.caption),
               ],
             ),
           ),
           TextButton.icon(
-            onPressed: () => showModalBottomSheet<void>(
+            onPressed: () => showAppBottomSheet<void>(
               context: context,
-              isScrollControlled: true,
               builder: (context) => ForumMembersSheet(channel: channel),
             ),
             icon: const Icon(Icons.group_outlined, size: 16),
@@ -753,22 +759,33 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isOwn ? Colors.white : KomplekkuColors.textPrimary;
-    final mutedForeground = isOwn
-        ? Colors.white70
-        : KomplekkuColors.textSecondary;
+    // Own messages get a light brand-tinted fill; others sit on plain white
+    // with a hairline border — both keep dark text, so neither reads as a
+    // loud, low-contrast color block.
+    const foreground = AppColors.textPrimary;
+    const mutedForeground = AppColors.textSecondary;
+    final bubbleColor = isOwn ? AppColors.surfaceMuted : AppColors.surface;
+    final bubbleBorder = Border.all(
+      color: isOwn
+          ? AppColors.primary.withValues(alpha: 0.25)
+          : AppColors.border,
+    );
 
     return Align(
       alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
-          color: isOwn ? KomplekkuColors.primary : KomplekkuColors.surfaceSoft,
-          borderRadius: BorderRadius.circular(12),
+          color: bubbleColor,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: bubbleBorder,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,18 +793,18 @@ class _MessageBubble extends StatelessWidget {
             if (!isOwn)
               Text(
                 message.authorName,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: AppTypography.caption.copyWith(
                   fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
                 ),
               ),
             if (message.isReply)
               Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.only(left: 8),
-                decoration: BoxDecoration(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: const EdgeInsets.only(left: AppSpacing.sm),
+                decoration: const BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: mutedForeground, width: 3),
+                    left: BorderSide(color: AppColors.borderStrong, width: 3),
                   ),
                 ),
                 child: Column(
@@ -795,33 +812,34 @@ class _MessageBubble extends StatelessWidget {
                   children: [
                     Text(
                       message.replyToAuthorName ?? 'Pesan dihapus',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: AppTypography.caption.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: mutedForeground,
                       ),
                     ),
                     Text(
                       message.replyToBody ?? 'Pesan asli sudah dihapus.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: mutedForeground),
+                      style: AppTypography.caption,
                     ),
                   ],
                 ),
               ),
             if (message.body.trim().isNotEmpty)
-              Text(message.body, style: TextStyle(color: foreground)),
+              Text(
+                message.body,
+                style: AppTypography.body.copyWith(color: foreground),
+              ),
             if (message.imageUrls.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: [
                     for (final url in message.imageUrls)
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.small),
                         child: Image.network(
                           url,
                           width: 140,
@@ -838,10 +856,10 @@ class _MessageBubble extends StatelessWidget {
                 Text(
                   '${_formatTime(message.createdAt)}'
                   '${message.isEdited ? ' · diedit' : ''}',
-                  style: TextStyle(fontSize: 11, color: mutedForeground),
+                  style: AppTypography.caption.copyWith(color: mutedForeground),
                 ),
                 if (canReply) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   _BubbleAction(
                     icon: Icons.reply_outlined,
                     tooltip: 'Balas pesan',
@@ -850,7 +868,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
                 if (canEdit) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   _BubbleAction(
                     icon: Icons.edit_outlined,
                     tooltip: 'Edit pesan',
@@ -859,7 +877,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
                 if (canDelete) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   _BubbleAction(
                     icon: Icons.delete_outline,
                     tooltip: 'Hapus pesan',
@@ -935,30 +953,34 @@ class _Composer extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (errorMessage != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: Text(
                   errorMessage!,
-                  style: const TextStyle(
-                    color: KomplekkuColors.danger,
-                    fontSize: 12,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.danger,
                   ),
                 ),
               ),
             if (composerContext != null)
               Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: const EdgeInsets.fromLTRB(10, AppSpacing.sm, 4, AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: KomplekkuColors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.input),
                   border: const Border(
-                    left: BorderSide(color: KomplekkuColors.primary, width: 3),
+                    left: BorderSide(color: AppColors.primary, width: 3),
                   ),
                 ),
                 child: Row(
@@ -971,8 +993,7 @@ class _Composer extends StatelessWidget {
                             editing != null
                                 ? 'Mengedit pesan'
                                 : 'Membalas ${replyTo!.authorName}',
-                            style: const TextStyle(
-                              fontSize: 12,
+                            style: AppTypography.caption.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -980,10 +1001,7 @@ class _Composer extends StatelessWidget {
                             composerContext.body,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: KomplekkuColors.textSecondary,
-                            ),
+                            style: AppTypography.caption,
                           ),
                         ],
                       ),
@@ -999,7 +1017,7 @@ class _Composer extends StatelessWidget {
               ),
             if (imageUrls.isNotEmpty || uploadingImage)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: SizedBox(
                   height: 56,
                   child: ListView(
@@ -1007,11 +1025,11 @@ class _Composer extends StatelessWidget {
                     children: [
                       for (final url in imageUrls)
                         Padding(
-                          padding: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.only(right: AppSpacing.sm),
                           child: Stack(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(AppRadius.small),
                                 child: Image.network(
                                   url,
                                   width: 56,
@@ -1026,7 +1044,7 @@ class _Composer extends StatelessWidget {
                                   iconSize: 16,
                                   icon: const Icon(
                                     Icons.cancel,
-                                    color: KomplekkuColors.danger,
+                                    color: AppColors.danger,
                                   ),
                                   onPressed: () => onRemoveImage(url),
                                 ),
@@ -1055,7 +1073,7 @@ class _Composer extends StatelessWidget {
                   IconButton(
                     onPressed: (sending || uploadingImage) ? null : onPickImage,
                     icon: const Icon(Icons.image_outlined),
-                    color: KomplekkuColors.textSecondary,
+                    color: AppColors.textSecondary,
                   ),
                 Expanded(
                   child: TextField(
@@ -1072,20 +1090,23 @@ class _Composer extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 IconButton.filled(
                   tooltip: editing != null ? 'Simpan perubahan' : 'Kirim pesan',
                   onPressed: sending ? null : onSend,
                   icon: sending
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.surface,
+                          ),
                         )
                       : Icon(editing != null ? Icons.check : Icons.send),
                   style: IconButton.styleFrom(
-                    backgroundColor: KomplekkuColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.surface,
                   ),
                 ),
               ],

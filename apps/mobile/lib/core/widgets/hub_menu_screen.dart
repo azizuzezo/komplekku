@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
+import 'package:komplekku/shared/widgets/app_list_tile.dart';
 
 /// One tappable row in a [HubMenuScreen]. [permission] mirrors the web
 /// sidebar's per-item `permission` field (`desktop-sidebar.tsx`) — when set,
@@ -50,25 +51,21 @@ class HubMenuScreen extends ConsumerWidget {
                 message: 'Akunmu belum memiliki akses ke menu ini.',
               )
             : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  AppSpacing.xl,
+                ),
                 itemCount: visible.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final entry = visible[index];
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: ListTile(
-                      leading: Icon(entry.icon, color: KomplekkuColors.primary),
-                      title: Text(
-                        entry.label,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      subtitle: Text(entry.description),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push(entry.route),
-                    ),
+                  return AppListTile(
+                    leadingIcon: entry.icon,
+                    title: entry.label,
+                    subtitle: entry.description,
+                    onTap: () => context.push(entry.route),
                   );
                 },
               ),

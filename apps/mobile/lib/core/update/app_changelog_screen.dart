@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/update/app_update_service.dart';
 
 /// Full-page release notes for an offered update, reached from
@@ -22,7 +22,7 @@ class AppChangelogScreen extends StatelessWidget {
         .toList();
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           release.versionName == null
@@ -41,7 +41,7 @@ class AppChangelogScreen extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: KomplekkuColors.danger.withValues(alpha: 0.1),
+                  color: AppColors.danger.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -50,13 +50,13 @@ class AppChangelogScreen extends StatelessWidget {
                     const Icon(
                       Icons.priority_high,
                       size: 16,
-                      color: KomplekkuColors.danger,
+                      color: AppColors.danger,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Pembaruan wajib',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.danger,
+                        color: AppColors.danger,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -69,7 +69,7 @@ class AppChangelogScreen extends StatelessWidget {
               Text(
                 'Belum ada catatan perubahan rinci untuk versi ini.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: KomplekkuColors.textSecondary,
+                  color: AppColors.textSecondary,
                 ),
               )
             else
@@ -82,7 +82,7 @@ class AppChangelogScreen extends StatelessWidget {
                       child: Icon(
                         Icons.circle,
                         size: 6,
-                        color: KomplekkuColors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 10),

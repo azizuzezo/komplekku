@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
@@ -9,6 +9,12 @@ import 'package:komplekku/features/home/data/home_repository.dart';
 import 'package:komplekku/features/announcement/domain/announcement.dart';
 import 'package:komplekku/features/home/domain/home_snapshot.dart';
 import 'package:komplekku/features/home/presentation/prayer_summary_card.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_error_state.dart';
+import 'package:komplekku/shared/widgets/app_header.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
 
 /// The five shortcuts on the home grid. Everything else lives in the Profil
 /// tab's grouped menu — the bottom bar only has room for five destinations, so
@@ -54,16 +60,16 @@ class HomeScreen extends ConsumerWidget {
     final snapshot = ref.watch(homeSnapshotProvider);
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: snapshot.when(
-          loading: () => const _HomeSkeleton(),
+          loading: () => const AppLoadingState.skeleton(rows: 5),
           error: (error, _) {
             final failure = error is ApiException
                 ? error
                 : ApiException.malformedResponse();
             final mustSignIn = failure.isUnauthorized || failure.isForbidden;
-            return _HomeError(
+            return AppErrorState(
               title: failure.isUnauthorized
                   ? 'Sesi sudah berakhir'
                   : failure.isForbidden
@@ -72,7 +78,7 @@ class HomeScreen extends ConsumerWidget {
               message: failure.message,
               icon: mustSignIn ? Icons.lock_outline : Icons.cloud_off_outlined,
               actionLabel: mustSignIn ? 'Keluar' : 'Coba lagi',
-              onAction: mustSignIn
+              onRetry: mustSignIn
                   ? () => ref.read(sessionControllerProvider.notifier).signOut()
                   : () => ref.invalidate(homeSnapshotProvider),
             );
@@ -81,23 +87,32 @@ class HomeScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(homeSnapshotProvider.future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.xxl,
+              ),
               children: [
-                _WelcomeHeader(data: data),
-                const SizedBox(height: 16),
+                AppHeader(
+                  title: 'Selamat datang, ${data.firstName}',
+                  subtitle: '${data.communityName} · ${data.houseLabel}',
+                  showAccount: true,
+                ),
+                const SizedBox(height: AppSpacing.base),
                 if (data.isCached) ...[
                   const _OfflineNotice(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.base),
                 ],
                 const PrayerSummaryCard(),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 const _QuickActionGrid(),
-                const SizedBox(height: 24),
-                _SectionHeader(
+                const SizedBox(height: AppSpacing.xl),
+                AppSectionHeader(
                   title: 'Pengumuman Terbaru',
-                  onSeeAll: () => context.go('/pengumuman'),
+                  action: 'Lihat semua',
+                  onAction: () => context.go('/pengumuman'),
                 ),
-                const SizedBox(height: 10),
                 if (data.announcements.isEmpty)
                   const _EmptyAnnouncements()
                 else
@@ -113,68 +128,6 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({required this.data});
-
-  final HomeSnapshot data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Selamat datang, ${data.firstName}',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${data.communityName} · ${data.houseLabel}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: KomplekkuColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          tooltip: 'Notifikasi',
-          onPressed: () => context.push('/notifikasi'),
-          icon: const Icon(Icons.notifications_none_outlined),
-          style: IconButton.styleFrom(
-            backgroundColor: KomplekkuColors.surfaceSoft,
-          ),
-        ),
-        const SizedBox(width: 6),
-        IconButton(
-          tooltip: 'Cari pengumuman',
-          onPressed: () => context.push('/pengumuman'),
-          icon: const Icon(Icons.search),
-          style: IconButton.styleFrom(
-            backgroundColor: KomplekkuColors.surfaceSoft,
-          ),
-        ),
-        const SizedBox(width: 6),
-        IconButton(
-          tooltip: 'Profil',
-          onPressed: () => context.push('/akun'),
-          icon: const Icon(Icons.person_outline),
-          style: IconButton.styleFrom(
-            backgroundColor: KomplekkuColors.surfaceSoft,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -196,38 +149,31 @@ class _QuickActionGrid extends ConsumerWidget {
         for (final action in visible)
           Expanded(
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
               onTap: () => context.push(action.route),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                 child: Column(
                   children: [
                     Container(
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: KomplekkuColors.surfaceMuted,
-                        borderRadius: BorderRadius.circular(14),
+                        color: AppColors.surfaceMuted,
+                        borderRadius: BorderRadius.circular(AppRadius.medium),
                       ),
                       child: Icon(
                         action.icon,
-                        color: KomplekkuColors.primary,
-                        size: 25,
+                        color: AppColors.primary,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.sm),
                     SizedBox(
                       width: 66,
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(
-                          action.label,
-                          maxLines: 1,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: Text(action.label, maxLines: 1, style: AppTypography.caption),
                       ),
                     ),
                   ],
@@ -235,38 +181,6 @@ class _QuickActionGrid extends ConsumerWidget {
               ),
             ),
           ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.onSeeAll});
-
-  final String title;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        TextButton(
-          onPressed: onSeeAll,
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Lihat semua'),
-              Icon(Icons.chevron_right, size: 18),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -281,72 +195,53 @@ class _AnnouncementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: KomplekkuColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: KomplekkuColors.border),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
+        onTap: onTap,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _HomeCover(
+              url: announcement.coverImageUrl,
+              badge: announcement.badge,
+              isRead: announcement.isRead,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _HomeCover(
-                  url: announcement.coverImageUrl,
-                  badge: announcement.badge,
-                  isRead: announcement.isRead,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              announcement.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          _HomeBadge(badge: announcement.badge),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatPublishedAt(announcement.publishedAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KomplekkuColors.textSecondary,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                      Expanded(
+                        child: Text(
+                          announcement.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        announcement.summary,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      _homeBadge(announcement.badge),
                     ],
                   ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: KomplekkuColors.textSecondary,
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatPublishedAt(announcement.publishedAt),
+                    style: AppTypography.tabular(AppTypography.caption),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    announcement.summary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body,
+                  ),
+                ],
+              ),
             ),
-          ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
         ),
       ),
     );
@@ -359,37 +254,14 @@ const _homeBadgeIcons = {
   AnnouncementBadge.info: Icons.info_outline,
 };
 
-Color _homeBadgeColor(AnnouncementBadge badge) => switch (badge) {
-  AnnouncementBadge.important => KomplekkuColors.danger,
-  AnnouncementBadge.event => KomplekkuColors.primary,
-  AnnouncementBadge.info => KomplekkuColors.textSecondary,
+AppBadgeTone _homeBadgeTone(AnnouncementBadge badge) => switch (badge) {
+  AnnouncementBadge.important => AppBadgeTone.danger,
+  AnnouncementBadge.event => AppBadgeTone.brand,
+  AnnouncementBadge.info => AppBadgeTone.neutral,
 };
 
-class _HomeBadge extends StatelessWidget {
-  const _HomeBadge({required this.badge});
-
-  final AnnouncementBadge badge;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _homeBadgeColor(badge);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        announcementBadgeLabels[badge]!,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
+Widget _homeBadge(AnnouncementBadge badge) =>
+    AppBadge(label: announcementBadgeLabels[badge]!, tone: _homeBadgeTone(badge));
 
 class _HomeCover extends StatelessWidget {
   const _HomeCover({
@@ -406,18 +278,18 @@ class _HomeCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final coverUrl = url;
     final placeholder = ColoredBox(
-      color: KomplekkuColors.surfaceMuted,
+      color: AppColors.surfaceMuted,
       child: Center(
         child: Icon(
           _homeBadgeIcons[badge],
-          color: KomplekkuColors.primary,
+          color: AppColors.primary,
           semanticLabel: isRead ? 'Sudah dibaca' : 'Belum dibaca',
         ),
       ),
     );
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppRadius.small),
       child: SizedBox(
         width: 52,
         height: 52,
@@ -439,22 +311,21 @@ class _OfflineNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
-        color: KomplekkuColors.surfaceSoft,
-        borderRadius: BorderRadius.all(Radius.circular(10)),
-        border: Border.fromBorderSide(
-          BorderSide(color: KomplekkuColors.border),
-        ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadius.small),
+        border: Border.all(color: AppColors.border),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.cloud_off_outlined, size: 20),
-          SizedBox(width: 10),
+          const Icon(Icons.cloud_off_outlined, size: 20, color: AppColors.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               'Kamu sedang offline. Data yang tampil adalah salinan terakhir.',
+              style: AppTypography.body,
             ),
           ),
         ],
@@ -470,86 +341,15 @@ class _EmptyAnnouncements extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.base),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: KomplekkuColors.border),
+        color: AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         'Belum ada pengumuman baru dari pengurus.',
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
-    );
-  }
-}
-
-class _HomeError extends StatelessWidget {
-  const _HomeError({
-    required this.title,
-    required this.message,
-    required this.icon,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final String title;
-  final String message;
-  final IconData icon;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Semantics(
-          liveRegion: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 32, color: KomplekkuColors.textSecondary),
-              const SizedBox(height: 12),
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: onAction, child: Text(actionLabel)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeSkeleton extends StatelessWidget {
-  const _HomeSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    Widget block(double height) => Container(
-      height: height,
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(12),
-      ),
-    );
-
-    return Semantics(
-      label: 'Memuat beranda',
-      liveRegion: true,
-      child: ExcludeSemantics(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          children: [block(34), block(150), block(76), block(96), block(96)],
-        ),
+        style: AppTypography.body,
       ),
     );
   }

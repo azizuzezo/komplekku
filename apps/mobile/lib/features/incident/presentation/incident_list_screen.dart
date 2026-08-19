@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -10,6 +10,10 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/incident/data/incident_repository.dart';
 import 'package:komplekku/features/incident/domain/incident.dart';
 import 'package:komplekku/features/incident/presentation/incident_create_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 /// List of incident reports ("Laporan kejadian"), mirroring
 /// `apps/web/features/incident/incident-list.tsx`. This screen is
@@ -69,10 +73,8 @@ class _IncidentListScreenState extends ConsumerState<IncidentListScreen> {
   }
 
   void _openCreateSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (context) => const _CreateIncidentSheet(),
     );
   }
@@ -130,7 +132,12 @@ class _IncidentList extends ConsumerWidget {
             children: [
               if (canManage)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.base,
+                    AppSpacing.md,
+                    AppSpacing.base,
+                    0,
+                  ),
                   child: _StatusFilterBar(
                     value: statusFilter,
                     onChanged: onStatusFilterChanged,
@@ -147,10 +154,15 @@ class _IncidentList extends ConsumerWidget {
                       )
                     : ListView.separated(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.base,
+                          AppSpacing.md,
+                          AppSpacing.base,
+                          AppSpacing.xl,
+                        ),
                         itemCount: visible.length,
                         separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
+                            const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
                           final item = visible[index];
                           return _IncidentCard(
@@ -206,7 +218,7 @@ class _StatusFilterBar extends StatelessWidget {
           ),
           for (final status in IncidentStatus.values)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.only(left: AppSpacing.sm),
               child: _FilterChip(
                 label: status.label,
                 selected: value == status,
@@ -236,7 +248,7 @@ class _FilterChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: (_) => onTap(),
-      selectedColor: KomplekkuColors.primary.withValues(alpha: 0.16),
+      selectedColor: AppColors.primary.withValues(alpha: 0.16),
     );
   }
 }
@@ -249,84 +261,51 @@ class _IncidentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    return AppCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      incident.title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusBadge(status: incident.status),
-                ],
+              Expanded(
+                child: Text(
+                  incident.title,
+                  style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                incident.location != null
-                    ? '${incident.category.label} · ${incident.location}'
-                    : incident.category.label,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Dilaporkan oleh ${incident.reporterName} · ${formatIncidentDateTime(incident.occurredAt)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: KomplekkuColors.textSecondary,
-                    ),
-              ),
+              const SizedBox(width: AppSpacing.sm),
+              _statusBadge(incident.status),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            incident.location != null
+                ? '${incident.category.label} · ${incident.location}'
+                : incident.category.label,
+            style: AppTypography.body,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Dilaporkan oleh ${incident.reporterName} · ${formatIncidentDateTime(incident.occurredAt)}',
+            style: AppTypography.caption,
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+AppBadgeTone _statusTone(IncidentStatus status) => switch (status) {
+  IncidentStatus.open => AppBadgeTone.danger,
+  IncidentStatus.inReview => AppBadgeTone.warning,
+  IncidentStatus.resolved => AppBadgeTone.success,
+  IncidentStatus.closed => AppBadgeTone.neutral,
+};
 
-  final IncidentStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      IncidentStatus.open => KomplekkuColors.danger,
-      IncidentStatus.inReview => KomplekkuColors.accent,
-      IncidentStatus.resolved => KomplekkuColors.success,
-      IncidentStatus.closed => KomplekkuColors.textSecondary,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
+Widget _statusBadge(IncidentStatus status) =>
+    AppBadge(label: status.label, tone: _statusTone(status));
 
 class _IncidentListSkeleton extends StatelessWidget {
   const _IncidentListSkeleton();
@@ -337,15 +316,15 @@ class _IncidentListSkeleton extends StatelessWidget {
       label: 'Memuat laporan kejadian',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 96,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.card),
             ),
           ),
         ),
@@ -429,11 +408,11 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
         const IncidentCreateState();
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
       ),
       child: SingleChildScrollView(
         child: Form(
@@ -442,11 +421,8 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Buat laporan kejadian',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
+              Text('Buat laporan kejadian', style: AppTypography.title),
+              const SizedBox(height: AppSpacing.base),
               DropdownButtonFormField<IncidentCategory>(
                 key: const ValueKey('incident-category'),
                 initialValue: _category,
@@ -465,7 +441,7 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
                         if (value != null) setState(() => _category = value);
                       },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               TextFormField(
                 key: const ValueKey('incident-title'),
                 controller: _titleController,
@@ -478,7 +454,7 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               TextFormField(
                 key: const ValueKey('incident-description'),
                 controller: _descriptionController,
@@ -492,7 +468,7 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               TextFormField(
                 key: const ValueKey('incident-location'),
                 controller: _locationController,
@@ -500,7 +476,7 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
                 decoration:
                     const InputDecoration(labelText: 'Lokasi (opsional)'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               InkWell(
                 onTap: createState.isSubmitting ? null : _pickOccurredAt,
                 child: InputDecorator(
@@ -508,7 +484,7 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
                   child: Text(formatIncidentDateTime(_occurredAt)),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
               TextFormField(
                 key: const ValueKey('incident-people'),
                 controller: _peopleController,
@@ -519,22 +495,21 @@ class _CreateIncidentSheetState extends ConsumerState<_CreateIncidentSheet> {
                 ),
               ),
               if (createState.submissionError != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Semantics(
                   liveRegion: true,
                   child: Text(
                     createState.submissionError!.message,
-                    style: const TextStyle(color: KomplekkuColors.danger),
+                    style: AppTypography.body.copyWith(color: AppColors.danger),
                   ),
                 ),
               ],
-              const SizedBox(height: 20),
-              FilledButton(
+              const SizedBox(height: AppSpacing.lg),
+              AppButton(
                 key: const ValueKey('submit-incident'),
+                label: createState.isSubmitting ? 'Mengirim…' : 'Kirim laporan',
+                isLoading: createState.isSubmitting,
                 onPressed: createState.isSubmitting ? null : _submit,
-                child: Text(
-                  createState.isSubmitting ? 'Mengirim…' : 'Kirim laporan',
-                ),
               ),
             ],
           ),

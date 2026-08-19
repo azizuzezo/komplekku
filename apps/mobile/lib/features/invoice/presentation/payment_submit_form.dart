@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/features/invoice/presentation/format.dart';
 import 'package:komplekku/features/invoice/presentation/payment_submit_controller.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
 /// Lets a resident send proof of payment for an unpaid/overdue invoice,
 /// mirroring `payment-submit-form.tsx`'s fields (amount, transfer date,
@@ -93,22 +94,20 @@ class _PaymentSubmitFormState extends ConsumerState<PaymentSubmitForm> {
 
     if (_submittedOnce && submittedPayment != null) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         decoration: BoxDecoration(
-          color: KomplekkuColors.success.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: KomplekkuColors.success.withValues(alpha: 0.4)),
+          color: AppColors.success.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
-            Icon(Icons.check_circle_outline, color: KomplekkuColors.success),
-            const SizedBox(width: 12),
+            const Icon(Icons.check_circle_outline, color: AppColors.success),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
                 'Bukti pembayaran terkirim. Menunggu verifikasi bendahara.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: KomplekkuColors.success,
-                    ),
+                style: AppTypography.body.copyWith(color: AppColors.success),
               ),
             ),
           ],
@@ -121,8 +120,8 @@ class _PaymentSubmitFormState extends ConsumerState<PaymentSubmitForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Jumlah dibayar', style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 6),
+          Text('Jumlah dibayar', style: AppTypography.body),
+          const SizedBox(height: AppSpacing.xs),
           TextFormField(
             controller: _amountController,
             keyboardType: TextInputType.number,
@@ -135,17 +134,17 @@ class _PaymentSubmitFormState extends ConsumerState<PaymentSubmitForm> {
               return null;
             },
           ),
-          const SizedBox(height: 16),
-          Text('Tanggal transfer', style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.base),
+          Text('Tanggal transfer', style: AppTypography.body),
+          const SizedBox(height: AppSpacing.xs),
           OutlinedButton(
             onPressed: _pickDate,
             style: OutlinedButton.styleFrom(alignment: Alignment.centerLeft),
             child: Text(formatDateOnly(_paidAtIso)),
           ),
-          const SizedBox(height: 16),
-          Text('Detail transfer', style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.base),
+          Text('Detail transfer', style: AppTypography.body),
+          const SizedBox(height: AppSpacing.xs),
           TextFormField(
             controller: _noteController,
             maxLines: 3,
@@ -162,22 +161,17 @@ class _PaymentSubmitFormState extends ConsumerState<PaymentSubmitForm> {
             },
           ),
           if (submissionError != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               submissionError.message,
-              style: TextStyle(color: KomplekkuColors.danger),
+              style: AppTypography.body.copyWith(color: AppColors.danger),
             ),
           ],
-          const SizedBox(height: 16),
-          FilledButton(
+          const SizedBox(height: AppSpacing.base),
+          AppButton(
+            label: 'Kirim bukti pembayaran',
+            isLoading: isSubmitting,
             onPressed: isSubmitting ? null : _submit,
-            child: isSubmitting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Kirim bukti pembayaran'),
           ),
         ],
       ),

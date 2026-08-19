@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/entity_actions.dart';
@@ -9,6 +9,8 @@ import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/agenda/data/agenda_repository.dart';
 import 'package:komplekku/features/agenda/domain/agenda_event.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 class AgendaListScreen extends ConsumerStatefulWidget {
   const AgendaListScreen({super.key});
@@ -85,7 +87,7 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
               },
               icon: const Icon(Icons.add),
               label: const Text('Buat Agenda'),
-              backgroundColor: KomplekkuColors.primary,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             )
           : null,
@@ -93,7 +95,12 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.md,
+                AppSpacing.base,
+                0,
+              ),
               child: SegmentedButton<AgendaView>(
                 segments: const [
                   ButtonSegment(
@@ -157,10 +164,15 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
                         ref.refresh(agendaListProvider(_view).future),
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.base,
+                        AppSpacing.md,
+                        AppSpacing.base,
+                        AppSpacing.xl,
+                      ),
                       itemCount: items.length,
                       separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
+                          const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         final event = items[index];
                         return _AgendaCard(
@@ -336,7 +348,13 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(_isEditing ? 'Edit Agenda' : 'Buat Agenda Baru'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.modal),
+      ),
+      title: Text(
+        _isEditing ? 'Edit Agenda' : 'Buat Agenda Baru',
+        style: AppTypography.title,
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -346,10 +364,10 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
             children: [
               if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: KomplekkuColors.danger),
+                    style: AppTypography.body.copyWith(color: AppColors.danger),
                   ),
                 ),
               TextFormField(
@@ -362,7 +380,7 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
                     ? 'Judul minimal 3 karakter'
                     : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(
@@ -405,7 +423,7 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
                     ? 'Lokasi minimal 2 karakter'
                     : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _organizerController,
                 decoration: const InputDecoration(
@@ -416,7 +434,7 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
                     ? 'Penyelenggara minimal 2 karakter'
                     : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 4,
@@ -433,21 +451,20 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        AppButton(
+          label: 'Batal',
+          variant: AppButtonVariant.ghost,
+          expand: false,
           onPressed: _submitting
               ? null
               : () => Navigator.of(context).pop(false),
-          child: const Text('Batal'),
         ),
-        ElevatedButton(
+        AppButton(
+          label: _isEditing ? 'Simpan Perubahan' : 'Terbitkan',
+          variant: AppButtonVariant.primary,
+          expand: false,
+          isLoading: _submitting,
           onPressed: _submitting ? null : _submit,
-          child: Text(
-            _submitting
-                ? 'Menyimpan...'
-                : _isEditing
-                ? 'Simpan Perubahan'
-                : 'Terbitkan',
-          ),
         ),
       ],
     );
@@ -471,56 +488,50 @@ class _AgendaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.event_outlined, color: KomplekkuColors.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${event.dateLabel} · ${event.timeRangeLabel}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      event.location,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (canManage)
-                EntityActions(
-                  onEdit: onEdit,
-                  onDelete: onDelete,
-                  deleteTitle: 'Hapus agenda?',
-                  deleteMessage:
-                      '"${event.title}" tidak akan terlihat lagi di kalender warga.',
-                  tooltip: 'Kelola agenda',
-                ),
-            ],
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(AppRadius.small),
+            ),
+            child: const Icon(Icons.event_outlined, color: AppColors.primary, size: 20),
           ),
-        ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${event.dateLabel} · ${event.timeRangeLabel}',
+                  style: AppTypography.tabular(AppTypography.body),
+                ),
+                const SizedBox(height: 2),
+                Text(event.location, style: AppTypography.caption),
+              ],
+            ),
+          ),
+          if (canManage)
+            EntityActions(
+              onEdit: onEdit,
+              onDelete: onDelete,
+              deleteTitle: 'Hapus agenda?',
+              deleteMessage:
+                  '"${event.title}" tidak akan terlihat lagi di kalender warga.',
+              tooltip: 'Kelola agenda',
+            ),
+        ],
       ),
     );
   }
@@ -535,15 +546,15 @@ class _AgendaListSkeleton extends StatelessWidget {
       label: 'Memuat agenda',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 96,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.card),
             ),
           ),
         ),

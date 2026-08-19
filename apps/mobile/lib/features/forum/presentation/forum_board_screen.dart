@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/upload/cloudinary_upload.dart';
@@ -10,16 +10,18 @@ import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_post_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_post.dart';
+import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 /// Category tint. Everything stays inside the brand palette — the mockup's
 /// green chips map onto the purple/cyan tokens rather than introducing a new
 /// hue per category.
 Color forumCategoryColor(ForumPostCategory category) => switch (category) {
-  ForumPostCategory.question => KomplekkuColors.primary,
-  ForumPostCategory.suggestion => KomplekkuColors.accent,
-  ForumPostCategory.information => KomplekkuColors.textSecondary,
-  ForumPostCategory.environment => KomplekkuColors.success,
-  ForumPostCategory.activity => KomplekkuColors.primaryDark,
+  ForumPostCategory.question => AppColors.primary,
+  ForumPostCategory.suggestion => AppColors.accent,
+  ForumPostCategory.information => AppColors.textSecondary,
+  ForumPostCategory.environment => AppColors.success,
+  ForumPostCategory.activity => AppColors.primaryDark,
 };
 
 /// The threaded "Forum Warga" board. Lives beside the chat channels rather
@@ -35,9 +37,8 @@ class _ForumBoardViewState extends ConsumerState<ForumBoardView> {
   ForumBoardQuery _query = const ForumBoardQuery();
 
   Future<void> _createPost() async {
-    final created = await showModalBottomSheet<bool>(
+    final created = await showAppBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
       builder: (context) => const CreateForumPostSheet(),
     );
     if (created == true) ref.invalidate(forumBoardProvider);
@@ -52,20 +53,23 @@ class _ForumBoardViewState extends ConsumerState<ForumBoardView> {
     );
 
     return ColoredBox(
-      color: KomplekkuColors.background,
+      color: AppColors.background,
       child: Column(
         children: [
           if (canPost)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.sm,
+                AppSpacing.base,
+                0,
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       'Diskusi warga',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: AppTypography.title.copyWith(fontSize: 16),
                     ),
                   ),
                   FilledButton.icon(
@@ -74,9 +78,9 @@ class _ForumBoardViewState extends ConsumerState<ForumBoardView> {
                     label: const Text('Buat Post'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.button),
                       ),
                     ),
                   ),
@@ -184,13 +188,18 @@ class _SortSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.md,
+        AppSpacing.base,
+        AppSpacing.sm,
+      ),
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(AppSpacing.xs),
         decoration: BoxDecoration(
-          color: KomplekkuColors.surfaceSoft,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: KomplekkuColors.border),
+          color: AppColors.surfaceSoft,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
@@ -201,22 +210,20 @@ class _SortSwitcher extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                     decoration: BoxDecoration(
                       color: sort == value
-                          ? KomplekkuColors.primary
+                          ? AppColors.primary
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(AppRadius.small),
                     ),
                     child: Text(
                       forumPostSortLabels[value]!,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
+                      style: AppTypography.label.copyWith(
                         color: sort == value
-                            ? Colors.white
-                            : KomplekkuColors.textSecondary,
+                            ? AppColors.surface
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -241,38 +248,39 @@ class _CategoryChips extends StatelessWidget {
       height: 46,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.base,
+          vertical: AppSpacing.xs,
+        ),
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: ChoiceChip(
               label: const Text('Semua'),
               selected: category == null,
               onSelected: (_) => onChanged(null),
-              selectedColor: KomplekkuColors.primary,
-              labelStyle: TextStyle(
-                fontSize: 12,
+              selectedColor: AppColors.primary,
+              labelStyle: AppTypography.caption.copyWith(
                 fontWeight: FontWeight.w600,
                 color: category == null
-                    ? Colors.white
-                    : KomplekkuColors.textPrimary,
+                    ? AppColors.surface
+                    : AppColors.textPrimary,
               ),
             ),
           ),
           for (final value in ForumPostCategory.values)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
               child: ChoiceChip(
                 label: Text(forumPostCategoryLabels[value]!),
                 selected: category == value,
                 onSelected: (_) => onChanged(value),
-                selectedColor: KomplekkuColors.primary,
-                labelStyle: TextStyle(
-                  fontSize: 12,
+                selectedColor: AppColors.primary,
+                labelStyle: AppTypography.caption.copyWith(
                   fontWeight: FontWeight.w600,
                   color: category == value
-                      ? Colors.white
-                      : KomplekkuColors.textPrimary,
+                      ? AppColors.surface
+                      : AppColors.textPrimary,
                 ),
               ),
             ),
@@ -296,106 +304,89 @@ class ForumPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: KomplekkuColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: KomplekkuColors.border),
-          ),
-          child: Column(
+    return AppCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ForumAvatar(name: post.authorName),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post.authorName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          formatForumRelativeTime(post.createdAt) +
-                              (post.isEdited ? ' · diedit' : ''),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+              ForumAvatar(name: post.authorName),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post.authorName,
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                  ForumCategoryChip(category: post.category),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                post.title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                post.excerpt,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: KomplekkuColors.textSecondary,
-                  height: 1.45,
+                    Text(
+                      formatForumRelativeTime(post.createdAt) +
+                          (post.isEdited ? ' · diedit' : ''),
+                      style: AppTypography.caption,
+                    ),
+                  ],
                 ),
               ),
-              if (post.imageUrls.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    post.imageUrls.first,
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox.shrink(),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: KomplekkuColors.border),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.mode_comment_outlined,
-                    size: 16,
-                    color: KomplekkuColors.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.replyCount} balasan',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(width: 16),
-                  ForumLikeButton(
-                    likeCount: post.likeCount,
-                    likedByMe: post.likedByMe,
-                    onToggle: onToggleLike,
-                    label: 'suka',
-                  ),
-                ],
+              ForumCategoryChip(category: post.category),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            post.title,
+            style: AppTypography.title.copyWith(fontSize: 16),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            post.excerpt,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.body.copyWith(height: 1.45),
+          ),
+          if (post.imageUrls.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.input),
+              child: Image.network(
+                post.imageUrls.first,
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              const Icon(
+                Icons.mode_comment_outlined,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${post.replyCount} balasan',
+                style: AppTypography.caption,
+              ),
+              const SizedBox(width: AppSpacing.base),
+              ForumLikeButton(
+                likeCount: post.likeCount,
+                likedByMe: post.likedByMe,
+                onToggle: onToggleLike,
+                label: 'suka',
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -417,7 +408,7 @@ class ForumAvatar extends StatelessWidget {
       height: size,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: KomplekkuColors.surfaceMuted,
+        color: AppColors.surfaceMuted,
       ),
       alignment: Alignment.center,
       child: Text(
@@ -425,7 +416,7 @@ class ForumAvatar extends StatelessWidget {
         style: TextStyle(
           fontSize: size * 0.42,
           fontWeight: FontWeight.w800,
-          color: KomplekkuColors.primary,
+          color: AppColors.primary,
         ),
       ),
     );
@@ -441,15 +432,17 @@ class ForumCategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = forumCategoryColor(category);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
         forumPostCategoryLabels[category]!,
-        style: TextStyle(
-          fontSize: 11,
+        style: AppTypography.caption.copyWith(
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -511,14 +504,17 @@ class _ForumLikeButtonState extends State<ForumLikeButton>
   @override
   Widget build(BuildContext context) {
     final color = widget.likedByMe
-        ? KomplekkuColors.danger
-        : KomplekkuColors.textSecondary;
+        ? AppColors.danger
+        : AppColors.textSecondary;
 
     return InkWell(
       onTap: _handleTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: 2,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -664,117 +660,107 @@ class _CreateForumPostSheetState extends ConsumerState<CreateForumPostSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+    // The bottom-sheet chrome (drag handle, safe area, keyboard inset) is
+    // already provided by `showAppBottomSheet` — this only lays out the form.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.base,
+        AppSpacing.xl,
+        AppSpacing.xl,
       ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _isEditing ? 'Edit diskusi' : 'Buat diskusi baru',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Tutup',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<ForumPostCategory>(
-                initialValue: _category,
-                decoration: const InputDecoration(labelText: 'Kategori'),
-                items: [
-                  for (final value in ForumPostCategory.values)
-                    DropdownMenuItem(
-                      value: value,
-                      child: Text(forumPostCategoryLabels[value]!),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _category = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _titleController,
-                maxLength: 240,
-                decoration: const InputDecoration(
-                  labelText: 'Judul',
-                  hintText: 'Misal: Usulan pemasangan CCTV di lingkungan RT',
+              Expanded(
+                child: Text(
+                  _isEditing ? 'Edit diskusi' : 'Buat diskusi baru',
+                  style: AppTypography.title.copyWith(fontSize: 16),
                 ),
               ),
-              TextField(
-                controller: _bodyController,
-                maxLines: 6,
-                maxLength: 5000,
-                decoration: InputDecoration(
-                  labelText: 'Isi diskusi',
-                  hintText: _isEditing
-                      ? 'Tulis ulang isi diskusimu…'
-                      : 'Jelaskan maksudmu supaya warga lain mudah menanggapi…',
-                ),
-              ),
-              if (!_isEditing) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _uploading ? null : _pickImage,
-                      icon: const Icon(Icons.image_outlined, size: 18),
-                      label: Text(
-                        _imageUrls.isEmpty
-                            ? 'Tambah foto'
-                            : '${_imageUrls.length} foto',
-                      ),
-                    ),
-                    if (_uploading) ...[
-                      const SizedBox(width: 12),
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: KomplekkuColors.danger),
-                ),
-              ],
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _submitting ? null : _submit,
-                  child: Text(
-                    _submitting
-                        ? 'Menyimpan…'
-                        : _isEditing
-                        ? 'Simpan perubahan'
-                        : 'Terbitkan',
-                  ),
-                ),
+              IconButton(
+                tooltip: 'Tutup',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          DropdownButtonFormField<ForumPostCategory>(
+            initialValue: _category,
+            decoration: const InputDecoration(labelText: 'Kategori'),
+            items: [
+              for (final value in ForumPostCategory.values)
+                DropdownMenuItem(
+                  value: value,
+                  child: Text(forumPostCategoryLabels[value]!),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _category = value);
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _titleController,
+            maxLength: 240,
+            decoration: const InputDecoration(
+              labelText: 'Judul',
+              hintText: 'Misal: Usulan pemasangan CCTV di lingkungan RT',
+            ),
+          ),
+          TextField(
+            controller: _bodyController,
+            maxLines: 6,
+            maxLength: 5000,
+            decoration: InputDecoration(
+              labelText: 'Isi diskusi',
+              hintText: _isEditing
+                  ? 'Tulis ulang isi diskusimu…'
+                  : 'Jelaskan maksudmu supaya warga lain mudah menanggapi…',
+            ),
+          ),
+          if (!_isEditing) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _uploading ? null : _pickImage,
+                  icon: const Icon(Icons.image_outlined, size: 18),
+                  label: Text(
+                    _imageUrls.isEmpty
+                        ? 'Tambah foto'
+                        : '${_imageUrls.length} foto',
+                  ),
+                ),
+                if (_uploading) ...[
+                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _error!,
+              style: AppTypography.caption.copyWith(color: AppColors.danger),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.base),
+          AppButton(
+            label: _isEditing ? 'Simpan perubahan' : 'Terbitkan',
+            isLoading: _submitting,
+            onPressed: _submitting ? null : _submit,
+          ),
+        ],
       ),
     );
   }
@@ -796,7 +782,7 @@ class _BoardSkeleton extends StatelessWidget {
           itemBuilder: (context, index) => Container(
             height: 150,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
+              color: AppColors.surfaceSoft,
               borderRadius: BorderRadius.circular(14),
             ),
           ),

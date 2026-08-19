@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -12,6 +12,9 @@ import 'package:komplekku/features/invoice/domain/invoice.dart';
 import 'package:komplekku/features/invoice/domain/payment.dart';
 import 'package:komplekku/features/invoice/presentation/format.dart';
 import 'package:komplekku/features/invoice/presentation/payment_review_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 /// Dual-mode Iuran screen mounted at `/layanan/iuran`.
 ///
@@ -100,9 +103,15 @@ class _InvoiceListView extends ConsumerWidget {
               onRefresh: () => ref.refresh(invoiceListProvider.future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  AppSpacing.xl,
+                ),
                 itemCount: items.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final invoice = items[index];
                   return _InvoiceCard(
@@ -127,72 +136,58 @@ class _InvoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      invoice.duesTypeName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
+              Expanded(
+                child: Text(
+                  invoice.duesTypeName,
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  _StatusChip(status: invoice.status),
-                ],
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Periode ${invoice.period} · ${formatRupiah(invoice.amount)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Jatuh tempo ${formatDateOnly(invoice.dueDate)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: KomplekkuColors.textSecondary,
-                    ),
-              ),
+              const SizedBox(width: AppSpacing.xs),
+              _InvoiceStatusBadge(status: invoice.status),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Periode ${invoice.period} · ${formatRupiah(invoice.amount)}',
+            style: AppTypography.tabular(AppTypography.body),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Jatuh tempo ${formatDateOnly(invoice.dueDate)}',
+            style: AppTypography.tabular(AppTypography.caption),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+AppBadgeTone _invoiceStatusTone(InvoiceStatus status) => switch (status) {
+  InvoiceStatus.paid => AppBadgeTone.success,
+  InvoiceStatus.pendingVerification => AppBadgeTone.brand,
+  InvoiceStatus.overdue => AppBadgeTone.danger,
+  InvoiceStatus.waived || InvoiceStatus.unpaid => AppBadgeTone.neutral,
+};
+
+class _InvoiceStatusBadge extends StatelessWidget {
+  const _InvoiceStatusBadge({required this.status});
 
   final InvoiceStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      InvoiceStatus.paid => KomplekkuColors.success,
-      InvoiceStatus.pendingVerification => KomplekkuColors.accent,
-      InvoiceStatus.overdue => KomplekkuColors.danger,
-      InvoiceStatus.waived || InvoiceStatus.unpaid => KomplekkuColors.textSecondary,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        invoiceStatusLabel(status),
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
-      ),
+    return AppBadge(
+      label: invoiceStatusLabel(status),
+      tone: _invoiceStatusTone(status),
     );
   }
 }
@@ -206,15 +201,16 @@ class _ListSkeleton extends StatelessWidget {
       label: 'Memuat data',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 96,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.small),
             ),
           ),
         ),
@@ -276,9 +272,15 @@ class _PaymentVerificationView extends ConsumerWidget {
               onRefresh: () => ref.refresh(paymentQueueProvider.future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  AppSpacing.xl,
+                ),
                 itemCount: items.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) => _PaymentReviewCard(
                   payment: items[index],
                 ),
@@ -301,7 +303,10 @@ class _PaymentReviewCard extends ConsumerWidget {
     final reason = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Tolak pembayaran'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.modal),
+        ),
+        title: Text('Tolak pembayaran', style: AppTypography.title),
         content: TextField(
           controller: reasonController,
           maxLines: 3,
@@ -310,18 +315,27 @@ class _PaymentReviewCard extends ConsumerWidget {
             hintText: 'Alasan penolakan, minimal 3 karakter.',
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.base,
+          0,
+          AppSpacing.base,
+          AppSpacing.base,
+        ),
         actions: [
-          TextButton(
+          AppButton(
+            label: 'Batal',
+            variant: AppButtonVariant.ghost,
+            expand: false,
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Batal'),
           ),
-          FilledButton(
+          AppButton(
+            label: 'Konfirmasi penolakan',
+            expand: false,
             onPressed: () {
               final value = reasonController.text.trim();
               if (value.length < 3) return;
               Navigator.of(dialogContext).pop(value);
             },
-            child: const Text('Konfirmasi penolakan'),
           ),
         ],
       ),
@@ -341,110 +355,98 @@ class _PaymentReviewCard extends ConsumerWidget {
     final isSubmitting = isActive && (reviewState.value?.isSubmitting ?? false);
     final error = isActive ? reviewState.value?.submissionError : null;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${payment.duesTypeName} · ${payment.period}',
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _PaymentStatusBadge(status: payment.status),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            formatRupiah(payment.amount),
+            style: AppTypography.tabular(
+              AppTypography.title.copyWith(fontSize: 17),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${payment.submittedByName} · ${payment.houseCode} · ${payment.householdDisplayName}',
+            style: AppTypography.body,
+          ),
+          Text(
+            'Transfer ${formatDateOnly(payment.paidAt)}',
+            style: AppTypography.tabular(AppTypography.body),
+          ),
+          const SizedBox(height: 4),
+          Text(payment.note, style: AppTypography.body),
+          if (error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              error.message,
+              style: AppTypography.body.copyWith(color: AppColors.danger),
+            ),
+          ],
+          if (payment.status == PaymentStatus.pending) ...[
+            const SizedBox(height: AppSpacing.md),
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '${payment.duesTypeName} · ${payment.period}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                  child: AppButton(
+                    label: 'Verifikasi',
+                    isLoading: isSubmitting && isActive,
+                    onPressed: isSubmitting
+                        ? null
+                        : () => ref
+                            .read(paymentReviewControllerProvider.notifier)
+                            .verify(payment.id),
                   ),
                 ),
-                _PaymentStatusChip(status: payment.status),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton(
+                    label: 'Tolak',
+                    variant: AppButtonVariant.secondary,
+                    onPressed:
+                        isSubmitting ? null : () => _reject(context, ref),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              formatRupiah(payment.amount),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${payment.submittedByName} · ${payment.houseCode} · ${payment.householdDisplayName}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            Text(
-              'Transfer ${formatDateOnly(payment.paidAt)}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(payment.note, style: Theme.of(context).textTheme.bodyMedium),
-            if (error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                error.message,
-                style: TextStyle(color: KomplekkuColors.danger),
-              ),
-            ],
-            if (payment.status == PaymentStatus.pending) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: isSubmitting
-                          ? null
-                          : () => ref
-                              .read(paymentReviewControllerProvider.notifier)
-                              .verify(payment.id),
-                      child: isSubmitting && isActive
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Verifikasi'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed:
-                          isSubmitting ? null : () => _reject(context, ref),
-                      child: const Text('Tolak'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _PaymentStatusChip extends StatelessWidget {
-  const _PaymentStatusChip({required this.status});
+AppBadgeTone _paymentStatusTone(PaymentStatus status) => switch (status) {
+  PaymentStatus.verified => AppBadgeTone.success,
+  PaymentStatus.rejected => AppBadgeTone.danger,
+  PaymentStatus.pending => AppBadgeTone.brand,
+};
+
+class _PaymentStatusBadge extends StatelessWidget {
+  const _PaymentStatusBadge({required this.status});
 
   final PaymentStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      PaymentStatus.verified => KomplekkuColors.success,
-      PaymentStatus.rejected => KomplekkuColors.danger,
-      PaymentStatus.pending => KomplekkuColors.accent,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        paymentStatusLabel(status),
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
-      ),
+    return AppBadge(
+      label: paymentStatusLabel(status),
+      tone: _paymentStatusTone(status),
     );
   }
 }

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/data/announcement_repository.dart';
 import 'package:komplekku/features/announcement/domain/announcement.dart';
 import 'package:komplekku/features/announcement/presentation/announcement_list_screen.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
 
 class AnnouncementDetailScreen extends ConsumerStatefulWidget {
   const AnnouncementDetailScreen({super.key, required this.id});
@@ -73,15 +74,15 @@ class _AnnouncementDetailScreenState
             );
           },
           data: (announcement) => SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (announcement.coverImageUrl != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.base),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
                       child: Image.network(
                         announcement.coverImageUrl!,
                         width: double.infinity,
@@ -93,28 +94,19 @@ class _AnnouncementDetailScreenState
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: _BadgeLabel(badge: announcement.badge),
                 ),
-                Text(
-                  announcement.title,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 8),
+                Text(announcement.title, style: AppTypography.heading),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   formatIndonesianDateTime(announcement.publishedAt),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                  style: AppTypography.tabular(AppTypography.caption),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 const Divider(),
-                const SizedBox(height: 20),
-                Text(
-                  announcement.body,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(announcement.body, style: AppTypography.bodyLarge),
               ],
             ),
           ),
@@ -131,19 +123,11 @@ class _BadgeLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (badge) {
-      AnnouncementBadge.important => KomplekkuColors.danger,
-      AnnouncementBadge.event => KomplekkuColors.primary,
-      AnnouncementBadge.info => KomplekkuColors.textSecondary,
+    final tone = switch (badge) {
+      AnnouncementBadge.important => AppBadgeTone.danger,
+      AnnouncementBadge.event => AppBadgeTone.brand,
+      AnnouncementBadge.info => AppBadgeTone.neutral,
     };
-    return Text(
-      announcementBadgeLabels[badge]!.toUpperCase(),
-      style: TextStyle(
-        color: color,
-        fontWeight: FontWeight.w800,
-        fontSize: 12,
-        letterSpacing: 0.6,
-      ),
-    );
+    return AppBadge(label: announcementBadgeLabels[badge]!, tone: tone);
   }
 }

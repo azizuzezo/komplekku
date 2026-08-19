@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/security_dashboard/data/security_dashboard_repository.dart';
 import 'package:komplekku/features/security_shift/data/security_shift_repository.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 /// Ops summary for security staff/admins, mirroring
 /// `apps/web/features/security-dashboard/security-dashboard-panel.tsx`.
@@ -75,16 +77,21 @@ class _DashboardBody extends ConsumerWidget {
         onRefresh: () => ref.refresh(securityDashboardProvider.future),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base,
+            AppSpacing.md,
+            AppSpacing.base,
+            AppSpacing.xl,
+          ),
           children: [
             const _ShiftCard(),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.base),
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
               childAspectRatio: 1.35,
               children: [
                 _StatCard(
@@ -188,99 +195,92 @@ class _ShiftCardState extends ConsumerState<_ShiftCard> {
             : 'Status shift belum bisa dimuat.')
         : null;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: shift != null
+                      ? AppColors.success.withValues(alpha: 0.12)
+                      : AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                ),
+                child: Icon(
                   shift != null
                       ? Icons.shield_outlined
                       : Icons.shield_moon_outlined,
                   color: shift != null
-                      ? KomplekkuColors.success
-                      : KomplekkuColors.textSecondary,
+                      ? AppColors.success
+                      : AppColors.textSecondary,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Shift jaga',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        shift != null
-                            ? 'Aktif sejak ${formatDashboardDateTime(shift.startedAt)}'
-                            : 'Belum ada shift aktif',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      if (shift != null)
-                        Text(
-                          'Petugas: ${shift.officerName}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_error != null) ...[
-              Text(
-                _error!,
-                style: const TextStyle(color: KomplekkuColors.danger),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Shift jaga', style: AppTypography.caption),
+                    const SizedBox(height: 2),
+                    Text(
+                      shift != null
+                          ? 'Aktif sejak ${formatDashboardDateTime(shift.startedAt)}'
+                          : 'Belum ada shift aktif',
+                      style: AppTypography.tabular(
+                        AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if (shift != null)
+                      Text(
+                        'Petugas: ${shift.officerName}',
+                        style: AppTypography.caption,
+                      ),
+                  ],
+                ),
+              ),
             ],
-            if (shiftLoadError != null)
-              Text(
-                shiftLoadError,
-                style: const TextStyle(color: KomplekkuColors.danger),
-              )
-            else if (shift != null) ...[
-              TextField(
-                controller: _notesController,
-                maxLines: 3,
-                maxLength: 1000,
-                decoration: const InputDecoration(
-                  labelText: 'Catatan akhir shift (opsional)',
-                ),
-              ),
-              FilledButton(
-                onPressed: _isMutating ? null : _end,
-                style: FilledButton.styleFrom(
-                  backgroundColor: KomplekkuColors.danger,
-                ),
-                child: _isMutating
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Akhiri shift'),
-              ),
-            ] else
-              FilledButton(
-                onPressed: _isMutating ? null : _start,
-                child: _isMutating
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Mulai shift'),
-              ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (_error != null) ...[
+            Text(
+              _error!,
+              style: AppTypography.body.copyWith(color: AppColors.danger),
+            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
-        ),
+          if (shiftLoadError != null)
+            Text(
+              shiftLoadError,
+              style: AppTypography.body.copyWith(color: AppColors.danger),
+            )
+          else if (shift != null) ...[
+            TextField(
+              controller: _notesController,
+              maxLines: 3,
+              maxLength: 1000,
+              decoration: const InputDecoration(
+                labelText: 'Catatan akhir shift (opsional)',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppButton(
+              label: 'Akhiri shift',
+              onPressed: _isMutating ? null : _end,
+              variant: AppButtonVariant.danger,
+              isLoading: _isMutating,
+            ),
+          ] else
+            AppButton(
+              label: 'Mulai shift',
+              onPressed: _isMutating ? null : _start,
+              isLoading: _isMutating,
+            ),
+        ],
       ),
     );
   }
@@ -301,52 +301,56 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      color: isDanger ? KomplekkuColors.danger.withValues(alpha: 0.08) : null,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 24,
-                    color: isDanger ? KomplekkuColors.danger : null,
-                  ),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    'Buka triase',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KomplekkuColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: KomplekkuColors.primary,
-                  ),
-                ],
+    final content = Padding(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: AppTypography.caption),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            value,
+            style: AppTypography.tabular(
+              AppTypography.heading.copyWith(
+                fontSize: 24,
+                color: isDanger ? AppColors.danger : null,
               ),
-            ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                Text(
+                  'Buka triase',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
           ],
-        ),
+        ],
+      ),
+    );
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: isDanger ? AppColors.danger.withValues(alpha: 0.08) : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(
+          color: isDanger ? AppColors.danger.withValues(alpha: 0.35) : AppColors.border,
         ),
       ),
+      child: onTap == null ? content : InkWell(onTap: onTap, child: content),
     );
   }
 }
@@ -360,32 +364,32 @@ class _DashboardSkeleton extends StatelessWidget {
       label: 'Memuat dasbor keamanan',
       liveRegion: true,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         children: [
           ExcludeSemantics(
             child: Container(
               height: 72,
               decoration: BoxDecoration(
-                color: KomplekkuColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(AppRadius.card),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.base),
           ExcludeSemantics(
             child: GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
               childAspectRatio: 1.35,
               children: List.generate(
                 4,
                 (index) => Container(
                   decoration: BoxDecoration(
-                    color: KomplekkuColors.surfaceSoft,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.surfaceSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.card),
                   ),
                 ),
               ),

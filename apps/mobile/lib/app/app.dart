@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 
 class KomplekkuApp extends ConsumerWidget {
   const KomplekkuApp({super.key});
@@ -13,7 +13,7 @@ class KomplekkuApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Komplekku',
       debugShowCheckedModeBanner: false,
-      theme: buildKomplekkuTheme(),
+      theme: buildAppTheme(),
       routerConfig: router,
     );
   }

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/agenda/data/agenda_repository.dart';
 import 'package:komplekku/features/agenda/domain/agenda_event.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 const _weekdayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
@@ -126,14 +127,19 @@ class _AgendaCalendarScreenState extends ConsumerState<AgendaCalendarScreen> {
             onRefresh: () => ref.refresh(agendaByDateProvider.future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.md,
+                AppSpacing.base,
+                AppSpacing.xl,
+              ),
               children: [
                 _MonthHeader(
                   month: _month,
                   onPrevious: () => _shiftMonth(-1),
                   onNext: () => _shiftMonth(1),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 _MonthGrid(
                   month: _month,
                   selectedDay: _selectedDay,
@@ -147,7 +153,7 @@ class _AgendaCalendarScreenState extends ConsumerState<AgendaCalendarScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 _SelectedDaySection(
                   day: _selectedDay,
                   events: eventsByDate[_dateKey(_selectedDay)] ?? const [],
@@ -187,10 +193,7 @@ class _MonthHeader extends StatelessWidget {
             child: Text(
               '${_monthNames[month.month - 1]} ${month.year}',
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: AppTypography.title,
             ),
           ),
         ),
@@ -232,23 +235,20 @@ class _MonthGrid extends StatelessWidget {
                   child: Center(
                     child: Text(
                       label,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: KomplekkuColors.textSecondary,
-                          ),
+                      style: AppTypography.caption.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
               )
               .toList(growable: false),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpacing.sm),
         GridView.count(
           crossAxisCount: 7,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
+          mainAxisSpacing: AppSpacing.xs,
+          crossAxisSpacing: AppSpacing.xs,
           children: days.map((day) {
             final key = _dateKey(day);
             final dayEvents = eventsByDate[key] ?? const <AgendaEvent>[];
@@ -291,10 +291,10 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = isSelected
-        ? Colors.white
+        ? AppColors.surface
         : isOtherMonth
-            ? KomplekkuColors.textSecondary
-            : KomplekkuColors.textPrimary;
+            ? AppColors.textSecondary
+            : AppColors.textPrimary;
 
     return Semantics(
       button: true,
@@ -303,20 +303,20 @@ class _DayCell extends StatelessWidget {
           '${eventCount == 0 ? 'tidak ada agenda' : '$eventCount agenda'}',
       child: Material(
         color: isSelected
-            ? KomplekkuColors.primary
+            ? AppColors.primary
             : isOtherMonth
                 ? Colors.transparent
-                : KomplekkuColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(8),
+                : AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadius.small),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.small),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.small),
               border: Border.all(
                 color: isToday && !isSelected
-                    ? KomplekkuColors.primary
+                    ? AppColors.primary
                     : Colors.transparent,
               ),
             ),
@@ -325,10 +325,12 @@ class _DayCell extends StatelessWidget {
               children: [
                 Text(
                   '${day.day}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                    color: foreground,
+                  style: AppTypography.tabular(
+                    AppTypography.caption.copyWith(
+                      fontSize: 13,
+                      fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
+                      color: foreground,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -347,8 +349,8 @@ class _DayCell extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: isSelected
-                                    ? Colors.white
-                                    : KomplekkuColors.primary,
+                                    ? AppColors.surface
+                                    : AppColors.primary,
                               ),
                             ),
                           ),
@@ -376,47 +378,51 @@ class _SelectedDaySection extends StatelessWidget {
       children: [
         Text(
           '${day.day} ${_monthNames[day.month - 1]} ${day.year}',
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
+          style: AppTypography.label,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.md),
         if (events.isEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.base),
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: KomplekkuColors.border),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              border: Border.all(color: AppColors.border),
             ),
             child: Text(
               'Tidak ada agenda pada tanggal ini.',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: AppTypography.body,
             ),
           )
         else
           ...events.map(
             (event) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.event_outlined,
-                    color: KomplekkuColors.primary,
-                  ),
-                  title: Text(
-                    event.title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    '${event.timeRangeLabel} · ${event.location}',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () =>
-                      context.push('/agenda/${event.id}'),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: AppCard(
+                onTap: () => context.push('/agenda/${event.id}'),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_outlined, color: AppColors.primary),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${event.timeRangeLabel} · ${event.location}',
+                            style: AppTypography.tabular(AppTypography.caption),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                  ],
                 ),
               ),
             ),
@@ -436,21 +442,21 @@ class _CalendarSkeleton extends StatelessWidget {
       liveRegion: true,
       child: ExcludeSemantics(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.base),
           children: [
             Container(
               height: 40,
               decoration: BoxDecoration(
-                color: KomplekkuColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(AppRadius.input),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Container(
               height: 260,
               decoration: BoxDecoration(
-                color: KomplekkuColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(AppRadius.input),
               ),
             ),
           ],

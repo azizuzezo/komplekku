@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/presentation/announcement_list_screen.dart'
@@ -9,6 +9,7 @@ import 'package:komplekku/features/announcement/presentation/announcement_list_s
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/notification/data/notification_repository.dart';
 import 'package:komplekku/features/notification/domain/app_notification.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 class NotificationListScreen extends ConsumerWidget {
   const NotificationListScreen({super.key});
@@ -77,10 +78,15 @@ class NotificationListScreen extends ConsumerWidget {
               onRefresh: () => ref.refresh(notificationListProvider.future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  AppSpacing.xl,
+                ),
                 itemCount: items.length,
                 separatorBuilder: (context, index) =>
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return _NotificationCard(
@@ -117,58 +123,46 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Icon(
-                  notification.isRead
-                      ? Icons.notifications_none_outlined
-                      : Icons.notifications_active_outlined,
-                  color: notification.isRead
-                      ? KomplekkuColors.textSecondary
-                      : KomplekkuColors.primary,
-                  semanticLabel:
-                      notification.isRead ? 'Sudah dibaca' : 'Belum dibaca',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      notification.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      notification.message,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      formatIndonesianDateTime(notification.createdAt),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: KomplekkuColors.textSecondary,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Icon(
+              notification.isRead
+                  ? Icons.notifications_none_outlined
+                  : Icons.notifications_active_outlined,
+              color: notification.isRead
+                  ? AppColors.textSecondary
+                  : AppColors.primary,
+              semanticLabel:
+                  notification.isRead ? 'Sudah dibaca' : 'Belum dibaca',
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  notification.title,
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(notification.message, style: AppTypography.body),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  formatIndonesianDateTime(notification.createdAt),
+                  style: AppTypography.tabular(AppTypography.caption),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -183,15 +177,16 @@ class _NotificationListSkeleton extends StatelessWidget {
       label: 'Memuat notifikasi',
       liveRegion: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) => ExcludeSemantics(
           child: Container(
             height: 100,
             decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.small),
             ),
           ),
         ),

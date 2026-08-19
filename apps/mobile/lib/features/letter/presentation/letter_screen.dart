@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -8,6 +8,11 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/letter/data/letter_repository.dart';
 import 'package:komplekku/features/letter/domain/letter.dart';
 import 'package:komplekku/features/letter/presentation/letter_form_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 /// Resident + staff dual-mode screen for "Surat". Residents ajukan (submit)
 /// letter requests and track their own history (`letter.create` /
@@ -35,7 +40,11 @@ class LetterScreen extends ConsumerWidget {
           : null,
       body: SafeArea(
         child: requests.when(
-          loading: () => const _LetterListSkeleton(),
+          loading: () => const Semantics(
+            label: 'Memuat permohonan surat',
+            liveRegion: true,
+            child: AppLoadingState.skeleton(rows: 4),
+          ),
           error: (error, _) {
             final failure = error is ApiException
                 ? error
@@ -78,10 +87,15 @@ class LetterScreen extends ConsumerWidget {
               onRefresh: () => ref.refresh(letterRequestListProvider.future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  96,
+                ),
                 itemCount: items.length,
                 separatorBuilder: (context, index) =>
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return _LetterRequestCard(
@@ -98,10 +112,8 @@ class LetterScreen extends ConsumerWidget {
   }
 
   void _openCreateSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (context) => const _LetterCreateSheet(),
     );
   }
@@ -110,38 +122,27 @@ class LetterScreen extends ConsumerWidget {
 Color letterStatusToneColor(LetterStatusTone tone) {
   switch (tone) {
     case LetterStatusTone.success:
-      return KomplekkuColors.success;
+      return AppColors.success;
     case LetterStatusTone.warning:
-      return KomplekkuColors.accent;
+      return AppColors.accent;
     case LetterStatusTone.danger:
-      return KomplekkuColors.danger;
+      return AppColors.danger;
     case LetterStatusTone.muted:
-      return KomplekkuColors.textSecondary;
+      return AppColors.textSecondary;
   }
 }
 
-class _LetterStatusBadge extends StatelessWidget {
-  const _LetterStatusBadge({required this.status});
+AppBadgeTone _letterBadgeTone(LetterStatusTone tone) => switch (tone) {
+  LetterStatusTone.muted => AppBadgeTone.neutral,
+  LetterStatusTone.warning => AppBadgeTone.warning,
+  LetterStatusTone.success => AppBadgeTone.success,
+  LetterStatusTone.danger => AppBadgeTone.danger,
+};
 
-  final LetterRequestStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = letterStatusToneColor(letterRequestStatusTone(status));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        letterRequestStatusLabels[status]!,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
+Widget _letterStatusBadge(LetterRequestStatus status) => AppBadge(
+  label: letterRequestStatusLabels[status]!,
+  tone: _letterBadgeTone(letterRequestStatusTone(status)),
+);
 
 class _LetterRequestCard extends ConsumerStatefulWidget {
   const _LetterRequestCard({required this.request, required this.canManage});
@@ -190,102 +191,112 @@ class _LetterRequestCardState extends ConsumerState<_LetterRequestCard> {
   @override
   Widget build(BuildContext context) {
     final request = widget.request;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  request.letterTypeName,
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _letterStatusBadge(request.status),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(request.purpose, style: AppTypography.body),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            widget.canManage
+                ? '${request.requesterName} · ${request.houseCode} · Diajukan ${formatLetterDateTime(request.createdAt)}'
+                : 'Diajukan ${formatLetterDateTime(request.createdAt)}',
+            style: AppTypography.tabular(AppTypography.caption),
+          ),
+          if (request.status == LetterRequestStatus.rejected &&
+              request.rejectionReason != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Alasan penolakan: ${request.rejectionReason}',
+              style: AppTypography.body.copyWith(color: AppColors.danger),
+            ),
+          ],
+          if (request.status == LetterRequestStatus.ready) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Dokumen siap diambil di sekretariat pengurus.',
+              style: AppTypography.body.copyWith(color: AppColors.success),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _error!.message,
+              style: AppTypography.body.copyWith(color: AppColors.danger),
+            ),
+          ],
+          if (widget.canManage &&
+              request.status == LetterRequestStatus.submitted &&
+              !_isRejecting) ...[
+            const SizedBox(height: AppSpacing.md),
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    request.letterTypeName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                _LetterStatusBadge(status: request.status),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(request.purpose, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 10),
-            Text(
-              widget.canManage
-                  ? '${request.requesterName} · ${request.houseCode} · Diajukan ${formatLetterDateTime(request.createdAt)}'
-                  : 'Diajukan ${formatLetterDateTime(request.createdAt)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: KomplekkuColors.textSecondary,
-                  ),
-            ),
-            if (request.status == LetterRequestStatus.rejected &&
-                request.rejectionReason != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Alasan penolakan: ${request.rejectionReason}',
-                style: const TextStyle(color: KomplekkuColors.danger),
-              ),
-            ],
-            if (request.status == LetterRequestStatus.ready) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Dokumen siap diambil di sekretariat pengurus.',
-                style: TextStyle(color: KomplekkuColors.success),
-              ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _error!.message,
-                style: const TextStyle(color: KomplekkuColors.danger),
-              ),
-            ],
-            if (widget.canManage &&
-                request.status == LetterRequestStatus.submitted &&
-                !_isRejecting) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  FilledButton(
+                  child: AppButton(
+                    label: 'Setujui',
+                    expand: false,
+                    isLoading: _isSubmitting,
                     onPressed: _isSubmitting
                         ? null
                         : () => _run(
-                              () => ref
-                                  .read(letterRepositoryProvider)
-                                  .approve(request.id),
-                            ),
-                    child: const Text('Setujui'),
+                            () => ref
+                                .read(letterRepositoryProvider)
+                                .approve(request.id),
+                          ),
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton(
+                    label: 'Tolak',
+                    variant: AppButtonVariant.secondary,
+                    expand: false,
                     onPressed: _isSubmitting
                         ? null
                         : () => setState(() => _isRejecting = true),
-                    child: const Text('Tolak'),
                   ),
-                ],
-              ),
-            ],
-            if (widget.canManage &&
-                request.status == LetterRequestStatus.submitted &&
-                _isRejecting) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _rejectReasonController,
-                decoration: const InputDecoration(
-                  labelText: 'Alasan penolakan',
-                  helperText: 'Alasan ini akan terlihat oleh warga yang mengajukan.',
                 ),
-                maxLines: 3,
+              ],
+            ),
+          ],
+          if (widget.canManage &&
+              request.status == LetterRequestStatus.submitted &&
+              _isRejecting) ...[
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _rejectReasonController,
+              decoration: const InputDecoration(
+                labelText: 'Alasan penolakan',
+                helperText:
+                    'Alasan ini akan terlihat oleh warga yang mengajukan.',
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  FilledButton(
+              maxLines: 3,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'Konfirmasi penolakan',
+                    variant: AppButtonVariant.danger,
+                    expand: false,
+                    isLoading: _isSubmitting,
                     onPressed: _isSubmitting
                         ? null
                         : () {
@@ -305,63 +316,40 @@ class _LetterRequestCardState extends ConsumerState<_LetterRequestCard> {
                                   .reject(request.id, reason),
                             );
                           },
-                    child: const Text('Konfirmasi penolakan'),
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton(
+                    label: 'Batal',
+                    variant: AppButtonVariant.secondary,
+                    expand: false,
                     onPressed: _isSubmitting
                         ? null
                         : () => setState(() {
-                              _isRejecting = false;
-                              _error = null;
-                            }),
-                    child: const Text('Batal'),
+                            _isRejecting = false;
+                            _error = null;
+                          }),
                   ),
-                ],
-              ),
-            ],
-            if (widget.canManage &&
-                request.status == LetterRequestStatus.approved) ...[
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _isSubmitting
-                    ? null
-                    : () => _run(
-                          () => ref
-                              .read(letterRepositoryProvider)
-                              .markReady(request.id),
-                        ),
-                child: const Text('Tandai siap'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LetterListSkeleton extends StatelessWidget {
-  const _LetterListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Memuat permohonan surat',
-      liveRegion: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
-        itemBuilder: (context, index) => ExcludeSemantics(
-          child: Container(
-            height: 100,
-            decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
+                ),
+              ],
             ),
-          ),
-        ),
+          ],
+          if (widget.canManage &&
+              request.status == LetterRequestStatus.approved) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppButton(
+              label: 'Tandai siap',
+              isLoading: _isSubmitting,
+              onPressed: _isSubmitting
+                  ? null
+                  : () => _run(
+                      () =>
+                          ref.read(letterRepositoryProvider).markReady(request.id),
+                    ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -412,11 +400,11 @@ class _LetterCreateSheetState extends ConsumerState<_LetterCreateSheet> {
     final typesAsync = ref.watch(letterTypeListProvider);
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
       ),
       child: SingleChildScrollView(
         child: Form(
@@ -425,19 +413,16 @@ class _LetterCreateSheetState extends ConsumerState<_LetterCreateSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Ajukan surat baru',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
+              Text('Ajukan surat baru', style: AppTypography.title),
+              const SizedBox(height: AppSpacing.base),
               typesAsync.when(
                 loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                   child: LinearProgressIndicator(),
                 ),
                 error: (error, _) => Text(
                   'Jenis surat belum bisa dimuat. Coba lagi.',
-                  style: const TextStyle(color: KomplekkuColors.danger),
+                  style: AppTypography.body.copyWith(color: AppColors.danger),
                 ),
                 data: (types) => DropdownButtonFormField<String>(
                   initialValue: _letterTypeId,
@@ -455,7 +440,7 @@ class _LetterCreateSheetState extends ConsumerState<_LetterCreateSheet> {
                       value == null ? 'Pilih jenis surat terlebih dahulu.' : null,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _purposeController,
                 decoration: const InputDecoration(
@@ -472,28 +457,23 @@ class _LetterCreateSheetState extends ConsumerState<_LetterCreateSheet> {
                 },
               ),
               if (submissionError != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   submissionError.message,
-                  style: const TextStyle(color: KomplekkuColors.danger),
+                  style: AppTypography.body.copyWith(color: AppColors.danger),
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Surat yang diterbitkan melalui Komplekku adalah surat keterangan dari '
                 'pengurus lingkungan, bukan dokumen resmi pemerintah.',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: AppTypography.caption,
               ),
-              const SizedBox(height: 20),
-              FilledButton(
+              const SizedBox(height: AppSpacing.lg),
+              AppButton(
+                label: 'Ajukan permohonan',
+                isLoading: isSubmitting,
                 onPressed: isSubmitting ? null : _submit,
-                child: isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Ajukan permohonan'),
               ),
             ],
           ),

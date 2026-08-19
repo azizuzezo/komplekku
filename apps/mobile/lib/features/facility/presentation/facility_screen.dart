@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -9,6 +9,10 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/facility/data/facility_repository.dart';
 import 'package:komplekku/features/facility/domain/facility.dart';
 import 'package:komplekku/features/facility/presentation/facility_booking_controller.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
+import 'package:komplekku/shared/widgets/app_text_field.dart';
 
 String _dateToApi(DateTime date) {
   final year = date.year.toString().padLeft(4, '0');
@@ -188,13 +192,14 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
                   ref.refresh(facilityBookingListProvider(query).future),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  AppSpacing.xxl,
+                ),
                 children: [
-                  Text(
-                    'Pilih fasilitas & tanggal',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
+                  const AppSectionHeader(title: 'Pilih fasilitas & tanggal'),
                   DropdownButtonFormField<String>(
                     initialValue: activeFacilityId,
                     decoration: const InputDecoration(labelText: 'Fasilitas'),
@@ -210,31 +215,30 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
                         setState(() => _selectedFacilityId = value),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(top: 6, bottom: 4),
+                    padding: const EdgeInsets.only(
+                      top: AppSpacing.xs,
+                      bottom: AppSpacing.xs,
+                    ),
                     child: Text(
                       'Jam operasional ${activeFacility.openTime}–${activeFacility.closeTime}'
                       '${activeFacility.capacity != null ? ' · kapasitas ${activeFacility.capacity} orang' : ''}'
                       '${activeFacility.rules != null ? ' · ${activeFacility.rules}' : ''}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: KomplekkuColors.textSecondary,
-                          ),
+                      style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
+                  const SizedBox(height: AppSpacing.sm),
+                  AppButton(
+                    label: _formatDateLabel(_selectedDate),
+                    icon: Icons.calendar_today_outlined,
+                    variant: AppButtonVariant.secondary,
+                    expand: false,
                     onPressed: _pickDate,
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    label: Text(_formatDateLabel(_selectedDate)),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Jadwal pada tanggal ini',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.xl),
+                  const AppSectionHeader(title: 'Jadwal pada tanggal ini'),
                   bookingsAsync.when(
                     loading: () => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.base),
                       child: LinearProgressIndicator(),
                     ),
                     error: (error, _) {
@@ -242,18 +246,21 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
                           ? error
                           : ApiException.malformedResponse();
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                         child: Text(
                           failure.message,
-                          style: const TextStyle(color: KomplekkuColors.danger),
+                          style: AppTypography.body.copyWith(color: AppColors.danger),
                         ),
                       );
                     },
                     data: (bookings) {
                       if (bookings.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text('Belum ada pemesanan pada tanggal ini.'),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                          child: Text(
+                            'Belum ada pemesanan pada tanggal ini.',
+                            style: AppTypography.body,
+                          ),
                         );
                       }
                       return Column(
@@ -264,12 +271,8 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
                     },
                   ),
                   if (canBook) ...[
-                    const SizedBox(height: 24),
-                    Text(
-                      'Pesan ${activeFacility.name}',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.xl),
+                    AppSectionHeader(title: 'Pesan ${activeFacility.name}'),
                     _BookingForm(
                       startTimeController: _startTimeController,
                       endTimeController: _endTimeController,
@@ -279,12 +282,8 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
                       onSubmit: () => _submitBooking(activeFacilityId),
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  Text(
-                    'Pemesanan saya',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.xl),
+                  const AppSectionHeader(title: 'Pemesanan saya'),
                   Consumer(
                     builder: (context, ref, _) {
                       final accountAsync = ref.watch(accountSnapshotProvider);
@@ -302,8 +301,9 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
                               )
                               .toList();
                           if (cancellable.isEmpty) {
-                            return const Text(
+                            return Text(
                               'Belum ada pemesanan yang dapat dibatalkan.',
+                              style: AppTypography.body,
                             );
                           }
                           return Column(
@@ -337,25 +337,23 @@ class _ScheduleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               '${booking.startTime}–${booking.endTime}',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: AppTypography.tabular(
+                AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Sudah dipesan oleh ${booking.bookedByName} (${booking.houseCode})'
               '${booking.purpose != null ? ' · ${booking.purpose}' : ''}',
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: AppTypography.body,
             ),
           ],
         ),
@@ -391,43 +389,36 @@ class _BookingForm extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            AppTextField(
               controller: startTimeController,
               readOnly: true,
-              decoration: const InputDecoration(labelText: 'Waktu mulai'),
+              label: 'Waktu mulai',
               onTap: onPickStartTime,
             ),
-            const SizedBox(height: 12),
-            TextField(
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
               controller: endTimeController,
               readOnly: true,
-              decoration: const InputDecoration(labelText: 'Waktu selesai'),
+              label: 'Waktu selesai',
               onTap: onPickEndTime,
             ),
-            const SizedBox(height: 12),
-            TextField(
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
               controller: purposeController,
-              decoration: const InputDecoration(
-                labelText: 'Keperluan (opsional)',
-              ),
+              label: 'Keperluan (opsional)',
             ),
             if (submissionError != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 submissionError.message,
-                style: const TextStyle(color: KomplekkuColors.danger),
+                style: AppTypography.body.copyWith(color: AppColors.danger),
               ),
             ],
-            const SizedBox(height: 16),
-            FilledButton(
+            const SizedBox(height: AppSpacing.base),
+            AppButton(
+              label: 'Pesan fasilitas',
+              isLoading: isSubmitting,
               onPressed: isSubmitting ? null : onSubmit,
-              child: isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Pesan fasilitas'),
             ),
           ],
         );
@@ -475,10 +466,9 @@ class _CancelRowState extends ConsumerState<_CancelRow> {
   @override
   Widget build(BuildContext context) {
     final booking = widget.booking;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -488,37 +478,33 @@ class _CancelRowState extends ConsumerState<_CancelRow> {
                 children: [
                   Text(
                     '${booking.startTime}–${booking.endTime}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: AppTypography.tabular(
+                      AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     '${booking.facilityName} · ${booking.houseCode}'
                     '${booking.purpose != null ? ' · ${booking.purpose}' : ''}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: AppTypography.body,
                   ),
                   if (_error != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
                       child: Text(
                         _error!.message,
-                        style: const TextStyle(color: KomplekkuColors.danger),
+                        style: AppTypography.body.copyWith(color: AppColors.danger),
                       ),
                     ),
                 ],
               ),
             ),
-            TextButton(
+            AppButton(
+              label: 'Batalkan',
+              variant: AppButtonVariant.ghost,
+              expand: false,
+              isLoading: _isSubmitting,
               onPressed: _isSubmitting ? null : _cancel,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Batalkan'),
             ),
           ],
         ),

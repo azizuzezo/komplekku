@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -9,6 +9,11 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/report/data/report_repository.dart';
 import 'package:komplekku/features/report/domain/report.dart';
 import 'package:komplekku/features/report/presentation/report_form_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 /// Resident + staff dual-mode screen for "Lapor Masalah". Residents see their
 /// own reports and can submit new ones (`report.create`); staff holding
@@ -35,7 +40,11 @@ class ReportListScreen extends ConsumerWidget {
           : null,
       body: SafeArea(
         child: reports.when(
-          loading: () => const _ReportListSkeleton(),
+          loading: () => const Semantics(
+            label: 'Memuat laporan',
+            liveRegion: true,
+            child: AppLoadingState.skeleton(rows: 4),
+          ),
           error: (error, _) {
             final failure = error is ApiException
                 ? error
@@ -78,10 +87,15 @@ class ReportListScreen extends ConsumerWidget {
               onRefresh: () => ref.refresh(reportListProvider.future),
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  AppSpacing.md,
+                  AppSpacing.base,
+                  96,
+                ),
                 itemCount: items.length,
                 separatorBuilder: (context, index) =>
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return _ReportCard(
@@ -100,10 +114,8 @@ class ReportListScreen extends ConsumerWidget {
   }
 
   void _openCreateSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (context) => const _ReportCreateSheet(),
     );
   }
@@ -122,130 +134,77 @@ class _ReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.report_problem_outlined,
-                color: KomplekkuColors.primary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.report_problem_outlined, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            reportCategoryLabels[report.category]!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
+                    Expanded(
+                      child: Text(
+                        reportCategoryLabels[report.category]!,
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
-                        _StatusBadge(status: report.status),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      report.location != null
-                          ? '${report.description} · ${report.location}'
-                          : report.description,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      showReporter
-                          ? '${report.reporterName} · ${report.houseCode} · ${formatReportDateTime(report.createdAt)}'
-                          : formatReportDateTime(report.createdAt),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: KomplekkuColors.textSecondary,
-                          ),
-                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    _reportStatusBadge(report.status),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  report.location != null
+                      ? '${report.description} · ${report.location}'
+                      : report.description,
+                  style: AppTypography.body,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  showReporter
+                      ? '${report.reporterName} · ${report.houseCode} · ${formatReportDateTime(report.createdAt)}'
+                      : formatReportDateTime(report.createdAt),
+                  style: AppTypography.tabular(AppTypography.caption),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+AppBadgeTone _reportBadgeTone(ReportStatusTone tone) => switch (tone) {
+  ReportStatusTone.muted => AppBadgeTone.neutral,
+  ReportStatusTone.warning => AppBadgeTone.warning,
+  ReportStatusTone.success => AppBadgeTone.success,
+};
 
-  final ReportStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = statusToneColor(reportStatusTone(status));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        reportStatusLabels[status]!,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
+Widget _reportStatusBadge(ReportStatus status) => AppBadge(
+  label: reportStatusLabels[status]!,
+  tone: _reportBadgeTone(reportStatusTone(status)),
+);
 
 /// Shared status-color mapping so list rows and the detail screen render the
 /// same status badge tones.
 Color statusToneColor(ReportStatusTone tone) {
   switch (tone) {
     case ReportStatusTone.success:
-      return KomplekkuColors.success;
+      return AppColors.success;
     case ReportStatusTone.warning:
-      return KomplekkuColors.accent;
+      return AppColors.accent;
     case ReportStatusTone.muted:
-      return KomplekkuColors.textSecondary;
-  }
-}
-
-class _ReportListSkeleton extends StatelessWidget {
-  const _ReportListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Memuat laporan',
-      liveRegion: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
-        itemBuilder: (context, index) => ExcludeSemantics(
-          child: Container(
-            height: 110,
-            decoration: BoxDecoration(
-              color: KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-      ),
-    );
+      return AppColors.textSecondary;
   }
 }
 
@@ -292,11 +251,11 @@ class _ReportCreateSheetState extends ConsumerState<_ReportCreateSheet> {
     final submissionError = formState.value?.submissionError;
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
       ),
       child: SingleChildScrollView(
         child: Form(
@@ -305,11 +264,8 @@ class _ReportCreateSheetState extends ConsumerState<_ReportCreateSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Buat laporan baru',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
+              Text('Buat laporan baru', style: AppTypography.title),
+              const SizedBox(height: AppSpacing.base),
               DropdownButtonFormField<ReportCategory>(
                 initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Kategori'),
@@ -325,7 +281,7 @@ class _ReportCreateSheetState extends ConsumerState<_ReportCreateSheet> {
                   if (value != null) setState(() => _category = value);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(labelText: 'Deskripsi'),
@@ -337,7 +293,7 @@ class _ReportCreateSheetState extends ConsumerState<_ReportCreateSheet> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _locationController,
                 decoration: const InputDecoration(
@@ -345,22 +301,17 @@ class _ReportCreateSheetState extends ConsumerState<_ReportCreateSheet> {
                 ),
               ),
               if (submissionError != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   submissionError.message,
-                  style: const TextStyle(color: KomplekkuColors.danger),
+                  style: AppTypography.body.copyWith(color: AppColors.danger),
                 ),
               ],
-              const SizedBox(height: 20),
-              FilledButton(
+              const SizedBox(height: AppSpacing.lg),
+              AppButton(
+                label: 'Kirim laporan',
+                isLoading: isSubmitting,
                 onPressed: isSubmitting ? null : _submit,
-                child: isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Kirim laporan'),
               ),
             ],
           ),

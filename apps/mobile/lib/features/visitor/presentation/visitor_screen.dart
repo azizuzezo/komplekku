@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
@@ -9,12 +9,24 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/visitor/data/visitor_repository.dart';
 import 'package:komplekku/features/visitor/domain/visitor.dart';
 import 'package:komplekku/features/visitor/presentation/visitor_controller.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
 
 const _statusLabels = {
   VisitorStatus.pending: 'Menunggu kedatangan',
   VisitorStatus.checkedIn: 'Sudah check-in',
   VisitorStatus.checkedOut: 'Sudah check-out',
   VisitorStatus.cancelled: 'Dibatalkan',
+};
+
+AppBadgeTone _statusTone(VisitorStatus status) => switch (status) {
+  VisitorStatus.pending => AppBadgeTone.warning,
+  VisitorStatus.checkedIn => AppBadgeTone.success,
+  VisitorStatus.checkedOut => AppBadgeTone.neutral,
+  VisitorStatus.cancelled => AppBadgeTone.danger,
 };
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
@@ -151,7 +163,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
       appBar: AppBar(title: const Text('Tamu')),
       body: SafeArea(
         child: inviteState.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) => StatePanel(
             icon: Icons.cloud_off_outlined,
             title: 'Undangan tamu belum bisa disiapkan',
@@ -181,21 +193,26 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
               );
             }
             return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.md,
+                AppSpacing.base,
+                AppSpacing.xl,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (canCheckin) ...[
                     const _VisitorCheckinSection(),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
                   if (canCreate) ...[
                   Text(
                     'Undang tamu dan bagikan kode QR yang ditunjukkan ke '
                     'petugas keamanan saat mereka tiba.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: AppTypography.body,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.base),
                   Form(
                     key: _formKey,
                     child: Column(
@@ -219,7 +236,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.base),
                         InkWell(
                           onTap: state.isSubmitting ? null : _pickVisitDate,
                           child: InputDecorator(
@@ -238,7 +255,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.base),
                         InkWell(
                           onTap: state.isSubmitting ? null : _pickExpectedTime,
                           child: InputDecorator(
@@ -252,7 +269,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.base),
                         TextFormField(
                           controller: _vehicleInfoController,
                           enabled: !state.isSubmitting,
@@ -265,7 +282,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                             hintText: 'Contoh: Mobil sedan hitam',
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.base),
                         TextFormField(
                           controller: _plateController,
                           enabled: !state.isSubmitting,
@@ -278,7 +295,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                             labelText: 'Nomor polisi (opsional)',
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.base),
                         TextFormField(
                           controller: _purposeController,
                           enabled: !state.isSubmitting,
@@ -290,7 +307,7 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                             labelText: 'Tujuan (opsional)',
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.base),
                         TextFormField(
                           controller: _notesController,
                           enabled: !state.isSubmitting,
@@ -303,41 +320,35 @@ class _VisitorScreenState extends ConsumerState<VisitorScreen> {
                           ),
                         ),
                         if (state.submissionError != null) ...[
-                          const SizedBox(height: 14),
+                          const SizedBox(height: AppSpacing.md),
                           Semantics(
                             liveRegion: true,
                             child: Text(
                               state.submissionError!.message,
-                              style: const TextStyle(
-                                color: KomplekkuColors.danger,
-                                height: 1.4,
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.danger,
                               ),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 20),
-                        FilledButton(
+                        const SizedBox(height: AppSpacing.lg),
+                        AppButton(
+                          label: 'Kirim undangan',
                           onPressed: state.isSubmitting ? null : _submit,
-                          child: Text(
-                            state.isSubmitting
-                                ? 'Mengirim undangan…'
-                                : 'Kirim undangan',
-                          ),
+                          isLoading: state.isSubmitting,
                         ),
                       ],
                     ),
                   ),
                   if (state.lastInvite != null) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.lg),
                     _QrRevealCard(visitor: state.lastInvite!),
                   ],
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSpacing.xl),
                   ],
-                  Text(
-                    canCheckin ? 'Daftar tamu' : 'Undangan tamu kamu',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  AppSectionHeader(
+                    title: canCheckin ? 'Daftar tamu' : 'Undangan tamu kamu',
                   ),
-                  const SizedBox(height: 10),
                   _VisitorInviteList(canCheckin: canCheckin),
                 ],
               ),
@@ -362,33 +373,30 @@ class _QrRevealCard extends StatelessWidget {
       liveRegion: true,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         decoration: BoxDecoration(
-          color: KomplekkuColors.surfaceSoft,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: KomplekkuColors.borderStrong),
+          color: AppColors.surfaceSoft,
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+          border: Border.all(color: AppColors.borderStrong),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Kode QR untuk ${visitor.guestName}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             SelectableText(
               qrToken,
-              style: const TextStyle(
-                fontFeatures: [FontFeature.tabularFigures()],
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.tabular(
+                AppTypography.title,
+              ).copyWith(color: AppColors.primaryDark),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Tunjukkan kode ini ke petugas keamanan saat tamu tiba.',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: AppTypography.caption,
             ),
           ],
         ),
@@ -444,7 +452,7 @@ class _VisitorInviteList extends ConsumerWidget {
           children: [
             for (final visitor in items) ...[
               _VisitorRow(visitor: visitor, canCheckin: canCheckin),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ],
         );
@@ -485,78 +493,66 @@ class _VisitorRowState extends ConsumerState<_VisitorRow> {
   @override
   Widget build(BuildContext context) {
     final visitor = widget.visitor;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    visitor.guestName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${visitor.houseCode} · '
-                    '${_formatVisitDateLabel(visitor.visitDate)}'
-                    '${visitor.isWalkIn ? ' · Walk-in' : ''}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: KomplekkuColors.danger,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+    return AppCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _statusLabels[visitor.status]!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  visitor.guestName,
+                  style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
                 ),
-                if (widget.canCheckin &&
-                    visitor.status == VisitorStatus.checkedIn) ...[
-                  const SizedBox(height: 6),
-                  OutlinedButton(
-                    onPressed: _isCheckingOut ? null : _checkOut,
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                    child: _isCheckingOut
-                        ? const SizedBox(
-                            height: 14,
-                            width: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Check-out'),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${visitor.houseCode} · '
+                  '${_formatVisitDateLabel(visitor.visitDate)}'
+                  '${visitor.isWalkIn ? ' · Walk-in' : ''}',
+                  style: AppTypography.caption,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    _error!,
+                    style: AppTypography.caption.copyWith(color: AppColors.danger),
                   ),
                 ],
               ],
             ),
-          ],
-        ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AppBadge(
+                label: _statusLabels[visitor.status]!,
+                tone: _statusTone(visitor.status),
+              ),
+              if (widget.canCheckin &&
+                  visitor.status == VisitorStatus.checkedIn) ...[
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: _isCheckingOut ? null : _checkOut,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    textStyle: AppTypography.caption,
+                  ),
+                  child: _isCheckingOut
+                      ? const SizedBox(
+                          height: 14,
+                          width: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Check-out'),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -574,13 +570,13 @@ class _VisitorListSkeleton extends StatelessWidget {
         children: List.generate(
           2,
           (index) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: ExcludeSemantics(
               child: Container(
                 height: 72,
                 decoration: BoxDecoration(
-                  color: KomplekkuColors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
                 ),
               ),
             ),
@@ -665,110 +661,91 @@ class _VisitorCheckinSectionState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Cari kode QR tamu',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _tokenController,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          labelText: 'Kode QR',
-                        ),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cari kode QR tamu', style: AppTypography.title),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _tokenController,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        labelText: 'Kode QR',
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _isLookingUp ? null : _lookup,
-                      child: _isLookingUp
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Cari'),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  AppButton(
+                    label: 'Cari',
+                    onPressed: _isLookingUp ? null : _lookup,
+                    isLoading: _isLookingUp,
+                    expand: false,
+                  ),
+                ],
+              ),
+              if (_lookupError != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  _lookupError!,
+                  style: AppTypography.body.copyWith(color: AppColors.danger),
                 ),
-                if (_lookupError != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _lookupError!,
-                    style: const TextStyle(color: KomplekkuColors.danger),
-                  ),
-                ],
-                if (_searched && visitor == null && _lookupError == null) ...[
-                  const SizedBox(height: 10),
-                  const Text('Kode tidak ditemukan.'),
-                ],
-                if (visitor != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: KomplekkuColors.surfaceSoft,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                visitor.guestName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              Text(
-                                '${visitor.houseCode} · '
-                                '${_formatVisitDateLabel(visitor.visitDate)}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              Text(
-                                _statusLabels[visitor.status]!,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: KomplekkuColors.primary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (visitor.status == VisitorStatus.pending)
-                          FilledButton(
-                            onPressed: _isCheckingIn ? null : _checkIn,
-                            child: _isCheckingIn
-                                ? const SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('Check-in'),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
-            ),
+              if (_searched && visitor == null && _lookupError == null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text('Kode tidak ditemukan.', style: AppTypography.body),
+              ],
+              if (visitor != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              visitor.guestName,
+                              style: AppTypography.bodyLarge.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              '${visitor.houseCode} · '
+                              '${_formatVisitDateLabel(visitor.visitDate)}',
+                              style: AppTypography.caption,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            AppBadge(
+                              label: _statusLabels[visitor.status]!,
+                              tone: _statusTone(visitor.status),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (visitor.status == VisitorStatus.pending)
+                        AppButton(
+                          label: 'Check-in',
+                          onPressed: _isCheckingIn ? null : _checkIn,
+                          isLoading: _isCheckingIn,
+                          expand: false,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.base),
         const _VisitorWalkInForm(),
       ],
     );
@@ -838,88 +815,77 @@ class _VisitorWalkInFormState extends ConsumerState<_VisitorWalkInForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return AppCard(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Catat tamu walk-in', style: AppTypography.title),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _houseCodeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(labelText: 'Kode rumah'),
+              validator: (value) => (value ?? '').trim().isEmpty
+                  ? 'Masukkan kode rumah yang dituju.'
+                  : null,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _guestNameController,
+              decoration: const InputDecoration(labelText: 'Nama tamu'),
+              validator: (value) => (value ?? '').trim().length < 2
+                  ? 'Masukkan nama tamu, minimal 2 karakter.'
+                  : null,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _guestPhoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Nomor HP tamu (opsional)',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _vehicleInfoController,
+              decoration: const InputDecoration(
+                labelText: 'Kendaraan (opsional)',
+                hintText: 'Contoh: Mobil sedan hitam',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _plateController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Nomor polisi (opsional)',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _purposeController,
+              decoration: const InputDecoration(labelText: 'Tujuan (opsional)'),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(_error!, style: AppTypography.body.copyWith(color: AppColors.danger)),
+            ],
+            if (_successGuestName != null) ...[
+              const SizedBox(height: AppSpacing.sm),
               Text(
-                'Catat tamu walk-in',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _houseCodeController,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'Kode rumah'),
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? 'Masukkan kode rumah yang dituju.'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _guestNameController,
-                decoration: const InputDecoration(labelText: 'Nama tamu'),
-                validator: (value) => (value ?? '').trim().length < 2
-                    ? 'Masukkan nama tamu, minimal 2 karakter.'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _guestPhoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor HP tamu (opsional)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _vehicleInfoController,
-                decoration: const InputDecoration(
-                  labelText: 'Kendaraan (opsional)',
-                  hintText: 'Contoh: Mobil sedan hitam',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _plateController,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor polisi (opsional)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _purposeController,
-                decoration: const InputDecoration(labelText: 'Tujuan (opsional)'),
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 10),
-                Text(_error!, style: const TextStyle(color: KomplekkuColors.danger)),
-              ],
-              if (_successGuestName != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  '$_successGuestName berhasil dicatat dan sudah check-in.',
-                  style: const TextStyle(color: KomplekkuColors.success),
-                ),
-              ],
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _isSaving ? null : _submit,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Catat & check-in tamu'),
+                '$_successGuestName berhasil dicatat dan sudah check-in.',
+                style: AppTypography.body.copyWith(color: AppColors.success),
               ),
             ],
-          ),
+            const SizedBox(height: AppSpacing.base),
+            AppButton(
+              label: 'Catat & check-in tamu',
+              onPressed: _isSaving ? null : _submit,
+              isLoading: _isSaving,
+            ),
+          ],
         ),
       ),
     );

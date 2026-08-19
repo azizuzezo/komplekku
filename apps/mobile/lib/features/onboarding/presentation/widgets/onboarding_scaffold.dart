@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/widgets/komplekku_logo.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
+/// Shared chrome for every onboarding step — logo lockup + logout action in
+/// the app bar, then eyebrow/title/description header above the step body.
 class OnboardingScaffold extends StatelessWidget {
   const OnboardingScaffold({
     super.key,
@@ -23,17 +26,25 @@ class OnboardingScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.brandCanvas,
       appBar: AppBar(
         toolbarHeight: 68,
-        titleSpacing: 20,
-        title: const KomplekkuLogo(width: 40),
+        titleSpacing: AppSpacing.lg,
+        // Split Studio: identity-first surfaces use the complete lockup, not
+        // the compact mark — see `/design.md` "Brand assets".
+        title: const KomplekkuLogo(
+          variant: KomplekkuLogoVariant.lockup,
+          width: 128,
+        ),
         actions: [
-          TextButton.icon(
+          AppButton(
+            variant: AppButtonVariant.ghost,
+            icon: Icons.logout,
+            label: isLoggingOut ? 'Keluar…' : 'Keluar',
             onPressed: isLoggingOut ? null : onLogout,
-            icon: const Icon(Icons.logout, size: 19),
-            label: Text(isLoggingOut ? 'Keluar…' : 'Keluar'),
+            expand: false,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: SafeArea(
@@ -43,26 +54,25 @@ class OnboardingScaffold extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.xxxl,
+              ),
               children: [
                 Text(
                   eyebrow.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: KomplekkuColors.primary,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.7,
-                      ),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.primary,
+                    letterSpacing: 0.8,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Text(title, style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 10),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: KomplekkuColors.textSecondary,
-                      ),
-                ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.sm),
+                Text(title, style: AppTypography.heading),
+                const SizedBox(height: AppSpacing.sm),
+                Text(description, style: AppTypography.body),
+                const SizedBox(height: AppSpacing.xl),
                 ...children,
               ],
             ),

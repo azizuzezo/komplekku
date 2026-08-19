@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/widgets/komplekku_logo.dart';
 import 'package:komplekku/features/auth/presentation/login_controller.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 
+/// Split Studio, collapsed to mobile: compact brand header (lockup + short
+/// context), then the single current step's form, full width.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -57,12 +60,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isOtpStep = loginState.challenge != null;
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.brandCanvas,
+      backgroundColor: AppColors.brandCanvas,
       body: SafeArea(
         child: Align(
           alignment: Alignment.topCenter,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.xxl,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Form(
@@ -70,23 +78,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const KomplekkuLogo(
-                      variant: KomplekkuLogoVariant.lockup,
-                      width: 246,
+                    const Center(
+                      child: KomplekkuLogo(
+                        variant: KomplekkuLogoVariant.lockup,
+                        width: 200,
+                      ),
                     ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: AppSpacing.xxl),
                     Text(
                       isOtpStep ? 'Masukkan kode OTP' : 'Masuk ke Komplekku',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: AppTypography.heading,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       isOtpStep
                           ? 'Gunakan enam digit yang dikirim ke ${_phoneController.text.trim()}.'
                           : 'Gunakan nomor HP yang terdaftar di lingkunganmu.',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: AppTypography.body,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: AppSpacing.xl),
                     if (!isOtpStep)
                       TextFormField(
                         key: const ValueKey('phone-field'),
@@ -103,6 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Nomor HP',
                           hintText: '0812 3456 7890',
+                          prefixIcon: Icon(Icons.phone_outlined),
                         ),
                         validator: (value) {
                           final digits = value?.replaceAll(RegExp(r'\D'), '') ?? '';
@@ -127,6 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           labelText: 'Kode OTP',
                           hintText: '6 digit',
                           counterText: '',
+                          prefixIcon: Icon(Icons.password_outlined),
                         ),
                         validator: (value) {
                           if (!RegExp(r'^\d{6}$').hasMatch(value ?? '')) {
@@ -137,33 +149,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onFieldSubmitted: (_) => _submit(),
                       ),
                     if (loginState.errorMessage != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                       Semantics(
                         liveRegion: true,
                         child: Text(
                           loginState.errorMessage!,
-                          style: const TextStyle(
-                            color: KomplekkuColors.danger,
-                            fontSize: 14,
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.danger,
                             height: 1.4,
                           ),
                         ),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: loginState.isSubmitting ? null : _submit,
-                      child: Text(
-                        loginState.isSubmitting
-                            ? 'Memproses…'
-                            : isOtpStep
-                                ? 'Verifikasi kode'
-                                : 'Kirim kode OTP',
-                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      label: isOtpStep ? 'Verifikasi kode' : 'Kirim kode OTP',
+                      onPressed: _submit,
+                      isLoading: loginState.isSubmitting,
                     ),
                     if (isOtpStep) ...[
-                      const SizedBox(height: 12),
-                      TextButton(
+                      const SizedBox(height: AppSpacing.sm),
+                      AppButton(
+                        variant: AppButtonVariant.ghost,
+                        label: 'Ganti nomor HP',
                         onPressed: loginState.isSubmitting
                             ? null
                             : () {
@@ -174,13 +182,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   _otpController.clear();
                                 });
                               },
-                        child: const Text('Ganti nomor HP'),
                       ),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.xl),
                     Text(
                       'Mode lokal memakai OTP development yang dikonfigurasi owner.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: AppTypography.caption,
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),

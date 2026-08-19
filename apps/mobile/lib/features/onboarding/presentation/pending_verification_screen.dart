@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/features/auth/domain/auth_state.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/onboarding/presentation/widgets/onboarding_scaffold.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_card.dart';
 
 class PendingVerificationScreen extends ConsumerStatefulWidget {
   const PendingVerificationScreen({super.key});
@@ -75,33 +77,28 @@ class _PendingVerificationScreenState
       onLogout: _logout,
       isLoggingOut: _isLoggingOut,
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: KomplekkuColors.surfaceSoft,
-            border: Border.all(color: KomplekkuColors.border),
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
-          ),
+        AppCard(
           child: const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.schedule_outlined, color: KomplekkuColors.primary),
-              SizedBox(width: 12),
+              Icon(Icons.schedule_outlined, color: AppColors.primary),
+              SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   'Belum ada tindakan lain yang perlu kamu lakukan. Periksa status kembali setelah pengurus meninjau permohonan.',
-                  style: TextStyle(height: 1.5),
+                  style: AppTypography.body,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        FilledButton.icon(
+        const SizedBox(height: AppSpacing.xl),
+        AppButton(
           key: const ValueKey('refresh-pending-status'),
-          onPressed: _isRefreshing ? null : _refresh,
-          icon: const Icon(Icons.refresh),
-          label: Text(_isRefreshing ? 'Memeriksa status…' : 'Periksa status'),
+          icon: Icons.refresh,
+          label: 'Periksa status',
+          onPressed: _refresh,
+          isLoading: _isRefreshing,
         ),
       ],
     );

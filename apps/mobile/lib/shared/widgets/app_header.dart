@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 
-class PrototypeHeader extends StatelessWidget {
-  const PrototypeHeader({
+/// Page-level heading used in place of a plain `AppBar` on hub/index screens
+/// (Layanan, Forum, Pengumuman, Akun, Shalat) — title + optional subtitle,
+/// with the back/notification/search affordances a resident desk needs.
+class AppHeader extends StatelessWidget {
+  const AppHeader({
     super.key,
     required this.title,
     this.subtitle,
@@ -34,29 +37,19 @@ class PrototypeHeader extends StatelessWidget {
             onPressed: () => context.pop(),
             transparent: true,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
         ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.6,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(title, style: AppTypography.heading),
               if (subtitle != null) ...[
                 const SizedBox(height: 3),
                 Text(
                   subtitle!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: KomplekkuColors.primaryDark,
-                    fontWeight: FontWeight.w700,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.primaryDark,
                   ),
                 ),
               ],
@@ -71,7 +64,7 @@ class PrototypeHeader extends StatelessWidget {
             onPressed: () => context.push('/notifikasi'),
           ),
         if (showSearch) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           _HeaderAction(
             tooltip: 'Cari',
             icon: Icons.search,
@@ -79,7 +72,7 @@ class PrototypeHeader extends StatelessWidget {
           ),
         ],
         if (showAccount) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           _HeaderAction(
             tooltip: 'Profil',
             icon: Icons.person_outline,
@@ -109,13 +102,11 @@ class _HeaderAction extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, size: 26),
+      icon: Icon(icon, size: 24),
       style: IconButton.styleFrom(
         minimumSize: const Size(48, 48),
-        backgroundColor: transparent
-            ? Colors.transparent
-            : KomplekkuColors.surfaceSoft,
-        foregroundColor: KomplekkuColors.textPrimary,
+        backgroundColor: transparent ? Colors.transparent : AppColors.surfaceSoft,
+        foregroundColor: AppColors.textPrimary,
         shape: const CircleBorder(),
       ),
     );

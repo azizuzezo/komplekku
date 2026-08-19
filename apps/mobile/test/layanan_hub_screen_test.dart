@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/shell/layanan_hub_screen.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 
 void main() {
@@ -20,7 +20,7 @@ void main() {
     return ProviderScope(
       overrides: [currentPermissionsProvider.overrideWithValue(permissions)],
       child: MaterialApp.router(
-        theme: buildKomplekkuTheme(),
+        theme: buildAppTheme(),
         routerConfig: router,
       ),
     );

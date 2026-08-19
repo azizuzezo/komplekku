@@ -3,8 +3,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:komplekku/app/theme/app_theme.dart';
-import 'package:komplekku/core/widgets/prototype_header.dart';
+import 'package:komplekku/core/theme/app_theme.dart';
+import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_header.dart';
+import 'package:komplekku/shared/widgets/app_section_header.dart';
 import 'package:komplekku/features/prayer/data/prayer_scheduler_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_settings_repository.dart';
@@ -150,13 +152,18 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
     final health = ref.watch(prayerScheduleHealthProvider);
 
     return Scaffold(
-      backgroundColor: KomplekkuColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+          ),
           children: [
             const _ScreenHeading(),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.base),
             if (!health.exactAlarmAllowed || health.lastError != null)
               PrayerScheduleHealthBanner(
                 exactAlarmAllowed: health.exactAlarmAllowed,
@@ -169,12 +176,12 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
                     .rescheduleUpcomingPrayers(),
               ),
             if (!health.exactAlarmAllowed || health.lastError != null)
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.base),
             _ViewSwitcher(
               view: _view,
               onChanged: (view) => setState(() => _view = view),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.base),
             if (_view == _ShalatView.today) ...[
               if (adzanState.kind == AdzanStateKind.iqomahCountdown)
                 IqomahCountdownCard(state: adzanState)
@@ -184,14 +191,8 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
                   at: next.at,
                   secondsRemaining: secondsToNext,
                 ),
-              const SizedBox(height: 20),
-              Text(
-                'Jadwal Shalat Hari Ini',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.lg),
+              const AppSectionHeader(title: 'Jadwal Shalat Hari Ini'),
               _TodayList(
                 times: times,
                 activePrayer: next.name,
@@ -199,18 +200,12 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
                 canToggle: _mutedLoaded,
                 onToggle: _toggle,
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Pratinjau Minggu Ini',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.lg),
+              const AppSectionHeader(title: 'Pratinjau Minggu Ini'),
               _WeekStrip(today: _now),
             ] else
               _MonthTable(month: _now),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             const _QuoteCard(),
           ],
         ),
@@ -224,7 +219,7 @@ class _ScreenHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const PrototypeHeader(
+    return const AppHeader(
       title: 'Jadwal Shalat',
       subtitle: 'RT 05 / RW 03 • Billabong',
       showAccount: true,
@@ -241,11 +236,11 @@ class _ViewSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(AppSpacing.xs),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: KomplekkuColors.border),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -257,21 +252,20 @@ class _ViewSwitcher extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => onChanged(entry.$1),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                   decoration: BoxDecoration(
                     color: view == entry.$1
-                        ? KomplekkuColors.primary
+                        ? AppColors.primary
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
                     entry.$2,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
+                    style: AppTypography.label.copyWith(
                       color: view == entry.$1
-                          ? Colors.white
-                          : KomplekkuColors.textSecondary,
+                          ? AppColors.surface
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -283,6 +277,10 @@ class _ViewSwitcher extends StatelessWidget {
   }
 }
 
+/// The single primary element on this screen: the current/next prayer.
+/// Kept restrained per /design.md ("no oversized dashboard hero") — the time
+/// uses `AppTypography.heading`, not `display`, so it reads at a glance
+/// without shouting over the supporting rail below it.
 class _NextPrayerHero extends StatelessWidget {
   const _NextPrayerHero({
     required this.prayer,
@@ -297,79 +295,50 @@ class _NextPrayerHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: KomplekkuColors.primary.withValues(alpha: 0.3),
-        ),
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 64,
-            height: 64,
+            width: 56,
+            height: 56,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: KomplekkuColors.primary,
+              color: AppColors.primary,
             ),
-            child: Icon(_prayerIcons[prayer], color: Colors.white, size: 30),
+            child: Icon(_prayerIcons[prayer], color: AppColors.surface, size: 26),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: KomplekkuColors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'SELANJUTNYA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  prayerLabels[prayer]!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
+                const AppBadge(label: 'SELANJUTNYA', tone: AppBadgeTone.brand),
+                const SizedBox(height: AppSpacing.sm),
+                Text(prayerLabels[prayer]!, style: AppTypography.title),
                 Text(
                   formatTime24(at),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: KomplekkuColors.primary,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: AppTypography.tabular(
+                    AppTypography.heading,
+                  ).copyWith(color: AppColors.primary),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Row(
                   children: [
                     const Icon(
                       Icons.schedule,
                       size: 14,
-                      color: KomplekkuColors.textSecondary,
+                      color: AppColors.textSecondary,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       '${_formatCountdown(secondsRemaining)} menuju waktu',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                      style: AppTypography.tabular(AppTypography.caption),
                     ),
                   ],
                 ),
@@ -386,6 +355,10 @@ class _NextPrayerHero extends StatelessWidget {
 /// MM:SS countdown, the exact iqomah clock time, and a progress bar whose
 /// end lines up with the same timestamp Android schedules the iqomah alarm
 /// for, so the on-screen countdown and the native alarm never disagree.
+///
+/// This replaces `_NextPrayerHero` as the screen's single primary element
+/// while iqomah is counting down, so it shares the same restrained scale
+/// (`AppTypography.heading`, not `display`).
 class IqomahCountdownCard extends StatelessWidget {
   const IqomahCountdownCard({super.key, required this.state});
 
@@ -409,11 +382,11 @@ class IqomahCountdownCard extends StatelessWidget {
           'Menuju iqomah ${prayerLabels[prayer]}, tersisa '
           '${formatDurationMMSS(state.iqomahSecondsRemaining)}',
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: KomplekkuColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: KomplekkuColors.primary),
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: AppColors.primary),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,58 +398,50 @@ class IqomahCountdownCard extends StatelessWidget {
                   height: 40,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: KomplekkuColors.primary,
+                    color: AppColors.primary,
                   ),
                   child: const Icon(
                     Icons.mosque,
-                    color: Colors.white,
+                    color: AppColors.surface,
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
                     'Menuju Iqomah ${prayerLabels[prayer]}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: KomplekkuColors.primary,
-                    ),
+                    style: AppTypography.title.copyWith(color: AppColors.primary),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.base),
             Center(
               child: Text(
                 formatDurationMMSS(state.iqomahSecondsRemaining),
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: KomplekkuColors.primary,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: AppTypography.tabular(
+                  AppTypography.heading,
+                ).copyWith(color: AppColors.primary),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.small),
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
                 minHeight: 8,
-                backgroundColor: KomplekkuColors.primary.withValues(
+                backgroundColor: AppColors.primary.withValues(
                   alpha: 0.15,
                 ),
                 valueColor: const AlwaysStoppedAnimation(
-                  KomplekkuColors.primary,
+                  AppColors.primary,
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Iqomah pukul ${formatTime24(iqomahAt)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: KomplekkuColors.textSecondary,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: AppTypography.tabular(AppTypography.caption),
             ),
           ],
         ),
@@ -486,7 +451,10 @@ class IqomahCountdownCard extends StatelessWidget {
 }
 
 /// Persistent — never a transient snackbar — because a missed adzan is not
-/// something a resident should have to notice was silently skipped.
+/// something a resident should have to notice was silently skipped. The
+/// permission-vs-error distinction is a real operational status, so it routes
+/// through `AppBadge` tones (warning for a permission gap, danger for an
+/// actual scheduling failure) instead of the ad hoc amber it used to carry.
 class PrayerScheduleHealthBanner extends StatelessWidget {
   const PrayerScheduleHealthBanner({
     super.key,
@@ -503,51 +471,53 @@ class PrayerScheduleHealthBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = !exactAlarmAllowed
+    final isPermissionIssue = !exactAlarmAllowed;
+    final message = isPermissionIssue
         ? 'Alarm mungkin terlambat. Izinkan alarm & pengingat tepat waktu agar adzan berbunyi otomatis.'
         : 'Adzan otomatis gagal dijadwalkan. Periksa izin notifikasi dan alarm, lalu coba lagi.';
-    final actionLabel = !exactAlarmAllowed ? 'Buka Pengaturan' : 'Coba Lagi';
-    final onAction = !exactAlarmAllowed ? onOpenSettings : onRetry;
+    final actionLabel = isPermissionIssue ? 'Buka Pengaturan' : 'Coba Lagi';
+    final onAction = isPermissionIssue ? onOpenSettings : onRetry;
+    final tone = isPermissionIssue ? AppBadgeTone.warning : AppBadgeTone.danger;
+    final chromeColor = isPermissionIssue ? AppColors.warning : AppColors.danger;
+    final badgeLabel = isPermissionIssue ? 'Izin Diperlukan' : 'Gagal Dijadwalkan';
 
     return Semantics(
       liveRegion: true,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.base),
         decoration: BoxDecoration(
-          color: KomplekkuColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.amber.shade700),
+          color: chromeColor.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(AppRadius.modal),
+          border: Border.all(color: chromeColor.withValues(alpha: 0.4)),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade700),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+            AppBadge(
+              label: badgeLabel,
+              tone: tone,
+              icon: Icons.warning_amber_rounded,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              message,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 40,
+              child: OutlinedButton(
+                onPressed: onAction,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(
+                    color: AppColors.primary,
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 40,
-                    child: OutlinedButton(
-                      onPressed: onAction,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: KomplekkuColors.primary,
-                        side: const BorderSide(
-                          color: KomplekkuColors.primary,
-                        ),
-                      ),
-                      child: Text(actionLabel),
-                    ),
-                  ),
-                ],
+                ),
+                child: Text(actionLabel),
               ),
             ),
           ],
@@ -576,9 +546,9 @@ class _TodayList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: KomplekkuColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: KomplekkuColors.border),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -598,7 +568,7 @@ class _TodayList extends StatelessWidget {
               onToggle: () => onToggle(prayer),
             ),
             if (prayer != PrayerName.values.last)
-              const Divider(height: 1, color: KomplekkuColors.border),
+              const Divider(height: 1, color: AppColors.border),
           ],
         ],
       ),
@@ -628,50 +598,52 @@ class _PrayerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: isActive ? KomplekkuColors.surfaceMuted : null,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      color: isActive ? AppColors.surfaceMuted : null,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
       child: Row(
         children: [
           Icon(
             _prayerIcons[prayer],
             size: 24,
             color: isActive
-                ? KomplekkuColors.primary
-                : KomplekkuColors.textSecondary,
+                ? AppColors.primary
+                : AppColors.textSecondary,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   prayerLabels[prayer]!,
-                  style: TextStyle(
+                  style: AppTypography.bodyLarge.copyWith(
                     fontWeight: FontWeight.w700,
                     color: isActive
-                        ? KomplekkuColors.primary
-                        : KomplekkuColors.textPrimary,
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   _prayerSubtitles[prayer]!,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: AppTypography.caption,
                 ),
               ],
             ),
           ),
           Text(
             formatTime24(at),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: AppTypography.tabular(AppTypography.bodyLarge).copyWith(
               fontWeight: FontWeight.w800,
               color: isActive
-                  ? KomplekkuColors.primary
-                  : KomplekkuColors.textPrimary,
-              fontFeatures: const [FontFeature.tabularFigures()],
+                  ? AppColors.primary
+                  : AppColors.textPrimary,
             ),
           ),
           if (isSchedulable) ...[
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.sm),
             IconButton(
               onPressed: canToggle ? onToggle : null,
               tooltip: isMuted
@@ -683,8 +655,8 @@ class _PrayerRow extends StatelessWidget {
                     : Icons.notifications_active,
                 size: 20,
                 color: isMuted
-                    ? KomplekkuColors.textSecondary
-                    : KomplekkuColors.primary,
+                    ? AppColors.textSecondary
+                    : AppColors.primary,
               ),
             ),
           ] else
@@ -709,23 +681,23 @@ class _WeekStrip extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        separatorBuilder: (context, index) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, index) {
           final day = days[index];
           final isToday = index == 0;
           final maghrib = calculatePrayerTimes(date: day)[PrayerName.maghrib]!;
           return Container(
             width: 78,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             decoration: BoxDecoration(
               color: isToday
-                  ? KomplekkuColors.surfaceMuted
-                  : KomplekkuColors.surfaceSoft,
-              borderRadius: BorderRadius.circular(12),
+                  ? AppColors.surfaceMuted
+                  : AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.medium),
               border: Border.all(
                 color: isToday
-                    ? KomplekkuColors.primary
-                    : KomplekkuColors.border,
+                    ? AppColors.primary
+                    : AppColors.border,
               ),
             ),
             child: Column(
@@ -733,25 +705,21 @@ class _WeekStrip extends StatelessWidget {
               children: [
                 Text(
                   _weekdayShort[day.weekday - 1],
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: AppTypography.caption.copyWith(
                     fontWeight: FontWeight.w700,
                     color: isToday
-                        ? KomplekkuColors.primary
-                        : KomplekkuColors.textPrimary,
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   '${day.day} ${_monthNames[day.month - 1].substring(0, 3)}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: AppTypography.caption,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Maghrib ${formatTime24(maghrib)}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: KomplekkuColors.textSecondary,
-                  ),
+                  style: AppTypography.tabular(AppTypography.caption),
                 ),
               ],
             ),
@@ -777,36 +745,31 @@ class _MonthTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_monthNames[month.month - 1]} ${month.year}',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        AppSectionHeader(
+          title: '${_monthNames[month.month - 1]} ${month.year}',
         ),
-        const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: KomplekkuColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: KomplekkuColors.border),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: AppColors.border),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
               Container(
-                color: KomplekkuColors.surfaceSoft,
+                color: AppColors.surfaceSoft,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.sm,
                 ),
                 child: Row(
                   children: [
-                    const SizedBox(
+                    SizedBox(
                       width: 44,
                       child: Text(
                         'Tgl',
-                        style: TextStyle(
-                          fontSize: 11,
+                        style: AppTypography.caption.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -817,8 +780,7 @@ class _MonthTable extends StatelessWidget {
                         child: Text(
                           prayerLabels[prayer]!.substring(0, 3),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 11,
+                          style: AppTypography.caption.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -852,20 +814,22 @@ class _MonthRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final times = calculatePrayerTimes(date: date);
     return Container(
-      color: isToday ? KomplekkuColors.surfaceMuted : null,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      color: isToday ? AppColors.surfaceMuted : null,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           SizedBox(
             width: 44,
             child: Text(
               '${date.day} ${_weekdayShort[date.weekday - 1]}',
-              style: TextStyle(
-                fontSize: 11,
+              style: AppTypography.caption.copyWith(
                 fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
                 color: isToday
-                    ? KomplekkuColors.primary
-                    : KomplekkuColors.textSecondary,
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
               ),
             ),
           ),
@@ -874,13 +838,11 @@ class _MonthRow extends StatelessWidget {
               child: Text(
                 formatTime24(times[prayer]!),
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
+                style: AppTypography.tabular(AppTypography.caption).copyWith(
                   fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
                   color: isToday
-                      ? KomplekkuColors.primary
-                      : KomplekkuColors.textPrimary,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                      ? AppColors.primary
+                      : AppColors.textPrimary,
                 ),
               ),
             ),
@@ -896,10 +858,10 @@ class _QuoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.base),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -909,31 +871,31 @@ class _QuoteCard extends StatelessWidget {
             height: 34,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: KomplekkuColors.primary,
+              color: AppColors.primary,
             ),
             child: const Icon(
               Icons.format_quote,
-              color: Colors.white,
+              color: AppColors.surface,
               size: 18,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _dailyQuote.text,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: AppTypography.body.copyWith(
                     fontStyle: FontStyle.italic,
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   _dailyQuote.source,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: KomplekkuColors.primary,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
