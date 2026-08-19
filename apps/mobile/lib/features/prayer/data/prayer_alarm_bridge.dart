@@ -76,6 +76,14 @@ class PrayerAlarmBridge {
     await _channel.invokeMethod<void>('openExactAlarmSettings');
   }
 
+  /// Prompts for exemption from Doze/App Standby battery throttling, which
+  /// OEM battery managers (MIUI, ColorOS, One UI) apply aggressively to
+  /// backgrounded apps regardless of how the adzan alarm was scheduled. A
+  /// no-op once already granted.
+  Future<void> requestIgnoreBatteryOptimizations() async {
+    await _channel.invokeMethod<void>('requestIgnoreBatteryOptimizations');
+  }
+
   Future<PrayerAlarmStatus> scheduleDiagnostic({int delaySeconds = 20}) async {
     final response = await _channel.invokeMapMethod<Object?, Object?>(
       'scheduleDiagnostic',

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.ApplicationInfo
 import android.content.Intent
 import android.net.Uri
+import android.os.PowerManager
 import android.provider.Settings
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
@@ -32,6 +33,10 @@ object PrayerAlarmBridge {
                                 Uri.parse("package:${activity.packageName}"),
                             ),
                         )
+                        result.success(true)
+                    }
+                    "requestIgnoreBatteryOptimizations" -> {
+                        requestIgnoreBatteryOptimizations(activity)
                         result.success(true)
                     }
                     "scheduleDiagnostic" -> {
@@ -70,6 +75,23 @@ object PrayerAlarmBridge {
                 result.error("PRAYER_ALARM_ERROR", error.message, null)
             }
         }
+    }
+
+    /**
+     * OEM battery managers (MIUI, ColorOS, FuntouchOS, One UI — common on
+     * Indonesian devices) kill backgrounded processes outright regardless of
+     * how the alarm was scheduled; this exemption is the only in-app lever
+     * against that. A no-op once already granted.
+     */
+    private fun requestIgnoreBatteryOptimizations(activity: Activity) {
+        val powerManager = activity.getSystemService(PowerManager::class.java)
+        if (powerManager.isIgnoringBatteryOptimizations(activity.packageName)) return
+        activity.startActivity(
+            Intent(
+                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                Uri.parse("package:${activity.packageName}"),
+            ),
+        )
     }
 
     private fun parseEvents(items: List<*>?): List<PrayerAlarmEvent> {

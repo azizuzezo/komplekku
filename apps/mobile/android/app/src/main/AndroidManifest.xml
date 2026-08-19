@@ -15,6 +15,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Lets the app ask to be exempted from Doze/App Standby battery
+         throttling, which OEM battery managers (MIUI, ColorOS, One UI) apply
+         aggressively to backgrounded apps regardless of how the adzan alarm
+         was scheduled. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Lets AdzanFallbackNotifier's notification launch full-screen when the
+         foreground playback service is blocked from starting in the
+         background (see PrayerAlarmReceiver). -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <!-- image_picker's gallery flow uses the system Photo Picker and needs no
          permission, but its "take photo" flow does not declare CAMERA itself. -->
     <uses-permission android:name="android.permission.CAMERA"/>

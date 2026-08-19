@@ -110,6 +110,7 @@ class PrayerSchedulerService {
   bool _timezoneReady = false;
   bool _channelsReady = false;
   bool _exactAlarmPromptShown = false;
+  bool _batteryOptimizationPromptShown = false;
 
   int _scheduledNotificationCount = 0;
   String? _lastScheduleError;
@@ -191,13 +192,28 @@ class PrayerSchedulerService {
 
     await androidPlugin.requestNotificationsPermission();
 
-    if (_exactAlarmPromptShown) return;
-    _exactAlarmPromptShown = true;
+    if (!_exactAlarmPromptShown) {
+      _exactAlarmPromptShown = true;
+      try {
+        await androidPlugin.requestExactAlarmsPermission();
+      } catch (_) {
+        // Another permission request was already in flight; the inexact-alarm
+        // fallback in rescheduleUpcomingPrayers() covers the denied case anyway.
+      }
+      // Return here rather than immediately opening a second settings screen
+      // on top of the one above — the battery-optimization prompt gets its
+      // turn on the next resume, once the user has come back from this one.
+      return;
+    }
+
+    if (_batteryOptimizationPromptShown) return;
+    _batteryOptimizationPromptShown = true;
     try {
-      await androidPlugin.requestExactAlarmsPermission();
+      await _alarmBridge.requestIgnoreBatteryOptimizations();
     } catch (_) {
-      // Another permission request was already in flight; the inexact-alarm
-      // fallback in rescheduleUpcomingPrayers() covers the denied case anyway.
+      // Non-Android, or the native channel isn't attached yet (unit tests);
+      // scheduling still works via AlarmManager, just less reliably on OEMs
+      // that otherwise kill backgrounded apps outright.
     }
   }
 
