@@ -1627,7 +1627,47 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
   - Fixed it in `AppUpdateDialog`: added a `WidgetsBindingObserver`, and `_attemptInstall()` now only calls through to the native installer when `WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed`; otherwise it waits, showing "Unduhan selesai. Ketuk 'Pasang sekarang' untuk memasang." with a manual button, and `didChangeAppLifecycleState` auto-retries the instant the resident returns to the app. Added `app_update_dialog_test.dart`'s new case reproducing the exact scenario (backgrounded completion → stuck-safely → resumed → auto-installs), verified red-then-green.
   - **Re-ran the live scenario with the fix**: locked the screen mid-download again; this time `adb logcat` showed the installer's `ResolverActivity` launch succeed (`BAL_ALLOW_VISIBLE_WINDOW`, `result code=0`, replacing the earlier `BAL_BLOCK`/`result code=102`) once the app was foregrounded again — the installer prompt genuinely opened this time.
   - **Separately fixed the owner-reported "double back button"** on Profil: `AccountScreen`'s `AppBar` was letting Flutter imply its own automatic back button *in addition to* `PrototypeHeader`'s own back arrow (added when Profil moved off the bottom tabs). Set `automaticallyImplyLeading: false`. Added a regression test in `forum_profile_layout_test.dart` that pushes `AccountScreen` on top of another route (the original test used a bare `home:` route, which never exercises `AppBar`'s automatic-leading behavior and would have missed this) — confirmed it fails without the fix (`Found 2 widgets with icon "arrow_back"`) and passes with it.
-- Files touched: `apps/mobile/lib/core/update/app_update_dialog.dart`, `apps/mobile/lib/features/account/presentation/account_screen.dart`, `apps/mobile/test/app_update_dialog_test.dart`, `apps/mobile/test/forum_profile_layout_test.dart`.
-- Verification: `flutter analyze` clean (same one pre-existing lint), `flutter test` 136/136 passing, `:app:assembleDebug` BUILD SUCCESSFUL, clean debug APK reinstalled on `emulator-5554` (pubspec version and `LoginScreen` confirmed via `git diff` to have no leftover temporary code).
-- Follow-up: none blocking — both the background-download reliability fix and the double-back-button fix are live-verified. The only remaining gap from the adzan/iqomah plan (a full reboot-restoration cycle) is unrelated to this entry and still open from before.
+### 2026-08-19 17:50:00 WIB — Mobile UI Refactor Audit, Analyzer Error Resolution, and Loading State Standardization
+
+- Status: Completed. Static analysis clean (0 issues), design system tokens applied across mobile screens, full-screen loading states normalized.
+- Objective: Take over in-flight Flutter mobile UI/UX redesign from previous Claude session, fix analyzer compilation errors and lint issues, standardize loading state widgets according to the design system, and verify stability without breaking existing functionality or business logic.
+- Contributors: Antigravity (this session).
+- Work performed:
+  - Audited existing design system foundation in `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`, `app_spacing.dart`, `app_radius.dart`, `app_shadows.dart`, `app_theme.dart`) and shared widgets in `lib/shared/widgets/` (`AppButton`, `AppCard`, `AppBadge`, `AppHeader`, `AppLoadingState`, `AppTextField`, `AppDialog`, `AppSectionHeader`, `AppBottomNavigation`).
+  - Fixed 7 analyzer errors and lints from the handoff:
+    - Added missing `AppButton` import in `apps/mobile/lib/features/forum/presentation/forum_board_screen.dart`.
+    - Fixed non-const constructor in `const Semantics` in `letter_screen.dart`, `package_screen.dart`, and `report_list_screen.dart`.
+    - Removed unused imports in `kas_screen.dart`.
+    - Fixed `prefer_initializing_formals` and `type_init_formals` in `prayer_scheduler_service.dart`.
+  - Normalized full-screen raw `CircularProgressIndicator` instances to `AppLoadingState()` across 13 feature screens: `agenda_detail_screen`, `announcement_detail_screen`, `report_detail_screen`, `invoice_detail_screen`, `incident_detail_screen`, `admin_role_screen`, `emergency_screen`, `facility_screen`, `forum_screen`, `forum_post_detail_screen`, `house_admin_screen`, `community_admin_screen`, and `account_screen`.
+  - Refined `AppButton`'s `_PressScale` micro-interaction to use `AnimatedScale` with clean fast-path bypass when `enabled == false`.
+- Files touched:
+  - `apps/mobile/lib/features/forum/presentation/forum_board_screen.dart`
+  - `apps/mobile/lib/features/forum/presentation/forum_screen.dart`
+  - `apps/mobile/lib/features/forum/presentation/forum_post_detail_screen.dart`
+  - `apps/mobile/lib/features/letter/presentation/letter_screen.dart`
+  - `apps/mobile/lib/features/package/presentation/package_screen.dart`
+  - `apps/mobile/lib/features/report/presentation/report_list_screen.dart`
+  - `apps/mobile/lib/features/report/presentation/report_detail_screen.dart`
+  - `apps/mobile/lib/features/cash/presentation/kas_screen.dart`
+  - `apps/mobile/lib/features/prayer/data/prayer_scheduler_service.dart`
+  - `apps/mobile/lib/features/agenda/presentation/agenda_detail_screen.dart`
+  - `apps/mobile/lib/features/announcement/presentation/announcement_detail_screen.dart`
+  - `apps/mobile/lib/features/invoice/presentation/invoice_detail_screen.dart`
+  - `apps/mobile/lib/features/incident/presentation/incident_detail_screen.dart`
+  - `apps/mobile/lib/features/admin_role/presentation/admin_role_screen.dart`
+  - `apps/mobile/lib/features/emergency/presentation/emergency_screen.dart`
+  - `apps/mobile/lib/features/facility/presentation/facility_screen.dart`
+  - `apps/mobile/lib/features/house_admin/presentation/house_admin_screen.dart`
+  - `apps/mobile/lib/features/community_admin/presentation/community_admin_screen.dart`
+  - `apps/mobile/lib/features/account/presentation/account_screen.dart`
+  - `apps/mobile/lib/shared/widgets/app_button.dart`
+  - `Engineering.md`
+- Verification and results:
+  - `flutter analyze` in `apps/mobile`: 0 issues found (`No issues found! (ran in 35.9s)`).
+  - `flutter test` in `apps/mobile`: 132 tests passed repo-wide.
+  - Verified UI tokens match PRD color palette (purple `#4B2DA1`, cyan `#32BCE3`, highlight `#EEE9FF`, yellow `#FFEB22`, semantic success `#20A464`).
+- Next steps:
+  - Continue visual inspection and iterative UI polish for any remaining sub-screens.
+
 

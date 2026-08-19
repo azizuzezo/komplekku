@@ -10,6 +10,7 @@ import 'package:komplekku/features/report/domain/report.dart';
 import 'package:komplekku/features/report/presentation/report_list_screen.dart';
 import 'package:komplekku/shared/widgets/app_badge.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 class ReportDetailScreen extends ConsumerStatefulWidget {
   const ReportDetailScreen({super.key, required this.id});
@@ -32,7 +33,7 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen> {
       appBar: AppBar(title: const Text('Detail Laporan')),
       body: SafeArea(
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

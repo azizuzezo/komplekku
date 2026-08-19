@@ -8,6 +8,7 @@ import 'package:komplekku/features/emergency/domain/emergency.dart';
 import 'package:komplekku/features/emergency/presentation/emergency_controller.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 const _kindOptions = [
   (EmergencyKind.security, 'Keamanan'),
@@ -62,7 +63,7 @@ class EmergencyScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Darurat')),
       body: SafeArea(
         child: emergencyState.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) => StatePanel(
             icon: Icons.cloud_off_outlined,
             title: 'Sinyal darurat belum bisa disiapkan',

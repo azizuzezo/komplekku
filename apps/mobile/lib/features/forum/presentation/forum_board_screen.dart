@@ -11,6 +11,7 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_post_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_post.dart';
 import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
+import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
 
 /// Category tint. Everything stays inside the brand palette — the mockup's

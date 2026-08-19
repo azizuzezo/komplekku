@@ -9,6 +9,7 @@ import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_post_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_post.dart';
 import 'package:komplekku/features/forum/presentation/forum_board_screen.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 const _monthNames = [
   'Januari',
@@ -265,7 +266,7 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
       ),
       body: SafeArea(
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

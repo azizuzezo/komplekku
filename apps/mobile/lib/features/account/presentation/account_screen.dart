@@ -7,6 +7,7 @@ import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
 import 'package:komplekku/shared/widgets/app_dialog.dart';
 import 'package:komplekku/shared/widgets/app_header.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 import 'package:komplekku/shared/widgets/app_text_field.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/account/data/account_repository.dart';
@@ -64,7 +65,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       ),
       body: SafeArea(
         child: account.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

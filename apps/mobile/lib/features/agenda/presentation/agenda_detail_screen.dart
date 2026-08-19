@@ -5,6 +5,7 @@ import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/agenda/data/agenda_repository.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 class AgendaDetailScreen extends ConsumerWidget {
   const AgendaDetailScreen({super.key, required this.id});
@@ -19,7 +20,7 @@ class AgendaDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Agenda')),
       body: SafeArea(
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

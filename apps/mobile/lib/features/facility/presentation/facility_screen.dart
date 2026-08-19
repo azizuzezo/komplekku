@@ -11,6 +11,7 @@ import 'package:komplekku/features/facility/domain/facility.dart';
 import 'package:komplekku/features/facility/presentation/facility_booking_controller.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 import 'package:komplekku/shared/widgets/app_section_header.dart';
 import 'package:komplekku/shared/widgets/app_text_field.dart';
 
@@ -138,7 +139,7 @@ class _FacilityScreenState extends ConsumerState<FacilityScreen> {
       appBar: AppBar(title: const Text('Fasilitas')),
       body: SafeArea(
         child: facilitiesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

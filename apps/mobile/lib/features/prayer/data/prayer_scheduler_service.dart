@@ -56,11 +56,10 @@ class PrayerSchedulerService {
     FlutterLocalNotificationsPlugin? plugin,
     SharedPreferencesAsync? preferences,
     PrayerAlarmBridge? alarmBridge,
-    PrayerSettingsRepository? settingsRepository,
+    this._settingsRepository,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _preferences = preferences ?? SharedPreferencesAsync(),
-       _alarmBridge = alarmBridge ?? PrayerAlarmBridge(),
-       _settingsRepository = settingsRepository;
+       _alarmBridge = alarmBridge ?? PrayerAlarmBridge();
 
   final FlutterLocalNotificationsPlugin _plugin;
   final SharedPreferencesAsync _preferences;

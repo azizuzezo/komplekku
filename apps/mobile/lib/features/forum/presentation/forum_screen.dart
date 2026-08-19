@@ -10,6 +10,7 @@ import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/shared/widgets/app_bottom_sheet.dart';
 import 'package:komplekku/shared/widgets/app_header.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_channel.dart';
@@ -334,7 +335,7 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
             if (canPost) _ForumCreateBar(onCreate: _createChannel),
             Expanded(
               child: channels.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const AppLoadingState(),
                 error: (error, _) {
                   final failure = error is ApiException
                       ? error
@@ -687,7 +688,7 @@ class _MessageList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final messages = ref.watch(forumMessageListProvider(channelId));
     return messages.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const AppLoadingState(),
       error: (error, _) => StatePanel(
         icon: Icons.cloud_off_outlined,
         title: 'Pesan belum bisa dimuat',

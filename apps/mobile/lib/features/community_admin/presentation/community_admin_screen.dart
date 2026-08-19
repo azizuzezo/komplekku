@@ -8,6 +8,7 @@ import 'package:komplekku/features/onboarding/domain/community_option.dart';
 import 'package:komplekku/shared/widgets/app_badge.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 import 'package:komplekku/shared/widgets/app_text_field.dart';
 
 class CommunityAdminScreen extends ConsumerWidget {
@@ -222,7 +223,7 @@ class _PrayerSettingsCardState extends ConsumerState<_PrayerSettingsCard> {
       description:
           'Satu jeda berlaku untuk Subuh, Dzuhur, Ashar, Maghrib, dan Isya di seluruh komunitas.',
       child: community.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoadingState(),
         error: (error, _) => StatePanel(
           icon: Icons.cloud_off_outlined,
           title: 'Pengaturan belum bisa dimuat',

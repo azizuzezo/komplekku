@@ -10,6 +10,7 @@ import 'package:komplekku/features/invoice/domain/invoice.dart';
 import 'package:komplekku/features/invoice/presentation/format.dart';
 import 'package:komplekku/features/invoice/presentation/payment_submit_form.dart';
 import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 /// Detail view for a single invoice, mirroring `invoice-detail.tsx`: shows
 /// invoice facts, a receipt when paid, the waiver reason when waived, and a
@@ -28,7 +29,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Tagihan Iuran')),
       body: SafeArea(
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

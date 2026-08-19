@@ -8,6 +8,7 @@ import 'package:komplekku/features/admin_role/domain/admin_role_models.dart';
 import 'package:komplekku/features/community_admin/data/community_admin_repository.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 class AdminRoleScreen extends ConsumerStatefulWidget {
   const AdminRoleScreen({super.key});
@@ -64,7 +65,7 @@ class _AdminRoleScreenState extends ConsumerState<AdminRoleScreen> {
       appBar: AppBar(title: const Text('Kelola Pengguna')),
       body: SafeArea(
         child: roles.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) => StatePanel(
             icon: Icons.cloud_off_outlined,
             title: 'Data peran belum bisa dimuat',
@@ -73,7 +74,7 @@ class _AdminRoleScreenState extends ConsumerState<AdminRoleScreen> {
             onAction: () => ref.invalidate(roleListProvider),
           ),
           data: (roleOptions) => members.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const AppLoadingState(),
             error: (error, _) => StatePanel(
               icon: Icons.cloud_off_outlined,
               title: 'Daftar pengguna belum bisa dimuat',

@@ -8,6 +8,7 @@ import 'package:komplekku/features/announcement/domain/announcement.dart';
 import 'package:komplekku/features/announcement/presentation/announcement_list_screen.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/shared/widgets/app_badge.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 class AnnouncementDetailScreen extends ConsumerStatefulWidget {
   const AnnouncementDetailScreen({super.key, required this.id});
@@ -43,7 +44,7 @@ class _AnnouncementDetailScreenState
       appBar: AppBar(title: const Text('Pengumuman')),
       body: SafeArea(
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error

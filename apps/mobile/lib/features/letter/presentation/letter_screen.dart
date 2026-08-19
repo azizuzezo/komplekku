@@ -40,10 +40,10 @@ class LetterScreen extends ConsumerWidget {
           : null,
       body: SafeArea(
         child: requests.when(
-          loading: () => const Semantics(
+          loading: () => Semantics(
             label: 'Memuat permohonan surat',
             liveRegion: true,
-            child: AppLoadingState.skeleton(rows: 4),
+            child: const AppLoadingState.skeleton(rows: 4),
           ),
           error: (error, _) {
             final failure = error is ApiException

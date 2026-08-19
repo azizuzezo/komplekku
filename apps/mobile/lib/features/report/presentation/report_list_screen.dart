@@ -40,10 +40,10 @@ class ReportListScreen extends ConsumerWidget {
           : null,
       body: SafeArea(
         child: reports.when(
-          loading: () => const Semantics(
+          loading: () => Semantics(
             label: 'Memuat laporan',
             liveRegion: true,
-            child: AppLoadingState.skeleton(rows: 4),
+            child: const AppLoadingState.skeleton(rows: 4),
           ),
           error: (error, _) {
             final failure = error is ApiException

@@ -10,6 +10,7 @@ import 'package:komplekku/features/onboarding/domain/community_option.dart';
 import 'package:komplekku/shared/widgets/app_badge.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
 import 'package:komplekku/shared/widgets/app_card.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 import 'package:komplekku/shared/widgets/app_text_field.dart';
 
 class HouseAdminScreen extends ConsumerStatefulWidget {
@@ -188,7 +189,7 @@ class _HouseAdminScreenState extends ConsumerState<HouseAdminScreen> {
           Text('Daftar rumah', style: AppTypography.title),
           const SizedBox(height: AppSpacing.base),
           houses.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const AppLoadingState(),
             error: (error, _) => StatePanel(
               icon: Icons.cloud_off_outlined,
               title: 'Daftar rumah belum bisa dimuat',

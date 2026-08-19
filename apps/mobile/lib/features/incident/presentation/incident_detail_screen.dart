@@ -12,6 +12,7 @@ import 'package:komplekku/features/incident/presentation/incident_list_screen.da
 import 'package:komplekku/features/incident/presentation/incident_update_controller.dart';
 import 'package:komplekku/shared/widgets/app_badge.dart';
 import 'package:komplekku/shared/widgets/app_button.dart';
+import 'package:komplekku/shared/widgets/app_loading_state.dart';
 
 /// Detail view for a single incident report, mirroring
 /// `apps/web/features/incident/incident-detail.tsx`. Accounts with
@@ -32,7 +33,7 @@ class IncidentDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Laporan kejadian')),
       body: SafeArea(
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoadingState(),
           error: (error, _) {
             final failure = error is ApiException
                 ? error
