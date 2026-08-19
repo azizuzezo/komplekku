@@ -4,7 +4,7 @@ publish_to: none
 # The `+N` build number is Android's versionCode — the integer the OS and the
 # in-app updater compare. Bump it on every release you distribute, and set
 # MOBILE_LATEST_VERSION_CODE on the API to the same number.
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ^3.12.0
