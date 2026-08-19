@@ -88,17 +88,17 @@ await repository.updateCommunity(iqomahDelayMinutes: delayMinutes);
 - Create/modify: `apps/mobile/test/prayer_service_test.dart`
 - Create: `apps/mobile/test/prayer_settings_repository_test.dart`
 
-- [ ] Write failing pure tests for a direct 10-minute countdown, exact iqomah transition, idle state afterward, custom delay, and stale/offline fallback to cached 10 minutes.
-- [ ] Replace the old 5-minute gap plus 6-minute countdown with one phase window:
+- [x] Write failing pure tests for a direct 10-minute countdown, exact iqomah transition, idle state afterward, custom delay, and stale/offline fallback to cached 10 minutes.
+- [x] Replace the old 5-minute gap plus 6-minute countdown with one phase window:
 
 ```dart
 final iqomahAt = adzanAt.add(Duration(minutes: iqomahDelayMinutes));
 final secondsRemaining = max(0, iqomahAt.difference(now).inSeconds + 1);
 ```
 
-- [ ] Fetch `/communities/current`, validate 1–60, cache the last valid value, and return 10 on a cold/offline fallback.
-- [ ] Expose a Riverpod provider usable by both scheduler and UI.
-- [ ] Run focused Dart tests and analyze; commit the batch.
+- [x] Fetch `/communities/current`, validate 1–60, cache the last valid value, and return 10 on a cold/offline fallback.
+- [x] Expose a Riverpod provider usable by both scheduler and UI.
+- [x] Run focused Dart tests and analyze; commit the batch.
 
 ## Task 4: Native Android exact-alarm playback pipeline
 

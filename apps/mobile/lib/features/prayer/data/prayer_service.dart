@@ -24,20 +24,20 @@ const prayerLabels = {
   PrayerName.isya: 'Isya',
 };
 
-enum AdzanStateKind { idle, adzan, postAdzanGap, iqomahCountdown, sholat }
+enum AdzanStateKind { idle, iqomahCountdown }
 
 class AdzanState {
   final AdzanStateKind kind;
   final PrayerName? activePrayer;
   final int? adzanTimeMs;
-  final int gapSecondsRemaining;
+  final int? iqomahTimeMs;
   final int iqomahSecondsRemaining;
 
   const AdzanState({
     required this.kind,
     this.activePrayer,
     this.adzanTimeMs,
-    this.gapSecondsRemaining = 0,
+    this.iqomahTimeMs,
     this.iqomahSecondsRemaining = 0,
   });
 }
@@ -122,12 +122,11 @@ Map<PrayerName, DateTime> calculatePrayerTimes({
   };
 }
 
-AdzanState getAdzanState(DateTime now, Map<PrayerName, DateTime> times) {
-  final nowMs = now.millisecondsSinceEpoch;
-  const postAdzanGapMs = 5 * 60 * 1000;
-  const iqomahCountdownMs = 6 * 60 * 1000;
-  const totalWindowMs = postAdzanGapMs + iqomahCountdownMs;
-
+AdzanState getAdzanState(
+  DateTime now,
+  Map<PrayerName, DateTime> times, {
+  required int iqomahDelayMinutes,
+}) {
   const prayers = [
     PrayerName.subuh,
     PrayerName.dzuhur,
@@ -137,37 +136,16 @@ AdzanState getAdzanState(DateTime now, Map<PrayerName, DateTime> times) {
   ];
 
   for (final prayer in prayers) {
-    final pTimeMs = times[prayer]!.millisecondsSinceEpoch;
-    final elapsed = nowMs - pTimeMs;
-
-    if (elapsed >= 0 && elapsed < totalWindowMs) {
-      if (elapsed < 30 * 1000) {
-        return AdzanState(
-          kind: AdzanStateKind.adzan,
-          activePrayer: prayer,
-          adzanTimeMs: pTimeMs,
-          gapSecondsRemaining: ((postAdzanGapMs - elapsed) / 1000).ceil(),
-          iqomahSecondsRemaining: 360,
-        );
-      } else if (elapsed < postAdzanGapMs) {
-        return AdzanState(
-          kind: AdzanStateKind.postAdzanGap,
-          activePrayer: prayer,
-          adzanTimeMs: pTimeMs,
-          gapSecondsRemaining: ((postAdzanGapMs - elapsed) / 1000).ceil(),
-          iqomahSecondsRemaining: 360,
-        );
-      } else {
-        final iqomahElapsed = elapsed - postAdzanGapMs;
-        final remaining = max(0, ((iqomahCountdownMs - iqomahElapsed) / 1000).ceil());
-        return AdzanState(
-          kind: AdzanStateKind.iqomahCountdown,
-          activePrayer: prayer,
-          adzanTimeMs: pTimeMs,
-          gapSecondsRemaining: 0,
-          iqomahSecondsRemaining: remaining,
-        );
-      }
+    final adzanAt = times[prayer]!;
+    final iqomahAt = adzanAt.add(Duration(minutes: iqomahDelayMinutes));
+    if (!now.isBefore(adzanAt) && now.isBefore(iqomahAt)) {
+      return AdzanState(
+        kind: AdzanStateKind.iqomahCountdown,
+        activePrayer: prayer,
+        adzanTimeMs: adzanAt.millisecondsSinceEpoch,
+        iqomahTimeMs: iqomahAt.millisecondsSinceEpoch,
+        iqomahSecondsRemaining: max(1, iqomahAt.difference(now).inSeconds),
+      );
     }
   }
 
