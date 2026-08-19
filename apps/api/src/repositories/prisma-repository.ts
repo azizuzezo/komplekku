@@ -627,6 +627,7 @@ export class PrismaRepository implements AppRepository {
         rwLabel: true,
         contactPhone: true,
         emergencyContactPhone: true,
+        iqomahDelayMinutes: true,
       },
     });
   }
@@ -654,6 +655,7 @@ export class PrismaRepository implements AppRepository {
         contactPhone: input.changes.contactPhone,
         emergencyContactPhone: input.changes.emergencyContactPhone,
         registrationOpen: input.changes.registrationOpen,
+        iqomahDelayMinutes: input.changes.iqomahDelayMinutes,
       },
     });
 
@@ -681,6 +683,7 @@ export class PrismaRepository implements AppRepository {
         rwLabel: community.rwLabel,
         timezone: community.timezone,
         registrationOpen: community.registrationOpen,
+        iqomahDelayMinutes: community.iqomahDelayMinutes,
       },
     };
   }
@@ -737,6 +740,7 @@ export class PrismaRepository implements AppRepository {
           rwLabel: community.rwLabel,
           timezone: community.timezone,
           registrationOpen: community.registrationOpen,
+          iqomahDelayMinutes: community.iqomahDelayMinutes,
         },
       };
     });
@@ -755,6 +759,7 @@ export class PrismaRepository implements AppRepository {
       rwLabel: community.rwLabel,
       timezone: community.timezone,
       registrationOpen: community.registrationOpen,
+      iqomahDelayMinutes: community.iqomahDelayMinutes,
     }));
   }
 

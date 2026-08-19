@@ -257,6 +257,7 @@ interface MemoryCommunity {
   address?: string | null;
   rwLabel?: string | null;
   registrationOpen: boolean;
+  iqomahDelayMinutes: number;
 }
 
 interface MemoryRt {
@@ -852,6 +853,7 @@ export class MemoryRepository implements AppRepository {
       timezone: "Asia/Jakarta",
       rwLabel: "RW 13",
       registrationOpen: true,
+      iqomahDelayMinutes: 10,
     });
     this.communities.set(demoIds.secondCommunity, {
       id: demoIds.secondCommunity,
@@ -859,6 +861,7 @@ export class MemoryRepository implements AppRepository {
       slug: "demo-taman-cendana",
       timezone: "Asia/Jakarta",
       registrationOpen: true,
+      iqomahDelayMinutes: 10,
     });
     this.rts.set(demoIds.rtOne, {
       id: demoIds.rtOne,
@@ -1842,6 +1845,7 @@ export class MemoryRepository implements AppRepository {
       rwLabel: community.rwLabel ?? null,
       contactPhone: null,
       emergencyContactPhone: null,
+      iqomahDelayMinutes: community.iqomahDelayMinutes,
     };
   }
 
@@ -1861,6 +1865,9 @@ export class MemoryRepository implements AppRepository {
     if (input.changes.rwLabel !== undefined) community.rwLabel = input.changes.rwLabel;
     if (input.changes.registrationOpen !== undefined) {
       community.registrationOpen = input.changes.registrationOpen;
+    }
+    if (input.changes.iqomahDelayMinutes !== undefined) {
+      community.iqomahDelayMinutes = input.changes.iqomahDelayMinutes;
     }
 
     this.audits.push({
@@ -1884,6 +1891,7 @@ export class MemoryRepository implements AppRepository {
         rwLabel: community.rwLabel ?? null,
         timezone: community.timezone,
         registrationOpen: community.registrationOpen,
+        iqomahDelayMinutes: community.iqomahDelayMinutes,
       },
     };
   }
@@ -1907,6 +1915,7 @@ export class MemoryRepository implements AppRepository {
       rwLabel: input.community.rwLabel ?? null,
       timezone: input.community.timezone,
       registrationOpen: true,
+      iqomahDelayMinutes: 10,
     };
     this.communities.set(community.id, community);
     const forumChannelId = randomUUID();
@@ -1941,6 +1950,7 @@ export class MemoryRepository implements AppRepository {
         rwLabel: community.rwLabel ?? null,
         timezone: community.timezone,
         registrationOpen: community.registrationOpen,
+        iqomahDelayMinutes: community.iqomahDelayMinutes,
       },
     };
   }
@@ -1956,6 +1966,7 @@ export class MemoryRepository implements AppRepository {
         rwLabel: community.rwLabel ?? null,
         timezone: community.timezone,
         registrationOpen: community.registrationOpen,
+        iqomahDelayMinutes: community.iqomahDelayMinutes,
       }));
   }
 

@@ -11,6 +11,8 @@ export const communitySummarySchema = z.object({
 
 export type CommunitySummary = z.infer<typeof communitySummarySchema>;
 
+export const iqomahDelayMinutesSchema = z.number().int().min(1).max(60);
+
 export const currentCommunityResponseSchema = dataEnvelopeSchema(
   z.object({
     community: communitySummarySchema.extend({
@@ -18,6 +20,7 @@ export const currentCommunityResponseSchema = dataEnvelopeSchema(
       rwLabel: z.string().nullable(),
       contactPhone: z.string().nullable(),
       emergencyContactPhone: z.string().nullable(),
+      iqomahDelayMinutes: iqomahDelayMinutesSchema,
     }),
   }),
 );
@@ -68,6 +71,7 @@ export const updateCommunityInputSchema = z
     contactPhone: z.string().trim().max(24).nullable().optional(),
     emergencyContactPhone: z.string().trim().max(24).nullable().optional(),
     registrationOpen: z.boolean().optional(),
+    iqomahDelayMinutes: iqomahDelayMinutesSchema.optional(),
   })
   .strict();
 
@@ -98,6 +102,7 @@ export const communityAdminSummarySchema = z.object({
   rwLabel: z.string().nullable(),
   timezone: z.string().min(1),
   registrationOpen: z.boolean(),
+  iqomahDelayMinutes: iqomahDelayMinutesSchema,
 });
 
 export type CommunityAdminSummary = z.infer<typeof communityAdminSummarySchema>;

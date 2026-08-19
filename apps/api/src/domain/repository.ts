@@ -210,6 +210,7 @@ export interface CurrentCommunityRecord {
   rwLabel: string | null;
   contactPhone: string | null;
   emergencyContactPhone: string | null;
+  iqomahDelayMinutes: number;
 }
 
 export interface CommunityAdminRecord {
@@ -220,6 +221,7 @@ export interface CommunityAdminRecord {
   rwLabel: string | null;
   timezone: string;
   registrationOpen: boolean;
+  iqomahDelayMinutes: number;
 }
 
 export type UpdateCommunityResult =

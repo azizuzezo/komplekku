@@ -152,4 +152,43 @@ describe("hierarki RT/RW", () => {
     });
     expect(escalate.statusCode).toBe(403);
   });
+
+  it("mengizinkan admin mengatur satu jeda iqomah untuk komunitas", async () => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+    const admin = await loginWeb(app);
+    repository.setPermissions(demoIds.user, superAdminPermissions);
+
+    const update = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/admin/community",
+      headers: { cookie: admin.cookie },
+      payload: { iqomahDelayMinutes: 12 },
+    });
+    expect(update.statusCode).toBe(200);
+    expect(update.json().data.community.iqomahDelayMinutes).toBe(12);
+
+    const current = await app.inject({
+      method: "GET",
+      url: "/api/v1/communities/current",
+      headers: { cookie: admin.cookie },
+    });
+    expect(current.statusCode).toBe(200);
+    expect(current.json().data.community.iqomahDelayMinutes).toBe(12);
+  });
+
+  it.each([0, 61, 10.5])("menolak jeda iqomah tidak valid: %s", async (delay) => {
+    const { app, repository } = await createTestApp();
+    closeCallbacks.push(() => app.close());
+    const admin = await loginWeb(app);
+    repository.setPermissions(demoIds.user, superAdminPermissions);
+
+    const update = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/admin/community",
+      headers: { cookie: admin.cookie },
+      payload: { iqomahDelayMinutes: delay },
+    });
+    expect(update.statusCode).toBe(422);
+  });
 });

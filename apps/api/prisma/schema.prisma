@@ -224,6 +224,7 @@ model Community {
   contactPhone          String?            @map("contact_phone") @db.VarChar(24)
   emergencyContactPhone String?            @map("emergency_contact_phone") @db.VarChar(24)
   registrationOpen      Boolean            @default(true) @map("registration_open")
+  iqomahDelayMinutes    Int                @default(10) @map("iqomah_delay_minutes")
   createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(3)

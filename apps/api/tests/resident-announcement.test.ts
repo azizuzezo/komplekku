@@ -28,6 +28,7 @@ describe("slice resident dan pengumuman", () => {
     });
     expect(community.statusCode).toBe(200);
     expect(currentCommunityResponseSchema.safeParse(community.json()).success).toBe(true);
+    expect(community.json().data.community.iqomahDelayMinutes).toBe(10);
 
     const home = await app.inject({
       method: "GET",
