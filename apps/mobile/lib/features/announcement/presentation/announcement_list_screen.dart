@@ -6,6 +6,7 @@ import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/widgets/entity_actions.dart';
+import 'package:komplekku/core/widgets/prototype_header.dart';
 import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/announcement/data/announcement_repository.dart';
@@ -31,7 +32,6 @@ class _AnnouncementListScreenState
     final canManage = permissions.contains('announcement.manage');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pengumuman')),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
               onPressed: () async {
@@ -52,6 +52,13 @@ class _AnnouncementListScreenState
       body: SafeArea(
         child: Column(
           children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: PrototypeHeader(
+                title: 'Pengumuman',
+                subtitle: 'RT 05 / RW 03 • Billabong',
+              ),
+            ),
             _FilterChips(
               filter: _filter,
               onChanged: (filter) => setState(() => _filter = filter),
@@ -76,10 +83,24 @@ class _AnnouncementListScreenState
     try {
       await ref.read(announcementRepositoryProvider).archive(announcement.id);
       ref.invalidate(announcementListProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pengumuman berhasil dihapus.')),
+        );
+      }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengumuman belum dapat dihapus. Coba lagi.'),
+          ),
+        );
       }
     }
   }
@@ -90,69 +111,68 @@ class _AnnouncementListScreenState
     bool canManage,
   ) {
     return announcements.when(
-          loading: () => const _AnnouncementListSkeleton(),
-          error: (error, _) {
-            final failure = error is ApiException
-                ? error
-                : ApiException.malformedResponse();
-            if (failure.isUnauthorized) {
-              return StatePanel(
-                icon: Icons.lock_outline,
-                title: 'Sesi sudah berakhir',
-                message: 'Masuk kembali untuk melihat pengumuman.',
-                actionLabel: 'Keluar',
-                onAction: () =>
-                    ref.read(sessionControllerProvider.notifier).signOut(),
+      loading: () => const _AnnouncementListSkeleton(),
+      error: (error, _) {
+        final failure = error is ApiException
+            ? error
+            : ApiException.malformedResponse();
+        if (failure.isUnauthorized) {
+          return StatePanel(
+            icon: Icons.lock_outline,
+            title: 'Sesi sudah berakhir',
+            message: 'Masuk kembali untuk melihat pengumuman.',
+            actionLabel: 'Keluar',
+            onAction: () =>
+                ref.read(sessionControllerProvider.notifier).signOut(),
+          );
+        }
+        return StatePanel(
+          icon: failure.isForbidden
+              ? Icons.block_outlined
+              : Icons.cloud_off_outlined,
+          title: failure.isForbidden
+              ? 'Pengumuman belum dapat diakses'
+              : 'Pengumuman belum bisa dimuat',
+          message: failure.message,
+          actionLabel: failure.isForbidden ? null : 'Coba lagi',
+          onAction: failure.isForbidden
+              ? null
+              : () => ref.invalidate(announcementListProvider(_filter)),
+        );
+      },
+      data: (items) {
+        if (items.isEmpty) {
+          return StatePanel(
+            icon: Icons.campaign_outlined,
+            title: _filter == AnnouncementFilter.all
+                ? 'Belum ada pengumuman'
+                : 'Tidak ada yang cocok',
+            message: _filter == AnnouncementFilter.all
+                ? 'Informasi lingkungan terbaru akan muncul di sini.'
+                : 'Coba pilih kategori lain untuk melihat pengumuman lainnya.',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.refresh(announcementListProvider(_filter).future),
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return _AnnouncementCard(
+                announcement: item,
+                canManage: canManage,
+                onTap: () => context.push('/pengumuman/${item.id}'),
+                onEdit: () => _editAnnouncement(item),
+                onDelete: () => _archiveAnnouncement(item),
               );
-            }
-            return StatePanel(
-              icon: failure.isForbidden
-                  ? Icons.block_outlined
-                  : Icons.cloud_off_outlined,
-              title: failure.isForbidden
-                  ? 'Pengumuman belum dapat diakses'
-                  : 'Pengumuman belum bisa dimuat',
-              message: failure.message,
-              actionLabel: failure.isForbidden ? null : 'Coba lagi',
-              onAction: failure.isForbidden
-                  ? null
-                  : () => ref.invalidate(announcementListProvider(_filter)),
-            );
-          },
-          data: (items) {
-            if (items.isEmpty) {
-              return StatePanel(
-                icon: Icons.campaign_outlined,
-                title: _filter == AnnouncementFilter.all
-                    ? 'Belum ada pengumuman'
-                    : 'Tidak ada yang cocok',
-                message: _filter == AnnouncementFilter.all
-                    ? 'Informasi lingkungan terbaru akan muncul di sini.'
-                    : 'Coba pilih kategori lain untuk melihat pengumuman lainnya.',
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: () =>
-                  ref.refresh(announcementListProvider(_filter).future),
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
-                itemCount: items.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return _AnnouncementCard(
-                    announcement: item,
-                    canManage: canManage,
-                    onTap: () => context.push('/pengumuman/${item.id}'),
-                    onEdit: () => _editAnnouncement(item),
-                    onDelete: () => _archiveAnnouncement(item),
-                  );
-                },
-              ),
-            );
-          },
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -171,25 +191,37 @@ class _FilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Row(
         children: [
           for (final value in AnnouncementFilter.values)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(announcementFilterLabels[value]!),
-                selected: filter == value,
-                onSelected: (_) => onChanged(value),
-                selectedColor: KomplekkuColors.primary,
-                labelStyle: TextStyle(
-                  color: filter == value
-                      ? Colors.white
-                      : KomplekkuColors.textPrimary,
-                  fontWeight: FontWeight.w600,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: ChoiceChip(
+                  showCheckmark: value == AnnouncementFilter.all,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  label: Text(announcementFilterLabels[value]!),
+                  selected: filter == value,
+                  onSelected: (_) => onChanged(value),
+                  selectedColor: KomplekkuColors.primary,
+                  side: BorderSide(
+                    color: filter == value
+                        ? KomplekkuColors.primary
+                        : KomplekkuColors.borderStrong,
+                  ),
+                  labelStyle: TextStyle(
+                    color: filter == value
+                        ? Colors.white
+                        : KomplekkuColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -320,29 +352,30 @@ class __CreateAnnouncementDialogState
         .read(announcementRepositoryProvider)
         .detail(existingId)
         .then((announcement) {
-      if (!mounted) return;
-      setState(() {
-        _titleController.text = announcement.title;
-        _summaryController.text = announcement.summary;
-        _bodyController.text = announcement.body;
-        _priority = switch (announcement.priority) {
-          AnnouncementPriority.urgent => 'URGENT',
-          AnnouncementPriority.important => 'IMPORTANT',
-          AnnouncementPriority.normal => 'NORMAL',
-        };
-        _category = announcement.category;
-        _coverImageUrl = announcement.coverImageUrl;
-        _loadingExisting = false;
-      });
-    }).catchError((Object error) {
-      if (!mounted) return;
-      setState(() {
-        _loadingExisting = false;
-        _errorMessage = error is ApiException
-            ? error.message
-            : 'Pengumuman belum bisa dimuat.';
-      });
-    });
+          if (!mounted) return;
+          setState(() {
+            _titleController.text = announcement.title;
+            _summaryController.text = announcement.summary;
+            _bodyController.text = announcement.body;
+            _priority = switch (announcement.priority) {
+              AnnouncementPriority.urgent => 'URGENT',
+              AnnouncementPriority.important => 'IMPORTANT',
+              AnnouncementPriority.normal => 'NORMAL',
+            };
+            _category = announcement.category;
+            _coverImageUrl = announcement.coverImageUrl;
+            _loadingExisting = false;
+          });
+        })
+        .catchError((Object error) {
+          if (!mounted) return;
+          setState(() {
+            _loadingExisting = false;
+            _errorMessage = error is ApiException
+                ? error.message
+                : 'Pengumuman belum bisa dimuat.';
+          });
+        });
   }
 
   Future<void> _pickCover() async {
@@ -424,102 +457,117 @@ class __CreateAnnouncementDialogState
               child: Center(child: CircularProgressIndicator()),
             )
           : SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: KomplekkuColors.danger),
-                  ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: KomplekkuColors.danger),
+                        ),
+                      ),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Judul Pengumuman',
+                        hintText: 'Misal: Kerja Bakti Blok F',
+                      ),
+                      validator: (val) => val == null || val.trim().length < 3
+                          ? 'Judul minimal 3 karakter'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _summaryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Ringkasan Singkat',
+                        hintText: 'Ringkasan 1-2 kalimat',
+                      ),
+                      validator: (val) => val == null || val.trim().length < 5
+                          ? 'Ringkasan minimal 5 karakter'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<AnnouncementCategory>(
+                      initialValue: _category,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori',
+                        helperText:
+                            'Menentukan chip Acara/Info di papan pengumuman.',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: AnnouncementCategory.info,
+                          child: Text('Info'),
+                        ),
+                        DropdownMenuItem(
+                          value: AnnouncementCategory.event,
+                          child: Text('Acara'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _category = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _CoverPickerField(
+                      coverImageUrl: _coverImageUrl,
+                      isUploading: _uploadingCover,
+                      onPick: _pickCover,
+                      onRemove: () => setState(() => _coverImageUrl = null),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _priority,
+                      decoration: const InputDecoration(
+                        labelText: 'Prioritas',
+                        helperText:
+                            'Di atas Normal, pengumuman ditandai "Penting".',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'NORMAL',
+                          child: Text('Biasa (Normal)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'IMPORTANT',
+                          child: Text('Penting'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'URGENT',
+                          child: Text('Mendesak (Darurat)'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _priority = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _bodyController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Isi Pengumuman Lengkap',
+                        hintText: 'Tuliskan pengumuman secara lengkap...',
+                      ),
+                      validator: (val) => val == null || val.trim().length < 10
+                          ? 'Isi minimal 10 karakter'
+                          : null,
+                    ),
+                  ],
                 ),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Judul Pengumuman',
-                  hintText: 'Misal: Kerja Bakti Blok F',
-                ),
-                validator: (val) =>
-                    val == null || val.trim().length < 3 ? 'Judul minimal 3 karakter' : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _summaryController,
-                decoration: const InputDecoration(
-                  labelText: 'Ringkasan Singkat',
-                  hintText: 'Ringkasan 1-2 kalimat',
-                ),
-                validator: (val) =>
-                    val == null || val.trim().length < 5 ? 'Ringkasan minimal 5 karakter' : null,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<AnnouncementCategory>(
-                initialValue: _category,
-                decoration: const InputDecoration(
-                  labelText: 'Kategori',
-                  helperText: 'Menentukan chip Acara/Info di papan pengumuman.',
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: AnnouncementCategory.info,
-                    child: Text('Info'),
-                  ),
-                  DropdownMenuItem(
-                    value: AnnouncementCategory.event,
-                    child: Text('Acara'),
-                  ),
-                ],
-                onChanged: (val) {
-                  if (val != null) setState(() => _category = val);
-                },
-              ),
-              const SizedBox(height: 12),
-              _CoverPickerField(
-                coverImageUrl: _coverImageUrl,
-                isUploading: _uploadingCover,
-                onPick: _pickCover,
-                onRemove: () => setState(() => _coverImageUrl = null),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _priority,
-                decoration: const InputDecoration(
-                  labelText: 'Prioritas',
-                  helperText:
-                      'Di atas Normal, pengumuman ditandai "Penting".',
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'NORMAL', child: Text('Biasa (Normal)')),
-                  DropdownMenuItem(value: 'IMPORTANT', child: Text('Penting')),
-                  DropdownMenuItem(value: 'URGENT', child: Text('Mendesak (Darurat)')),
-                ],
-                onChanged: (val) {
-                  if (val != null) setState(() => _priority = val);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _bodyController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Isi Pengumuman Lengkap',
-                  hintText: 'Tuliskan pengumuman secara lengkap...',
-                ),
-                validator: (val) =>
-                    val == null || val.trim().length < 10 ? 'Isi minimal 10 karakter' : null,
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting
+              ? null
+              : () => Navigator.of(context).pop(false),
           child: const Text('Batal'),
         ),
         ElevatedButton(
@@ -528,8 +576,8 @@ class __CreateAnnouncementDialogState
             _submitting
                 ? 'Menyimpan...'
                 : _isEditing
-                    ? 'Simpan Perubahan'
-                    : 'Terbitkan',
+                ? 'Simpan Perubahan'
+                : 'Terbitkan',
           ),
         ),
       ],
@@ -602,8 +650,8 @@ class _AnnouncementCard extends StatelessWidget {
                     Text(
                       announcement.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -616,9 +664,9 @@ class _AnnouncementCard extends StatelessWidget {
                     Text(
                       formatIndonesianDateTime(announcement.publishedAt),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: KomplekkuColors.textSecondary,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                        color: KomplekkuColors.textSecondary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
@@ -683,10 +731,9 @@ class _CoverPickerField extends StatelessWidget {
             children: [
               Text(
                 'Gambar sampul (opsional)',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Row(
                 children: [

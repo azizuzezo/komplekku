@@ -63,7 +63,7 @@ function blankToUndefined(value: string) {
 function CreateReportForm() {
   const queryClient = useQueryClient();
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [isUploadingPhotos] = useState(false);
   const form = useForm<CreateReportInput>({
     resolver: zodResolver(createReportInputSchema),
     defaultValues: {

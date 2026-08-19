@@ -30,7 +30,7 @@ export function AnnouncementRow({
   featured?: boolean;
   canManage?: boolean;
   onEdit?: () => void;
-  onDelete?: () => void;
+  onDelete?: () => Promise<unknown> | void;
   isBusy?: boolean;
 }) {
   const badge = announcementBadge(announcement);

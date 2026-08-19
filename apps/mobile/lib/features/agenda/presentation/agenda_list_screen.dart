@@ -33,10 +33,24 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
       await ref.read(agendaRepositoryProvider).archive(event.id);
       ref.invalidate(agendaListProvider(_view));
       ref.invalidate(agendaByDateProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Agenda berhasil dihapus.')),
+        );
+      }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Agenda belum dapat dihapus. Coba lagi.'),
+          ),
+        );
       }
     }
   }
@@ -86,10 +100,7 @@ class _AgendaListScreenState extends ConsumerState<AgendaListScreen> {
                     value: AgendaView.upcoming,
                     label: Text('Mendatang'),
                   ),
-                  ButtonSegment(
-                    value: AgendaView.past,
-                    label: Text('Lampau'),
-                  ),
+                  ButtonSegment(value: AgendaView.past, label: Text('Lampau')),
                 ],
                 selected: {_view},
                 onSelectionChanged: (selection) {
@@ -275,7 +286,9 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
       return;
     }
     if (_formatTime(endTime).compareTo(_formatTime(startTime)) <= 0) {
-      setState(() => _errorMessage = 'Waktu selesai harus setelah waktu mulai.');
+      setState(
+        () => _errorMessage = 'Waktu selesai harus setelah waktu mulai.',
+      );
       return;
     }
     setState(() {
@@ -364,9 +377,7 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(
-                        _startTime == null
-                            ? 'Mulai'
-                            : _formatTime(_startTime!),
+                        _startTime == null ? 'Mulai' : _formatTime(_startTime!),
                       ),
                       trailing: const Icon(Icons.schedule_outlined),
                       onTap: () => _pickTime(isStart: true),
@@ -423,7 +434,9 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting
+              ? null
+              : () => Navigator.of(context).pop(false),
           child: const Text('Batal'),
         ),
         ElevatedButton(
@@ -432,8 +445,8 @@ class __CreateAgendaDialogState extends ConsumerState<_CreateAgendaDialog> {
             _submitting
                 ? 'Menyimpan...'
                 : _isEditing
-                    ? 'Simpan Perubahan'
-                    : 'Terbitkan',
+                ? 'Simpan Perubahan'
+                : 'Terbitkan',
           ),
         ),
       ],
@@ -476,22 +489,22 @@ class _AgendaCard extends StatelessWidget {
                     Text(
                       event.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       '${event.dateLabel} · ${event.timeRangeLabel}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       event.location,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: KomplekkuColors.textSecondary,
-                          ),
+                        color: KomplekkuColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),

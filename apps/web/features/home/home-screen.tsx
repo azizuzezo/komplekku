@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays, Clock3, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock3, MapPin, Search } from "lucide-react";
 import Link from "next/link";
 
 import { HomeSkeleton } from "@/components/ui/content-skeleton";
@@ -16,34 +16,7 @@ import { getHome } from "./home-api";
 import { HomeQuickActions } from "./home-quick-actions";
 import { PrayerCard } from "@/features/prayer/prayer-card";
 import { KomplekMap } from "@/components/map/komplek-map";
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 11) return "pagi";
-  if (hour < 15) return "siang";
-  if (hour < 19) return "sore";
-  return "malam";
-}
-
-function formatCommunityDate(timeZone: string) {
-  try {
-    return new Intl.DateTimeFormat("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone,
-    }).format(new Date());
-  } catch {
-    return new Intl.DateTimeFormat("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "Asia/Jakarta",
-    }).format(new Date());
-  }
-}
+import { NotificationAction } from "@/components/shell/notification-action";
 
 export function HomeScreen() {
   const homeQuery = useQuery({ queryKey: ["home"], queryFn: getHome });
@@ -130,26 +103,25 @@ export function HomeScreen() {
   const nextAgenda = agendaPreviewQuery.data?.data.items[0];
 
   return (
-    <div className="page-content home-desk">
+    <div className="page-content home-desk prototype-home">
       <header className="resident-masthead">
-        <div className="resident-masthead__context">
-          <p>{home.community.name}</p>
-          <time dateTime={new Date().toISOString()}>
-            {formatCommunityDate(home.community.timezone)}
-          </time>
-        </div>
         <div className="resident-masthead__welcome">
           <h1>
-            Selamat {getGreeting()}, {home.viewer.firstName}
+            Selamat datang, {home.viewer.firstName}
           </h1>
           <p className="home-address">
-            <MapPin size={17} aria-hidden="true" />
-            {home.household.house.addressLabel}
+            {home.household.house.addressLabel} <span>•</span> {home.community.name}
           </p>
+        </div>
+        <div className="resident-masthead__actions">
+          <NotificationAction />
+          <Link className="prototype-icon-action" href="/pengumuman" aria-label="Cari pengumuman">
+            <Search size={24} aria-hidden="true" />
+          </Link>
         </div>
       </header>
 
-      <PrayerCard />
+      <PrayerCard variant="home" />
 
       <HomeQuickActions />
 

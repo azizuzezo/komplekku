@@ -114,7 +114,7 @@ export function AnnouncementList() {
   const announcements = announcementsQuery.data.data.items;
 
   return (
-    <div className="announcement-page-wrapper">
+    <div className="announcement-page-wrapper prototype-announcements">
       {editingId && (
         <EditAnnouncementModal announcementId={editingId} onClose={() => setEditingId(null)} />
       )}
@@ -152,7 +152,7 @@ export function AnnouncementList() {
               key={announcement.id}
               canManage={canManage}
               onEdit={() => setEditingId(announcement.id)}
-              onDelete={() => archiveMutation.mutate(announcement.id)}
+              onDelete={() => archiveMutation.mutateAsync(announcement.id)}
               isBusy={archiveMutation.isPending}
             />
           ))}

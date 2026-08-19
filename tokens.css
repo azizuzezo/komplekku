@@ -1,5 +1,5 @@
-/* genre: quiet premium civic · macrostructure: Ecosystem Index · design-system: design.md · designed-as-app
- * theme: Komplekku purple/cyan/yellow brand (owner override 2026-08-17, supersedes the civic-green system)
+/* genre: quiet premium civic · macrostructure: resident noticeboard · design-system: design.md · designed-as-app
+ * theme: Komplekku green prototype (owner override 2026-08-19, supersedes the purple system)
  * display: Plus Jakarta Sans · body: Plus Jakarta Sans
  */
 
@@ -7,20 +7,20 @@
   color-scheme: light;
 
   /* Hallmark tokens — literal values from design.md, the locked design system. */
-  --color-paper: oklch(100% 0 0);
-  --color-paper-2: oklch(97.4% 0.003 286);
-  --color-paper-3: oklch(93% 0.003 286);
-  --color-ink: oklch(26.2% 0.015 297);
-  --color-ink-2: oklch(38% 0.014 297);
-  --color-rule: oklch(89% 0.006 296);
-  --color-rule-2: oklch(80% 0.01 296);
-  --color-muted: oklch(56.6% 0.019 297);
-  --color-neutral: oklch(46% 0.016 297);
-  --color-brand: oklch(40.9% 0.1753 287.9);
-  --color-brand-deep: oklch(34.1% 0.1783 281.6);
-  --color-brand-wash: oklch(94.4% 0.03 296.2);
-  --color-accent: oklch(74.1% 0.1249 221.9);
-  --color-focus: oklch(48% 0.19 288);
+  --color-paper: #ffffff;
+  --color-paper-2: #f7faf8;
+  --color-paper-3: #eff5f1;
+  --color-ink: #101119;
+  --color-ink-2: #353842;
+  --color-rule: #e0e4e2;
+  --color-rule-2: #c9d2cd;
+  --color-muted: #666a73;
+  --color-neutral: #73777f;
+  --color-brand: #008a52;
+  --color-brand-deep: #006b3f;
+  --color-brand-wash: #eef8f2;
+  --color-accent: #0aa6a6;
+  --color-focus: #008a52;
 
   /* App-facing names alias the hallmark tokens above. */
   --color-primary: var(--color-brand);
@@ -34,20 +34,20 @@
   --color-border: var(--color-rule);
 
   /* Status colors — warning kept from the prior system (no replacement given); danger/success are the owner's new values. */
-  --color-warning: oklch(62.64% 0.1248 70.45);
-  --color-danger: oklch(62.6% 0.1933 23);
-  --color-success: oklch(63.6% 0.1453 155.9);
-  --color-warning-ink: oklch(43% 0.105 70.45);
-  --color-danger-ink: oklch(45% 0.13 23.49);
-  --color-success-ink: oklch(42% 0.08 155.85);
+  --color-warning: #dd8214;
+  --color-danger: #e51d3f;
+  --color-success: #008a52;
+  --color-warning-ink: #8a4d06;
+  --color-danger-ink: #b70f2d;
+  --color-success-ink: #006b3f;
 
   /* Supporting semantic colors. */
-  --color-focus-guard: oklch(100% 0 0);
+  --color-focus-guard: #ffffff;
   --color-accent-ink: var(--color-ink);
-  --color-on-primary: oklch(100% 0 0);
-  --color-on-danger: oklch(100% 0 0);
+  --color-on-primary: #ffffff;
+  --color-on-danger: #ffffff;
   --color-info: var(--color-brand);
-  --color-disabled: oklch(82% 0.008 296);
+  --color-disabled: #b9c0bc;
   --color-loading: var(--color-paper-2);
 
   --color-state-error: var(--color-danger);
@@ -88,9 +88,9 @@
   --radius-md: 0.75rem;
   --radius-button: 0.5rem;
   --radius-input: 0.625rem;
-  --radius-card: 0.75rem;
-  --radius-modal: 0.875rem;
-  --radius-sheet: 1.125rem;
+  --radius-card: 1rem;
+  --radius-modal: 1rem;
+  --radius-sheet: 1.25rem;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
@@ -115,7 +115,7 @@
   --opacity-muted: 0.72;
 
   --rule-thin: 1px;
-  --shadow-raised: 0 8px 24px oklch(26.2% 0.015 297 / 0.08);
+  --shadow-raised: 0 8px 24px rgb(16 17 25 / 0.08);
 
   --z-base: 1;
   --z-raised: 10;
@@ -155,17 +155,17 @@
   --color-text-primary: var(--color-ink);
   --color-text-secondary: var(--color-muted);
   --color-border: var(--color-rule);
-  --color-accent: oklch(74.1% 0.1249 221.9);
-  --color-warning: oklch(62.64% 0.1248 70.45);
-  --color-danger: oklch(62.6% 0.1933 23);
-  --color-success: oklch(63.6% 0.1453 155.9);
-  --color-warning-ink: oklch(43% 0.105 70.45);
-  --color-danger-ink: oklch(45% 0.13 23.49);
-  --color-success-ink: oklch(42% 0.08 155.85);
-  --color-focus: oklch(48% 0.19 288);
-  --color-on-primary: oklch(100% 0 0);
-  --color-on-danger: oklch(100% 0 0);
+  --color-accent: #0aa6a6;
+  --color-warning: #dd8214;
+  --color-danger: #e51d3f;
+  --color-success: #008a52;
+  --color-warning-ink: #8a4d06;
+  --color-danger-ink: #b70f2d;
+  --color-success-ink: #006b3f;
+  --color-focus: #008a52;
+  --color-on-primary: #ffffff;
+  --color-on-danger: #ffffff;
   --color-info: var(--color-brand);
-  --color-disabled: oklch(82% 0.008 296);
+  --color-disabled: #b9c0bc;
   --color-loading: var(--color-paper-2);
 }

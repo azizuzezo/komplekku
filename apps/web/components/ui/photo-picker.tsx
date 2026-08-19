@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, Image, LoaderCircle, Trash2, X } from "lucide-react";
+import { Camera, Image, LoaderCircle, X } from "lucide-react";
 
 import {
   CloudinaryConfigError,
@@ -27,10 +27,6 @@ export function PhotoPicker({ onChange, disabled = false }: PhotoPickerProps) {
   const [slots, setSlots] = useState<PhotoSlot[]>([]);
   const [configError, setConfigError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const doneUrls = slots
-    .filter((s): s is Extract<PhotoSlot, { kind: "done" }> => s.kind === "done")
-    .map((s) => s.remoteUrl);
 
   const canAddMore = slots.length < MAX_PHOTOS && !disabled;
 
@@ -188,7 +184,6 @@ export function PhotoPicker({ onChange, disabled = false }: PhotoPickerProps) {
         {slots.map((slot) => (
           <div key={slot.localUrl} className="photo-picker__slot">
             {/* Preview image */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={slot.localUrl}
               alt="Pratinjau foto"
@@ -289,7 +284,6 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
           className="photo-grid__item"
           aria-label={`Foto ${i + 1} — buka di tab baru`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt={`Foto laporan ${i + 1}`} className="photo-grid__img" loading="lazy" />
         </a>
       ))}

@@ -9,7 +9,6 @@ import 'package:komplekku/features/home/data/home_repository.dart';
 import 'package:komplekku/features/announcement/domain/announcement.dart';
 import 'package:komplekku/features/home/domain/home_snapshot.dart';
 import 'package:komplekku/features/home/presentation/prayer_summary_card.dart';
-import 'package:komplekku/features/map/presentation/komplek_map_screen.dart';
 
 /// The five shortcuts on the home grid. Everything else lives in the Profil
 /// tab's grouped menu — the bottom bar only has room for five destinations, so
@@ -41,7 +40,7 @@ const _quickActions = [
   ),
   (
     icon: Icons.event_outlined,
-    label: 'Agenda',
+    label: 'Jadwal RT',
     route: '/agenda',
     permission: null,
   ),
@@ -68,8 +67,8 @@ class HomeScreen extends ConsumerWidget {
               title: failure.isUnauthorized
                   ? 'Sesi sudah berakhir'
                   : failure.isForbidden
-                      ? 'Akses beranda belum tersedia'
-                      : 'Beranda belum bisa dimuat',
+                  ? 'Akses beranda belum tersedia'
+                  : 'Beranda belum bisa dimuat',
               message: failure.message,
               icon: mustSignIn ? Icons.lock_outline : Icons.cloud_off_outlined,
               actionLabel: mustSignIn ? 'Keluar' : 'Coba lagi',
@@ -105,24 +104,10 @@ class HomeScreen extends ConsumerWidget {
                   ...data.announcements.map(
                     (announcement) => _AnnouncementTile(
                       announcement: announcement,
-                      onTap: () => context.push('/pengumuman/${announcement.id}'),
+                      onTap: () =>
+                          context.push('/pengumuman/${announcement.id}'),
                     ),
                   ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(
-                    Icons.map_outlined,
-                    color: KomplekkuColors.primary,
-                  ),
-                  label: const Text('Peta Digital & Pos Security Utama'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: KomplekkuColors.border),
-                  ),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const KomplekMapScreen()),
-                  ),
-                ),
               ],
             ),
           ),
@@ -148,18 +133,17 @@ class _WelcomeHeader extends StatelessWidget {
             children: [
               Text(
                 'Selamat datang, ${data.firstName}',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 '${data.communityName} · ${data.houseLabel}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: KomplekkuColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: KomplekkuColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -168,6 +152,15 @@ class _WelcomeHeader extends StatelessWidget {
           tooltip: 'Notifikasi',
           onPressed: () => context.push('/notifikasi'),
           icon: const Icon(Icons.notifications_none_outlined),
+          style: IconButton.styleFrom(
+            backgroundColor: KomplekkuColors.surfaceSoft,
+          ),
+        ),
+        const SizedBox(width: 6),
+        IconButton(
+          tooltip: 'Cari pengumuman',
+          onPressed: () => context.push('/pengumuman'),
+          icon: const Icon(Icons.search),
           style: IconButton.styleFrom(
             backgroundColor: KomplekkuColors.surfaceSoft,
           ),
@@ -214,14 +207,18 @@ class _QuickActionGrid extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      action.label,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
+                    SizedBox(
+                      width: 66,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          action.label,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -247,10 +244,9 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         TextButton(
           onPressed: onSeeAll,
@@ -309,9 +305,7 @@ class _AnnouncementTile extends StatelessWidget {
                               announcement.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
+                              style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -323,11 +317,9 @@ class _AnnouncementTile extends StatelessWidget {
                       Text(
                         _formatPublishedAt(announcement.publishedAt),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: KomplekkuColors.textSecondary,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
+                          color: KomplekkuColors.textSecondary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -359,10 +351,10 @@ const _homeBadgeIcons = {
 };
 
 Color _homeBadgeColor(AnnouncementBadge badge) => switch (badge) {
-      AnnouncementBadge.important => KomplekkuColors.danger,
-      AnnouncementBadge.event => KomplekkuColors.primary,
-      AnnouncementBadge.info => KomplekkuColors.textSecondary,
-    };
+  AnnouncementBadge.important => KomplekkuColors.danger,
+  AnnouncementBadge.event => KomplekkuColors.primary,
+  AnnouncementBadge.info => KomplekkuColors.textSecondary,
+};
 
 class _HomeBadge extends StatelessWidget {
   const _HomeBadge({required this.badge});
@@ -533,13 +525,13 @@ class _HomeSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget block(double height) => Container(
-          height: height,
-          margin: const EdgeInsets.only(bottom: 14),
-          decoration: BoxDecoration(
-            color: KomplekkuColors.surfaceSoft,
-            borderRadius: BorderRadius.circular(12),
-          ),
-        );
+      height: height,
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: KomplekkuColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
 
     return Semantics(
       label: 'Memuat beranda',
@@ -547,13 +539,7 @@ class _HomeSkeleton extends StatelessWidget {
       child: ExcludeSemantics(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          children: [
-            block(34),
-            block(150),
-            block(76),
-            block(96),
-            block(96),
-          ],
+          children: [block(34), block(150), block(76), block(96), block(96)],
         ),
       ),
     );

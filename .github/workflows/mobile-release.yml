@@ -1,0 +1,144 @@
+# Builds the signed Android APK and publishes it as a GitHub Release asset.
+#
+# Why not Vercel: its build container has Node only — an APK needs the Flutter
+# and Android SDKs. And the APK is ~62 MB, so committing it to `public/` would
+# add that much to git history on every release, permanently.
+#
+# The release asset URL is stable, so MOBILE_APK_URL on the API is set once:
+#   https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk
+name: Build & publish mobile APK
+
+on:
+  push:
+    branches: [main]
+    # Only rebuild when something that ends up inside the APK changed.
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-release.yml"
+  workflow_dispatch:
+
+# Needed to create the release and upload the asset.
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from pubspec
+        id: version
+        run: |
+          # `version: 0.2.0+2` → name 0.2.0, code 2. The build number IS the
+          # Android versionCode the in-app updater compares.
+          RAW=$(grep -m1 '^version:' apps/mobile/pubspec.yaml | awk '{print $2}')
+          echo "name=${RAW%%+*}" >> "$GITHUB_OUTPUT"
+          echo "code=${RAW##*+}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${RAW%%+*}+${RAW##*+}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # Without these secrets Gradle silently falls back to debug signing,
+          # and the resulting APK could never update an installed release
+          # build. Fail loudly instead of shipping an uninstallable update.
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. See docs/mobile-release.md."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > apps/mobile/android/komplekku-release.jks
+          cat > apps/mobile/android/key.properties <<EOF
+          storeFile=komplekku-release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build release APK
+        working-directory: apps/mobile
+        run: flutter build apk --release
+
+      - name: Verify it is signed with the release key
+        working-directory: apps/mobile
+        run: |
+          # A debug-signed APK here would be worse than no APK: installs would
+          # fail for every existing user with INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
+            | tee /tmp/certs.txt
+          grep -q "CN=Komplekku" /tmp/certs.txt || {
+            echo "::error::APK is not signed with the Komplekku release key."
+            exit 1
+          }
+
+      - name: Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          NOTES="Build otomatis dari ${GITHUB_SHA::7}.
+
+          versionName: $VERSION_NAME
+          versionCode: $VERSION_CODE
+
+          Set \`MOBILE_LATEST_VERSION_CODE=$VERSION_CODE\` dan
+          \`MOBILE_LATEST_VERSION_NAME=$VERSION_NAME\` di env API agar warga
+          ditawari pembaruan ini."
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Same version pushed again: replace the asset in place. Warga who
+            # already have this versionCode will NOT be re-prompted — bump the
+            # `+N` in pubspec.yaml to actually ship an update.
+            gh release upload "$TAG" \
+              apps/mobile/build/app/outputs/flutter-apk/app-release.apk --clobber
+          else
+            gh release create "$TAG" \
+              apps/mobile/build/app/outputs/flutter-apk/app-release.apk \
+              --title "Komplekku $VERSION_NAME ($VERSION_CODE)" \
+              --notes "$NOTES"
+          fi
+
+      - name: Summary
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          {
+            echo "### APK terbit"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| versionName | \`$VERSION_NAME\` |"
+            echo "| versionCode | \`$VERSION_CODE\` |"
+            echo "| URL unduhan | https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk |"
+            echo ""
+            echo "Set di env API lalu deploy ulang:"
+            echo ""
+            echo '```'
+            echo "MOBILE_LATEST_VERSION_CODE=$VERSION_CODE"
+            echo "MOBILE_LATEST_VERSION_NAME=$VERSION_NAME"
+            echo "MOBILE_APK_URL=https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

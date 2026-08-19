@@ -1,39 +1,40 @@
 import 'package:flutter/material.dart';
 
 abstract final class KomplekkuColors {
-  static const primary = Color(0xFF4B2DA1);
-  static const primaryDark = Color(0xFF32178F);
+  static const primary = Color(0xFF008A52);
+  static const primaryDark = Color(0xFF006B3F);
   static const background = Color(0xFFFFFFFF);
   static const brandCanvas = Color(0xFFFFFFFF);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceSoft = Color(0xFFF6F6F8);
-  static const surfaceMuted = Color(0xFFEEE9FF);
-  static const textPrimary = Color(0xFF25232B);
-  static const textSecondary = Color(0xFF777480);
-  static const border = Color(0xFFDBDADE);
-  static const borderStrong = Color(0xFFBEBCC4);
-  static const accent = Color(0xFF32BCE3);
-  static const danger = Color(0xFFE5484D);
-  static const success = Color(0xFF20A464);
+  static const surfaceSoft = Color(0xFFF7FAF8);
+  static const surfaceMuted = Color(0xFFEEF8F2);
+  static const textPrimary = Color(0xFF101119);
+  static const textSecondary = Color(0xFF666A73);
+  static const border = Color(0xFFE0E4E2);
+  static const borderStrong = Color(0xFFC9D2CD);
+  static const accent = Color(0xFF0AA6A6);
+  static const danger = Color(0xFFE51D3F);
+  static const success = Color(0xFF008A52);
 }
 
 ThemeData buildKomplekkuTheme() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: KomplekkuColors.primary,
-    brightness: Brightness.light,
-    surface: KomplekkuColors.surface,
-    error: KomplekkuColors.danger,
-  ).copyWith(
-    primary: KomplekkuColors.primary,
-    onPrimary: KomplekkuColors.surface,
-    primaryContainer: KomplekkuColors.surfaceSoft,
-    onPrimaryContainer: KomplekkuColors.primaryDark,
-    secondary: KomplekkuColors.accent,
-    onSecondary: KomplekkuColors.textPrimary,
-    onSurface: KomplekkuColors.textPrimary,
-    outline: KomplekkuColors.border,
-    outlineVariant: KomplekkuColors.borderStrong,
-  );
+  final scheme =
+      ColorScheme.fromSeed(
+        seedColor: KomplekkuColors.primary,
+        brightness: Brightness.light,
+        surface: KomplekkuColors.surface,
+        error: KomplekkuColors.danger,
+      ).copyWith(
+        primary: KomplekkuColors.primary,
+        onPrimary: KomplekkuColors.surface,
+        primaryContainer: KomplekkuColors.surfaceSoft,
+        onPrimaryContainer: KomplekkuColors.primaryDark,
+        secondary: KomplekkuColors.accent,
+        onSecondary: KomplekkuColors.textPrimary,
+        onSurface: KomplekkuColors.textPrimary,
+        outline: KomplekkuColors.border,
+        outlineVariant: KomplekkuColors.borderStrong,
+      );
 
   return ThemeData(
     useMaterial3: true,
@@ -104,7 +105,7 @@ ThemeData buildKomplekkuTheme() {
         backgroundColor: KomplekkuColors.primary,
         foregroundColor: KomplekkuColors.surface,
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -113,7 +114,7 @@ ThemeData buildKomplekkuTheme() {
         foregroundColor: KomplekkuColors.primary,
         side: const BorderSide(color: KomplekkuColors.borderStrong),
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -129,7 +130,7 @@ ThemeData buildKomplekkuTheme() {
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(10)),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
         side: BorderSide(color: KomplekkuColors.border),
       ),
     ),
@@ -142,7 +143,7 @@ ThemeData buildKomplekkuTheme() {
       behavior: SnackBarBehavior.floating,
       backgroundColor: KomplekkuColors.primaryDark,
       contentTextStyle: const TextStyle(color: KomplekkuColors.surface),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
   );
 }

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/core/widgets/prototype_header.dart';
 import 'package:komplekku/features/prayer/data/prayer_scheduler_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
 
@@ -160,10 +161,9 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
               const SizedBox(height: 20),
               Text(
                 'Jadwal Shalat Hari Ini',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 10),
               _TodayList(
@@ -176,10 +176,9 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
               const SizedBox(height: 20),
               Text(
                 'Pratinjau Minggu Ini',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 10),
               _WeekStrip(today: _now),
@@ -199,25 +198,9 @@ class _ScreenHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Jadwal Shalat',
-          style: Theme.of(context)
-              .textTheme
-              .headlineMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Waktu Indonesia Barat · Lokasi komplek',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: KomplekkuColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-      ],
+    return const PrototypeHeader(
+      title: 'Jadwal Shalat',
+      subtitle: 'RT 05 / RW 03 • Billabong',
     );
   }
 }
@@ -231,10 +214,10 @@ class _ViewSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(12),
+        color: KomplekkuColors.surface,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: KomplekkuColors.border),
       ),
       child: Row(
@@ -252,7 +235,7 @@ class _ViewSwitcher extends StatelessWidget {
                     color: view == entry.$1
                         ? KomplekkuColors.primary
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     entry.$2,
@@ -287,11 +270,13 @@ class _NextPrayerHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: KomplekkuColors.surfaceMuted,
+        color: const Color(0xFFF7FBF2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: KomplekkuColors.primary.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: KomplekkuColors.primary.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -301,7 +286,7 @@ class _NextPrayerHero extends StatelessWidget {
             height: 64,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: KomplekkuColors.primary,
+              color: Color(0xFF8BC7A3),
             ),
             child: Icon(_prayerIcons[prayer], color: Colors.white, size: 30),
           ),
@@ -332,18 +317,17 @@ class _NextPrayerHero extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   prayerLabels[prayer]!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 Text(
                   formatTime24(at),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: KomplekkuColors.primary,
-                        fontWeight: FontWeight.w800,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                    color: KomplekkuColors.primary,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -357,8 +341,8 @@ class _NextPrayerHero extends StatelessWidget {
                     Text(
                       '${_formatCountdown(secondsRemaining)} menuju waktu',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
@@ -404,8 +388,9 @@ class _TodayList extends StatelessWidget {
               isActive: prayer == activePrayer,
               // Syuruq is a sun position, not a prayer — the scheduler never
               // sounds an adzan for it, so it gets no bell.
-              isSchedulable:
-                  PrayerSchedulerService.schedulablePrayers.contains(prayer),
+              isSchedulable: PrayerSchedulerService.schedulablePrayers.contains(
+                prayer,
+              ),
               isMuted: muted.contains(prayer),
               canToggle: canToggle,
               onToggle: () => onToggle(prayer),
@@ -476,12 +461,12 @@ class _PrayerRow extends StatelessWidget {
           Text(
             formatTime24(at),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: isActive
-                      ? KomplekkuColors.primary
-                      : KomplekkuColors.textPrimary,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+              fontWeight: FontWeight.w800,
+              color: isActive
+                  ? KomplekkuColors.primary
+                  : KomplekkuColors.textPrimary,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
           if (isSchedulable) ...[
             const SizedBox(width: 6),
@@ -592,10 +577,9 @@ class _MonthTable extends StatelessWidget {
       children: [
         Text(
           '${_monthNames[month.month - 1]} ${month.year}',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
         Container(
@@ -625,8 +609,8 @@ class _MonthTable extends StatelessWidget {
                         ),
                       ),
                     ),
-                    for (final prayer in PrayerSchedulerService
-                        .schedulablePrayers)
+                    for (final prayer
+                        in PrayerSchedulerService.schedulablePrayers)
                       Expanded(
                         child: Text(
                           prayerLabels[prayer]!.substring(0, 3),
@@ -643,7 +627,8 @@ class _MonthTable extends StatelessWidget {
               for (var dayNumber = 1; dayNumber <= dayCount; dayNumber++)
                 _MonthRow(
                   date: DateTime(month.year, month.month, dayNumber),
-                  isToday: dayNumber == today.day &&
+                  isToday:
+                      dayNumber == today.day &&
                       month.month == today.month &&
                       month.year == today.year,
                 ),
@@ -738,17 +723,17 @@ class _QuoteCard extends StatelessWidget {
                 Text(
                   _dailyQuote.text,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontStyle: FontStyle.italic,
-                        height: 1.5,
-                      ),
+                    fontStyle: FontStyle.italic,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   _dailyQuote.source,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KomplekkuColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: KomplekkuColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),

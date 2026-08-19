@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 export default function ShalatPage() {
   return (
     <AppShell contextLabel="Shalat">
-      <div className="page-content page-content--narrow">
+      <div className="page-content page-content--narrow prototype-shalat-page">
         <header className="page-heading page-heading--index">
           <h1>Jadwal Shalat</h1>
-          <p>Waktu shalat hari ini dan sebulan penuh, lengkap dengan hitung mundur adzan.</p>
+          <p>RT 05 / RW 03 · Billabong</p>
         </header>
         {/* PrayerCard already owns the live countdown, adzan state, and audio
             controls — this page adds the day/month schedule around it rather

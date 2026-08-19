@@ -169,7 +169,7 @@ export function ForumBoard() {
   const posts = postsQuery.data.data.items;
 
   return (
-    <div className="forum-board">
+    <div className="forum-board prototype-forum">
       {editing && <EditForumPostModal post={editing} onClose={() => setEditing(null)} />}
       <div className="forum-board__header">
         {controls}
@@ -197,7 +197,7 @@ export function ForumBoard() {
               canEdit={post.authorUserId === currentUserId && canPost}
               canDelete={post.authorUserId === currentUserId || canModerate}
               onEdit={() => setEditing(post)}
-              onDelete={() => deleteMutation.mutate(post.id)}
+              onDelete={() => deleteMutation.mutateAsync(post.id)}
               isBusy={deleteMutation.isPending}
             />
           ))}
@@ -223,7 +223,7 @@ function ForumPostCard({
   canEdit: boolean;
   canDelete: boolean;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete: () => Promise<unknown> | void;
   isBusy: boolean;
 }) {
   return (

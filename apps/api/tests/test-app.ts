@@ -12,10 +12,12 @@ export const testEnv = {
   LOG_LEVEL: "silent",
 } as const;
 
-export async function createTestApp() {
+/// `envOverrides` lets a test exercise config-driven behaviour (the in-app
+/// updater's release settings, for instance) without a second helper.
+export async function createTestApp(envOverrides: Record<string, string | boolean | number> = {}) {
   const repository = new MemoryRepository();
   const built = await buildApp({
-    env: testEnv,
+    env: { ...testEnv, ...envOverrides },
     repository,
     logger: false,
   });

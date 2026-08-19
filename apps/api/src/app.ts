@@ -14,6 +14,7 @@ import { PushNotificationProvider } from "./lib/push-notification-provider";
 import { PrismaRepository } from "./repositories/prisma-repository";
 import { registerAdminRoleRoutes } from "./routes/admin-roles";
 import { registerAgendaRoutes } from "./routes/agenda";
+import { registerAppReleaseRoutes } from "./routes/app-release";
 import { registerAnnouncementRoutes } from "./routes/announcements";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerCameraRoutes } from "./routes/cameras";
@@ -100,6 +101,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   registerErrorHandler(app);
   const authenticate = createAuthenticate(repository, config);
   await registerHealthRoutes(app, repository);
+  await registerAppReleaseRoutes(app, config);
   await registerAuthRoutes(app, repository, config, authenticate);
   await registerResidentRoutes(app, repository, authenticate);
   await registerHouseholdRoutes(app, repository, authenticate);

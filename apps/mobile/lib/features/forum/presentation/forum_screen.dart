@@ -8,6 +8,7 @@ import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
 import 'package:komplekku/core/upload/cloudinary_upload.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
+import 'package:komplekku/core/widgets/prototype_header.dart';
 import 'package:komplekku/features/auth/presentation/session_controller.dart';
 import 'package:komplekku/features/forum/data/forum_repository.dart';
 import 'package:komplekku/features/forum/domain/forum_channel.dart';
@@ -43,16 +44,21 @@ class _ForumTabsState extends State<ForumScreen> {
     return Scaffold(
       backgroundColor: KomplekkuColors.background,
       appBar: AppBar(
-        title: const Text('Forum Warga'),
+        toolbarHeight: 76,
+        titleSpacing: 20,
+        title: const PrototypeHeader(
+          title: 'Forum Warga',
+          showNotifications: false,
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: KomplekkuColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(12),
+                color: KomplekkuColors.surface,
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: KomplekkuColors.border),
               ),
               child: Row(
@@ -72,7 +78,7 @@ class _ForumTabsState extends State<ForumScreen> {
                             color: _showBoard == entry.$1
                                 ? KomplekkuColors.primary
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(9),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -235,11 +241,45 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
   }
 
   Future<void> _delete(String channelId, String messageId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus pesan?'),
+        content: const Text('Pesan ini tidak akan terlihat lagi di forum.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: KomplekkuColors.danger,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await ref.read(forumRepositoryProvider).deleteMessage(messageId);
       ref.invalidate(forumMessageListProvider(channelId));
-    } catch (_) {
-      // Best-effort: the list refetch on next poll will reconcile either way.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pesan berhasil dihapus.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        final message = error is ApiException
+            ? error.message
+            : 'Pesan belum dapat dihapus. Coba lagi.';
+        setState(() => _sendError = message);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
     }
   }
 
@@ -248,15 +288,15 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
     required bool accept,
   }) async {
     try {
-      await ref.read(forumRepositoryProvider).respondToInvitation(
-            channelId: channel.id,
-            accept: accept,
-          );
+      await ref
+          .read(forumRepositoryProvider)
+          .respondToInvitation(channelId: channel.id, accept: accept);
       ref.invalidate(forumChannelListProvider);
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -276,10 +316,9 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
     final permissions = ref.watch(currentPermissionsProvider);
     final canPost = permissions.contains('forum.post');
     final canModerate = permissions.contains('forum.manage');
-    final myUserId = ref.watch(sessionControllerProvider).maybeWhen(
-          data: (session) => session?.userId,
-          orElse: () => null,
-        );
+    final myUserId = ref
+        .watch(sessionControllerProvider)
+        .maybeWhen(data: (session) => session?.userId, orElse: () => null);
 
     return Scaffold(
       backgroundColor: KomplekkuColors.background,
@@ -317,10 +356,12 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
             // A pending invitation is not a room you can read yet — it is a
             // decision to make, so those channels sit in their own banner
             // above the thread instead of in the tab strip.
-            final invitations =
-                items.where((channel) => channel.isPendingInvitation).toList();
-            final openChannels =
-                items.where((channel) => !channel.isPendingInvitation).toList();
+            final invitations = items
+                .where((channel) => channel.isPendingInvitation)
+                .toList();
+            final openChannels = items
+                .where((channel) => !channel.isPendingInvitation)
+                .toList();
 
             if (openChannels.isEmpty) {
               return ListView(
@@ -345,12 +386,15 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
             // Also re-anchors when the active forum disappears (invitation
             // declined elsewhere, forum left) instead of polling a dead id.
             if (_activeChannelId == null ||
-                !openChannels.any((channel) => channel.id == _activeChannelId)) {
+                !openChannels.any(
+                  (channel) => channel.id == _activeChannelId,
+                )) {
               _activeChannelId = openChannels.first.id;
             }
             final activeChannelId = _activeChannelId!;
-            final activeChannel = openChannels
-                .firstWhere((channel) => channel.id == activeChannelId);
+            final activeChannel = openChannels.firstWhere(
+              (channel) => channel.id == activeChannelId,
+            );
             _ensurePolling(activeChannelId);
 
             final isChannelModerator = activeChannel.isPrivate
@@ -377,7 +421,8 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
                     myUserId: myUserId,
                     canPost: canPost,
                     isChannelModerator: isChannelModerator,
-                    onDelete: (messageId) => _delete(activeChannelId, messageId),
+                    onDelete: (messageId) =>
+                        _delete(activeChannelId, messageId),
                     onReply: (message) => setState(() {
                       _editing = null;
                       _replyTo = message;
@@ -402,7 +447,8 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
                     editing: _editing,
                     onSend: () => _send(activeChannelId),
                     onPickImage: _pickImage,
-                    onRemoveImage: (url) => setState(() => _imageUrls.remove(url)),
+                    onRemoveImage: (url) =>
+                        setState(() => _imageUrls.remove(url)),
                     onCancelContext: _resetComposer,
                   ),
               ],
@@ -442,7 +488,9 @@ class _ChannelTabs extends StatelessWidget {
                 ? Icon(
                     Icons.lock_outline,
                     size: 14,
-                    color: isActive ? Colors.white : KomplekkuColors.textSecondary,
+                    color: isActive
+                        ? Colors.white
+                        : KomplekkuColors.textSecondary,
                   )
                 : null,
             label: Text(channel.label),
@@ -461,10 +509,7 @@ class _ChannelTabs extends StatelessWidget {
 }
 
 class _InvitationBanner extends StatelessWidget {
-  const _InvitationBanner({
-    required this.invitations,
-    required this.onRespond,
-  });
+  const _InvitationBanner({required this.invitations, required this.onRespond});
 
   final List<ForumChannel> invitations;
   final void Function(ForumChannel channel, {required bool accept}) onRespond;
@@ -488,10 +533,10 @@ class _InvitationBanner extends StatelessWidget {
                   Text(
                     'Undangan forum',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: KomplekkuColors.textSecondary,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: KomplekkuColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -540,9 +585,7 @@ class _PrivateChannelHeader extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: KomplekkuColors.border),
-        ),
+        border: Border(bottom: BorderSide(color: KomplekkuColors.border)),
       ),
       child: Row(
         children: [
@@ -674,8 +717,9 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = isOwn ? Colors.white : KomplekkuColors.textPrimary;
-    final mutedForeground =
-        isOwn ? Colors.white70 : KomplekkuColors.textSecondary;
+    final mutedForeground = isOwn
+        ? Colors.white70
+        : KomplekkuColors.textSecondary;
 
     return Align(
       alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,

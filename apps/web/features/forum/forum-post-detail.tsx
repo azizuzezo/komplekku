@@ -130,7 +130,7 @@ export function ForumPostDetail({ postId }: { postId: string }) {
   const composerError = replyMutation.error ?? editMutation.error;
 
   return (
-    <div className="forum-thread">
+    <div className="forum-thread prototype-discussion">
       <Link className="text-link" href="/forum">
         <ArrowLeft size={16} aria-hidden="true" />
         Kembali ke forum

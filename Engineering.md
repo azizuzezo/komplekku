@@ -30,7 +30,11 @@ This file is the durable engineering memory for Komplekku. Read it at the start 
 
 ## Current project state
 
-Last updated: 2026-08-12 10:35:00 WIB (UTC+07:00).
+Last updated: 2026-08-19 02:44:02 WIB (UTC+07:00).
+
+- The five owner-supplied green mobile prototypes dated 2026-08-19 are the current visual source of truth for Web and Flutter. Both clients use the same five primary destinations (Beranda, Shalat, Pengumuman, Forum, Profil), Plus Jakarta Sans, white surfaces, `#008A52` green, `#006B3F` deep green, and `#EEF8F2` wash; this supersedes the older purple/cyan and `#28594A` presentation notes below.
+- Flutter adzan/iqomah is now OS-scheduled for seven days and has been verified on `emulator-5554`: 70 distinct `ScheduledNotificationReceiver` alarms (10 per day) were present with no `invalid_icon` or `invalid_sound` errors. Android notification resources must remain in `res/drawable`/`res/raw`, with the raw audio protected from release resource shrinking.
+- Delete/archive actions for agenda, announcements, forum posts/replies/messages now have confirmation, pending feedback, cache/provider refresh, and visible success/failure handling on both clients. Web mutations use `mutateAsync` so request errors reach the shared confirmation dialog; Flutter no longer swallows forum-message delete failures.
 
 - Status: **Phases 0 through 6 are now complete** — web, API, and Flutter mobile applications are fully built and verified end-to-end. Phase 6 quality, accessibility, security, permission, performance, offline, responsive, and documentation audits have passed 100% locally. See ENG-020 below for the full record of this audit session.
 - The owner's standing "APK last" preference was explicitly and knowingly overridden this session by a direct instruction ("continue to phase 5") once all web/API phases were confirmed complete — it should still govern future sessions by default unless the owner again asks to proceed into mobile work.
@@ -81,7 +85,7 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
 - Local-first and no deployment, publishing, Git push, cloud provisioning, production DNS/database configuration, Docker image push, or external secret upload without explicit owner authorization.
 - Functional first: no dead controls, fake filters/search/pagination, hardcoded statistics, decorative charts presented as data, or fake production data.
 - Natural Bahasa Indonesia copy; residential, civic, safe, warm, and practical visual character rather than generic AI/SaaS styling.
-- Primary design anchors: Komplek Green `#28594A`, warm background `#F7F5EF`, Plus Jakarta Sans, Lucide icons on web, Material icons on Flutter, restrained radii and purposeful motion.
+- Primary design anchors: prototype green `#008A52`, deep green `#006B3F`, green wash `#EEF8F2`, white background/surfaces, Plus Jakarta Sans, Lucide icons on web, Material icons on Flutter, 16 px cards, and purposeful motion.
 - Every feature handles loading, success, empty, error, offline, unauthorized, and forbidden states.
 - UUIDs and tenant isolation, private-by-default object storage with signed access, validated randomized attachment keys, least-data privacy, granular RBAC, audit logs, and server-side secrets.
 - Accessibility, responsive behavior from approximately 360 px upward, reduced-motion support, real APIs and databases, critical tests, and updated documentation are part of the definition of done.
@@ -1346,4 +1350,74 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
   - `flutter analyze`: "No issues found!" after each of the three fixes in this entry.
   - `flutter build apk --release` + `flutter install -d emulator-5554` + `adb screencap`: used as the actual verification method for the icon and nav-bubble fixes (screenshots taken and inspected, not assumed).
   - `flutter test`: 94/94 passed after this entry's changes.
+
+---
+
+### 2026-08-19 01:50:43 WIB — Flutter Adzan and Prototype-Fidelity Investigation
+
+- Status: Investigation completed; bounded design awaiting owner approval before implementation.
+- Objective: Diagnose the owner's report that Flutter still exposes manual “Putar Adzan” behavior instead of sounding automatically, and assess the current Flutter UI against five supplied green civic-style prototype screenshots.
+- Contributors: single agent (Codex `/root`).
+- Work performed:
+  - Read the repository workflow, canonical PRD, current engineering memory, relevant debugging/TDD/design skills, recent commits, and the current Flutter prayer, shell, home, announcement, forum, and theme implementations.
+  - Preserved unrelated uncommitted owner work for the in-app APK updater, release signing, and API release endpoint; no production source was edited during this investigation.
+  - Booted the local `Keenan` Android emulator and inspected the previously installed `0.1.0+1` APK. It had only the legacy adzan/iqomah notification channels using `USAGE_NOTIFICATION`, exact-alarm package permission reported as not granted, and zero Komplekku alarms in `dumpsys alarm`.
+  - Installed the already-existing local `0.2.0+2` release APK with `adb install -r` (preserving emulator app data), launched it, and confirmed the new `_v2` adzan/iqomah channels are created with `USAGE_ALARM`. The Shalat UI reported Subuh adzan enabled, but `dumpsys alarm` still showed zero Komplekku/ScheduledNotificationReceiver alarms after restart and after an explicit Subuh off/on toggle.
+  - Confirmed the immediate failure boundary: `PrayerSchedulerService._scheduleAt()` catches every scheduling exception and returns `false`, so all schedule attempts can fail silently while the UI continues to claim adzan is enabled. The precise plugin exception is not observable without first replacing the blanket catch with testable diagnostics.
+  - Confirmed the manual `PrayerCard` still contains “Putar Adzan”/Iqomah controls but is currently unreferenced by the redesigned navigation; the installed older APK can therefore still expose obsolete behavior while the current Shalat screen uses per-prayer bell toggles.
+  - Compared the latest source/render with the supplied prototypes. The structural direction is partially present, but the live theme remains purple (`#4B2DA1`/`#32178F`/`#EEE9FF`) and visible layout differs materially: generic app bars, oversized controls/cards, wrapped bottom-nav label, missing prototype header actions, and incomplete home/forum/detail geometry.
+- Files touched: `Engineering.md` only. Diagnostic screenshots were written under ignored `apps/mobile/build/`; the existing release APK and emulator installation were used without changing source.
+- Decisions and assumptions:
+  - Treat the user's newest prototype set as the latest visual instruction and therefore as superseding the prior purple palette once the owner approves the proposed design.
+  - Preserve real API-driven content and permissions; “same as prototype” means layout, hierarchy, typography, colors, and interaction fidelity, not hardcoding the prototype's sample names, dates, counts, or images.
+- Verification and results:
+  - On-device evidence: legacy APK had old notification channels and no alarms; release `0.2.0+2` created `USAGE_ALARM` channels but still registered zero prayer alarms despite enabled UI state and explicit rescheduling.
+  - Captured and inspected `apps/mobile/build/diagnostic-current.png`, `diagnostic-latest.png`, and `diagnostic-shalat.png`.
+  - A fresh debug build attempt was stopped after Gradle exceeded five minutes with no output; only the exact orphaned diagnostic build processes started by this task were terminated. The existing release APK was sufficient for the on-device comparison.
+- Follow-up: after owner approval, use TDD to expose the scheduler result/error path, fix the confirmed scheduling failure, remove obsolete manual playback UI, apply the green prototype design system to the five requested Flutter surfaces, and perform analyzer/tests/build plus on-device alarm and screenshot verification.
+
+---
+
+### 2026-08-19 01:55:18 WIB — Delete-Flow Investigation Added to Flutter Scope
+
+- Status: Investigation completed; combined design awaiting owner approval before implementation.
+- Objective: Add the owner's report that delete actions fail for agenda, announcements, forum content, and similar existing delete-capable flows to the pending Flutter repair/redesign scope.
+- Contributors: single agent (Codex `/root`).
+- Work performed:
+  - Traced the mobile confirmation widget, repository calls, provider invalidation, API routes, permission guards, and Prisma soft-delete/archive implementations for agenda, announcements, forum posts, forum replies, and realtime forum messages.
+  - Confirmed the production API currently exposes every named mutation route: anonymous requests to the agenda archive and announcement/forum delete endpoints return `401` rather than `404`; no production data was created, changed, or deleted.
+  - Confirmed the source API already has focused tests for agenda archive, announcement archive, forum post/reply moderation, and own-message deletion. The current mobile package has no equivalent mutation-flow tests.
+  - Found a concrete cross-flow UX defect in realtime forum chat: `_delete()` catches and discards every error, so authorization/network/server failures look exactly like an inert delete button. Other delete flows surface API errors but have no shared busy/success handling and inconsistent refresh/navigation behavior.
+- Files touched: `Engineering.md` only; no application source or production state changed.
+- Decisions and assumptions:
+  - Interpret “dsb” only as existing UI flows that already provide an explicit delete/archive action; do not broaden it to unrelated records or add new destructive capabilities without owner direction.
+  - Retain server-side soft deletion/archive and audit history for agenda and announcements, while presenting the action consistently as “Hapus” to the user.
+- Verification and results:
+  - Safe production route probe: `/health/live` returned `200`; anonymous agenda archive plus announcement, forum-post, forum-reply, and forum-message delete requests each returned `401`, confirming route presence without exercising a mutation.
+  - Static trace confirms mobile endpoint paths match the API paths and that list queries exclude archived/deleted rows.
+- Follow-up: after owner approval, add failing mobile tests for mutation state/error behavior, make delete confirmation and progress/result feedback consistent, stop swallowing forum delete errors, refresh or navigate only after confirmed success, and retain the existing permission/ownership rules.
+
+---
+
+### 2026-08-19 02:44:02 WIB — Green Prototype Parity, Automatic Adzan, and Reliable Delete Actions
+
+- Status: Completed locally; no deploy, push, or production mutation performed.
+- Objective: Match the five supplied green prototypes across Web and Flutter, remove manual adzan replay, restore automatic adzan sound, and repair delete/archive interactions for agenda, announcements, and forum content.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Work performed:
+  - Replaced the live purple/cyan presentation with the owner-approved white/green system (`#008A52`, `#006B3F`, `#EEF8F2`, Plus Jakarta Sans, 16 px cards) in canonical tokens, design notes, Web CSS, and Flutter theme. Reworked responsive Beranda, Shalat, Pengumuman, Forum, and Diskusi surfaces plus the shared five-item bottom navigation; real API content and permission gates remain dynamic rather than copying prototype sample data.
+  - Removed the obsolete unreferenced Flutter manual `PrayerCard` and its `audioplayers` dependency. Root-caused scheduler failure to Android resources referenced only by plugin strings: `@mipmap/ic_launcher` was rejected because the plugin resolves icons only from `drawable`, then release resource shrinking removed `raw/adzan` and `raw/iqomah`. Added a valid monochrome drawable, made it the default notification icon, retained raw audio via `res/raw/keep.xml`, and exposed/logged scheduler failures instead of silently reporting success.
+  - Made shared Web and Flutter delete controls await the server operation and expose pending/error state. Web agenda/announcement/forum mutations now use `mutateAsync`; Flutter shows success/failure feedback, refreshes providers only after a confirmed response, adds confirmation for realtime messages, and no longer discards delete errors.
+  - Cleaned five pre-existing Web lint findings encountered by the finish gate (unused photo-picker/report state and stale missing-rule suppression comments) without changing their behavior. Reverted an accidental repo-wide Dart formatting pass so unrelated mobile files remain byte-equivalent to their original state.
+- Files touched: canonical `tokens.css`/`design.md`; Web prayer/home/announcement/forum/detail pages, responsive CSS, shared entity actions and focused contract tests; Flutter theme/shell/header, home/shalat/announcement/forum/detail screens, scheduler/push notification resources and tests; `Engineering.md`. Existing updater/signing/API-release worktree changes were preserved.
+- Decisions and assumptions:
+  - “Same as prototype” means the supplied layout, visual hierarchy, palette, spacing, and interaction language at responsive mobile widths; names, addresses, counts, dates, permissions, and records continue to come from the signed-in account/API.
+  - Agenda and announcement “Hapus” remains the existing server-side archive/soft-delete operation, preserving auditability. No new destructive endpoint was introduced.
+  - Browser-control inspection remained unavailable because the in-app browser reported no installed backend. Web parity was verified through source contracts, lint/typecheck/tests, and a production Next.js build; Flutter was visually inspected from emulator screenshots.
+- Verification and results:
+  - Flutter: `flutter analyze` clean; full `flutter test` 106/106 passed; release APK built successfully and updated in place on `emulator-5554`. Final Android inspection found exactly 70 distinct prayer alarms (10 per day for 2026-08-19 through 2026-08-25), with zero `invalid_icon`, `invalid_sound`, scheduler, or fatal error log lines. Final artifact: `apps/mobile/build/app/outputs/flutter-apk/app-release.apk`.
+  - Web: ESLint clean, route type generation/TypeScript clean, 17/17 Vitest tests passed, and Next.js production build completed all 41 routes.
+  - API delete coverage: focused agenda, announcement, forum board, and realtime forum suites passed 29/29. API TypeScript passed. Full API lint still reports six unrelated existing findings in updater/repository/push/announcement-test files; none is in this task's mutation or UI changes.
+  - `git diff --check` passed, and production strings no longer contain “Putar Adzan” or the removed in-process audio source.
+- Follow-ups: rendered Web browser QA remains the only blocked visual check; repeat at 360/393/471 px once a browser backend is available. A physical Android device should still confirm OEM-specific exact-alarm and volume behavior, although emulator OS scheduling is now proven.
 

@@ -155,8 +155,17 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
       if (mounted) context.pop();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Diskusi belum dapat dihapus. Coba lagi.'),
+          ),
+        );
       }
     }
   }
@@ -180,10 +189,24 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
     try {
       await ref.read(forumPostRepositoryProvider).deleteReply(reply.id);
       _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Balasan berhasil dihapus.')),
+        );
+      }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Balasan belum dapat dihapus. Coba lagi.'),
+          ),
+        );
       }
     }
   }
@@ -194,10 +217,9 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
     final permissions = ref.watch(currentPermissionsProvider);
     final canPost = hasPermission(permissions, 'forum.post');
     final canModerate = hasPermission(permissions, 'forum.manage');
-    final myUserId = ref.watch(sessionControllerProvider).maybeWhen(
-          data: (session) => session?.userId,
-          orElse: () => null,
-        );
+    final myUserId = ref
+        .watch(sessionControllerProvider)
+        .maybeWhen(data: (session) => session?.userId, orElse: () => null);
 
     return Scaffold(
       backgroundColor: KomplekkuColors.background,
@@ -245,8 +267,9 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
         child: detail.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) {
-            final failure =
-                error is ApiException ? error : ApiException.malformedResponse();
+            final failure = error is ApiException
+                ? error
+                : ApiException.malformedResponse();
             if (failure.isUnauthorized) {
               return StatePanel(
                 icon: Icons.lock_outline,
@@ -294,9 +317,7 @@ class _ForumPostDetailScreenState extends ConsumerState<ForumPostDetailScreen> {
                       const SizedBox(height: 20),
                       Text(
                         'Balasan (${value.replies.length})',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 10),
@@ -404,10 +425,10 @@ class _PostCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             post.title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800, height: 1.25),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              height: 1.25,
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -435,10 +456,9 @@ class _PostCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             detail.body,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(height: 1.6),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.6),
           ),
           if (post.imageUrls.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -474,9 +494,9 @@ class _PostCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 '${post.replyCount} balasan',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 20),
               ForumLikeButton(
@@ -585,10 +605,9 @@ class _ReplyTile extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       reply.body,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(height: 1.5),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(height: 1.5),
                     ),
                     const SizedBox(height: 6),
                     Row(

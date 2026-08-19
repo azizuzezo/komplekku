@@ -3,7 +3,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:komplekku/core/api/api_client.dart';
 
-final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+final pushNotificationServiceProvider = Provider<PushNotificationService>((
+  ref,
+) {
   return PushNotificationService(ref.watch(apiClientProvider));
 });
 
@@ -24,8 +26,7 @@ class PushNotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('ic_stat_komplekku');
     const iosSettings = DarwinInitializationSettings();
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -48,20 +49,21 @@ class PushNotificationService {
 
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
 
     _initialized = true;
   }
 
-  Future<void> registerDeviceToken(String token, {String platform = 'ANDROID'}) async {
+  Future<void> registerDeviceToken(
+    String token, {
+    String platform = 'ANDROID',
+  }) async {
     try {
       await _client.post<void>(
         '/notifications/device-token',
-        data: {
-          'token': token,
-          'platform': platform,
-        },
+        data: {'token': token, 'platform': platform},
       );
     } catch (_) {
       // Ignore background token sync errors gracefully
@@ -82,7 +84,7 @@ class PushNotificationService {
       channelDescription: _channelDescription,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_stat_komplekku',
     );
 
     const details = NotificationDetails(
@@ -90,12 +92,6 @@ class PushNotificationService {
       iOS: DarwinNotificationDetails(),
     );
 
-    await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+    await _notificationsPlugin.show(id, title, body, details, payload: payload);
   }
 }

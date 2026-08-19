@@ -11,10 +11,10 @@ export const metadata: Metadata = {
 export default function ForumPage() {
   return (
     <AppShell contextLabel="Forum Warga">
-      <div className="page-content">
+      <div className="page-content prototype-forum-page">
         <header className="page-heading page-heading--index">
           <h1>Forum Warga</h1>
-          <p>Diskusi bertopik dengan warga, atau obrolan realtime satu RT dan komunitas.</p>
+          <p>Diskusi dan informasi antarwarga di lingkunganmu.</p>
         </header>
         <ForumTabs />
       </div>

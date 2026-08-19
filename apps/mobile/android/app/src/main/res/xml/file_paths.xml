@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scopes the FileProvider to the app-private external directory the updater
+     downloads into (MainActivity.downloadDirectory). Nothing else is exposed. -->
+<paths>
+    <external-files-path name="app_updates" path="." />
+</paths>

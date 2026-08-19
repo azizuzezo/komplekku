@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,7 +41,9 @@ class PrayerSchedulerService {
     'komplekku_iqomah_channel',
   ];
 
-  static const _notificationIcon = '@mipmap/ic_launcher';
+  /// flutter_local_notifications resolves small icons from `res/drawable`.
+  /// A mipmap reference makes initialization fail with `invalid_icon`.
+  static const notificationIconName = 'ic_stat_komplekku';
   static const _scheduledIdsKey = 'prayer_scheduler_scheduled_ids';
   static const _autoAdzanEnabledKey = 'prayer_scheduler_auto_enabled';
   // Stored as the *muted* set rather than the enabled one so that a prayer
@@ -70,6 +73,12 @@ class PrayerSchedulerService {
   bool _channelsReady = false;
   bool _exactAlarmPromptShown = false;
 
+  int _scheduledNotificationCount = 0;
+  String? _lastScheduleError;
+
+  int get scheduledNotificationCount => _scheduledNotificationCount;
+  String? get lastScheduleError => _lastScheduleError;
+
   /// The scheduled notification is posted by a broadcast receiver long after
   /// this Dart isolate is gone, so it reads the small icon from the value
   /// `initialize()` persists. Without this call that lookup returns null, the
@@ -83,7 +92,7 @@ class PrayerSchedulerService {
     if (_pluginReady) return;
     await _plugin.initialize(
       const InitializationSettings(
-        android: AndroidInitializationSettings(_notificationIcon),
+        android: AndroidInitializationSettings(notificationIconName),
         iOS: DarwinInitializationSettings(),
       ),
     );
@@ -187,7 +196,8 @@ class PrayerSchedulerService {
     if (stored == null) return const {};
     return stored
         .map(
-          (name) => _adzanPrayers.where((prayer) => prayer.name == name).firstOrNull,
+          (name) =>
+              _adzanPrayers.where((prayer) => prayer.name == name).firstOrNull,
         )
         .whereType<PrayerName>()
         .toSet();
@@ -233,6 +243,8 @@ class PrayerSchedulerService {
   /// while. No-ops (after clearing any stale schedule) when the user has muted
   /// auto-adzan.
   Future<void> rescheduleUpcomingPrayers({int days = _scheduleDays}) async {
+    _scheduledNotificationCount = 0;
+    _lastScheduleError = null;
     await _ensureInitialized();
     await _ensureTimezone();
     await _ensureChannels();
@@ -298,6 +310,7 @@ class PrayerSchedulerService {
       _scheduledIdsKey,
       scheduledIds.map((id) => id.toString()).toList(),
     );
+    _scheduledNotificationCount = scheduledIds.length;
   }
 
   Future<void> _cancelScheduled() async {
@@ -336,7 +349,7 @@ class PrayerSchedulerService {
       android: AndroidNotificationDetails(
         channelId,
         channelName,
-        icon: _notificationIcon,
+        icon: notificationIconName,
         importance: Importance.max,
         priority: Priority.max,
         playSound: true,
@@ -360,9 +373,12 @@ class PrayerSchedulerService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
       return true;
-    } catch (_) {
+    } catch (error, stackTrace) {
       // A rejected alarm (revoked permission, OEM quota) must not stop the
       // remaining prayers from being scheduled.
+      _lastScheduleError ??= error.toString();
+      debugPrint('Prayer schedule failed for $title at $time: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return false;
     }
   }
@@ -370,10 +386,17 @@ class PrayerSchedulerService {
   /// Deterministic per (day, prayer, adzan/iqomah) id so a reschedule call
   /// cancels exactly the notifications it previously created, and distinct
   /// from the id space used elsewhere (e.g. PushNotificationService's ids).
-  int _notificationId(DateTime day, PrayerName prayer, {required bool isIqomah}) {
+  int _notificationId(
+    DateTime day,
+    PrayerName prayer, {
+    required bool isIqomah,
+  }) {
     final dayKey = day.year * 10000 + day.month * 100 + day.day;
     final prayerIndex = _adzanPrayers.indexOf(prayer);
-    return 10000000 + (dayKey % 100000) * 100 + prayerIndex * 2 + (isIqomah ? 1 : 0);
+    return 10000000 +
+        (dayKey % 100000) * 100 +
+        prayerIndex * 2 +
+        (isIqomah ? 1 : 0);
   }
 
   Future<List<int>> _loadScheduledIds() async {

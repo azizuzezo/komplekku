@@ -124,7 +124,7 @@ export function AgendaList({ view }: { view: AgendaView }) {
               key={event.id}
               canManage={canManage}
               onEdit={() => setEditingId(event.id)}
-              onDelete={() => archiveMutation.mutate(event.id)}
+              onDelete={() => archiveMutation.mutateAsync(event.id)}
               isBusy={archiveMutation.isPending}
             />
           ))}

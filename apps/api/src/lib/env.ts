@@ -43,6 +43,15 @@ const envSchema = z
       .regex(/^\d{6}$/)
       .optional(),
     FIREBASE_SERVICE_ACCOUNT_KEY: z.string().optional(),
+    // In-app updater. The APK is hosted wherever ops chooses (object storage,
+    // a static host), so the URL is configuration rather than something the
+    // API serves itself. Leaving MOBILE_APK_URL unset disables update prompts
+    // entirely — the endpoint then reports "no update available".
+    MOBILE_LATEST_VERSION_CODE: z.coerce.number().int().min(1).optional(),
+    MOBILE_LATEST_VERSION_NAME: z.string().optional(),
+    MOBILE_APK_URL: z.string().url().optional(),
+    MOBILE_UPDATE_MANDATORY: booleanFromEnv.default(false),
+    MOBILE_RELEASE_NOTES: z.string().optional(),
   })
   .superRefine((value, context) => {
     if (Boolean(value.OTP_BYPASS_PHONE_E164) !== Boolean(value.OTP_BYPASS_CODE)) {

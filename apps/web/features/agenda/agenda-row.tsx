@@ -16,7 +16,7 @@ export function AgendaRow({
   event: AgendaEvent;
   canManage?: boolean;
   onEdit?: () => void;
-  onDelete?: () => void;
+  onDelete?: () => Promise<unknown> | void;
   isBusy?: boolean;
 }) {
   const dateParts = getAgendaDateParts(event.date);

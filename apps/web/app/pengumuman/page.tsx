@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 export default function AnnouncementsPage() {
   return (
     <AppShell contextLabel="Pengumuman">
-      <div className="page-content page-content--narrow">
+      <div className="page-content page-content--narrow prototype-announcement-page">
         <header className="page-heading page-heading--index">
-          <h1>Pengumuman lingkungan</h1>
-          <p>Catatan resmi dari pengurus, tersusun dari yang terbaru.</p>
+          <h1>Pengumuman</h1>
+          <p>RT 05 / RW 03 · Billabong</p>
         </header>
         <AnnouncementList />
       </div>

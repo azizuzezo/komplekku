@@ -6,7 +6,7 @@ import 'package:komplekku/app/theme/app_theme.dart';
 ///
 /// One widget so the confirmation step is never accidentally skipped in one
 /// place and present in another: deleting always asks first.
-class EntityActions extends StatelessWidget {
+class EntityActions extends StatefulWidget {
   const EntityActions({
     super.key,
     required this.deleteTitle,
@@ -24,12 +24,19 @@ class EntityActions extends StatelessWidget {
   final bool isBusy;
   final String tooltip;
 
+  @override
+  State<EntityActions> createState() => _EntityActionsState();
+}
+
+class _EntityActionsState extends State<EntityActions> {
+  bool _deleting = false;
+
   Future<void> _confirmDelete(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(deleteTitle),
-        content: Text(deleteMessage),
+        title: Text(widget.deleteTitle),
+        content: Text(widget.deleteMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -45,13 +52,21 @@ class EntityActions extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) await onDelete?.call();
+    if (confirmed != true || widget.onDelete == null) return;
+    setState(() => _deleting = true);
+    try {
+      await widget.onDelete!.call();
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (onEdit == null && onDelete == null) return const SizedBox.shrink();
-    if (isBusy) {
+    if (widget.onEdit == null && widget.onDelete == null) {
+      return const SizedBox.shrink();
+    }
+    if (widget.isBusy || _deleting) {
       return const SizedBox(
         width: 40,
         height: 40,
@@ -66,18 +81,18 @@ class EntityActions extends StatelessWidget {
     }
 
     return PopupMenuButton<String>(
-      tooltip: tooltip,
+      tooltip: widget.tooltip,
       icon: const Icon(
         Icons.more_vert,
         size: 20,
         color: KomplekkuColors.textSecondary,
       ),
       onSelected: (action) {
-        if (action == 'edit') onEdit?.call();
+        if (action == 'edit') widget.onEdit?.call();
         if (action == 'delete') _confirmDelete(context);
       },
       itemBuilder: (context) => [
-        if (onEdit != null)
+        if (widget.onEdit != null)
           const PopupMenuItem(
             value: 'edit',
             child: ListTile(
@@ -87,7 +102,7 @@ class EntityActions extends StatelessWidget {
               title: Text('Edit'),
             ),
           ),
-        if (onDelete != null)
+        if (widget.onDelete != null)
           const PopupMenuItem(
             value: 'delete',
             child: ListTile(

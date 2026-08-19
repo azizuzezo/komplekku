@@ -36,26 +36,28 @@ A locked product design system for Komplekku. Every web and Flutter surface must
 
 ## Theme
 
-Primary purple is the identity plane, not a faint afterthought. The page and card surface are true white (owner direction, 2026-08-11); cyan is the secondary accent and yellow is reserved for the logo mark, never a UI fill. This palette is an explicit owner override (2026-08-17) of both the PRD's original warm-green anchor and the forest-green system that preceded it below — supplied as an exact hex palette plus a new logo (`assets/brand/komplekku-lockup.png`, see its README for source and history).
+The five owner-supplied mobile prototypes are the current visual source of truth (owner direction, 2026-08-19). Web and Flutter use the same crisp green/white civic system: saturated green marks the current action, deep green carries hierarchy, pale green indicates emphasis, and neutral white cards preserve dense readability. This explicitly supersedes the purple/cyan override from 2026-08-17.
 
-- `--color-paper`: `oklch(100% 0 0)`
-- `--color-paper-2`: `oklch(97.4% 0.003 286)` (`#F6F6F8`)
-- `--color-paper-3`: `oklch(93% 0.003 286)`
-- `--color-ink`: `oklch(26.2% 0.015 297)` (`#25232B`)
-- `--color-ink-2`: `oklch(38% 0.014 297)`
-- `--color-rule`: `oklch(89% 0.006 296)`
-- `--color-rule-2`: `oklch(80% 0.01 296)`
-- `--color-muted`: `oklch(56.6% 0.019 297)` (`#777480`)
-- `--color-neutral`: `oklch(46% 0.016 297)`
-- `--color-brand`: `oklch(40.9% 0.1753 287.9)` (`#4B2DA1`)
-- `--color-brand-deep`: `oklch(34.1% 0.1783 281.6)` (`#32178F`)
-- `--color-brand-wash`: `oklch(94.4% 0.03 296.2)` (`#EEE9FF` soft purple)
-- `--color-accent`: `oklch(74.1% 0.1249 221.9)` (`#32BCE3` cyan)
-- `--color-focus`: `oklch(48% 0.19 288)`
+- `--color-paper`: `#FFFFFF`
+- `--color-paper-2`: `#F7FAF8`
+- `--color-paper-3`: `#EFF5F1`
+- `--color-ink`: `#101119`
+- `--color-ink-2`: `#353842`
+- `--color-rule`: `#E0E4E2`
+- `--color-rule-2`: `#C9D2CD`
+- `--color-muted`: `#666A73`
+- `--color-neutral`: `#73777F`
+- `--color-brand`: `#008A52`
+- `--color-brand-deep`: `#006B3F`
+- `--color-brand-wash`: `#EEF8F2`
+- `--color-accent`: `#0AA6A6`
+- `--color-focus`: `#008A52`
 - Status colors: `--color-danger` `oklch(62.6% 0.1933 23)` (`#E5484D`), `--color-success` `oklch(63.6% 0.1453 155.9)` (`#20A464`), `--color-warning` unchanged from the prior system (`oklch(62.64% 0.1248 70.45)`, no replacement given).
 - `#FFEB22` (logo yellow) is not a UI token — it appears only inside the logo raster, per the owner's palette table ("logo/accent" role), not as a text/fill/background color in the product UI.
 
-### Prior theme (superseded 2026-08-17)
+### Prior themes (superseded 2026-08-19)
+
+The purple/cyan/yellow system (`#4B2DA1`, `#32178F`, `#EEE9FF`, `#32BCE3`) was the owner override from 2026-08-17 until the five green prototypes were approved as the exact cross-platform target on 2026-08-19.
 
 The forest green system below was the locked theme from 2026-08-11 until the owner supplied the purple/cyan/yellow palette above. Kept here for history only — do not use these values.
 

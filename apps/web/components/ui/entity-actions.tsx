@@ -19,7 +19,7 @@ export function EntityActions({
   label = "Tindakan lainnya",
 }: {
   onEdit?: () => void;
-  onDelete?: () => void;
+  onDelete?: () => Promise<unknown> | void;
   deleteTitle: string;
   deleteMessage: string;
   isBusy?: boolean;
@@ -27,6 +27,8 @@ export function EntityActions({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,9 +50,9 @@ export function EntityActions({
         aria-label={label}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
-        disabled={isBusy}
+        disabled={isBusy || deleting}
       >
-        {isBusy ? (
+        {isBusy || deleting ? (
           <LoaderCircle className="loading-icon" size={18} aria-hidden="true" />
         ) : (
           <MoreVertical size={18} aria-hidden="true" />
@@ -90,7 +92,12 @@ export function EntityActions({
       )}
 
       {confirming && (
-        <div className="modal-backdrop" onClick={() => setConfirming(false)}>
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!deleting) setConfirming(false);
+          }}
+        >
           <div
             className="modal-card modal-card--confirm"
             role="alertdialog"
@@ -102,23 +109,39 @@ export function EntityActions({
               <h2 className="modal-title">{deleteTitle}</h2>
             </div>
             <p>{deleteMessage}</p>
+            {deleteError && <p role="alert" className="field-error">{deleteError}</p>}
             <div className="modal-actions">
               <button
                 className="button button--secondary"
                 type="button"
                 onClick={() => setConfirming(false)}
+                disabled={deleting}
               >
                 Batal
               </button>
               <button
                 className="button button--danger"
                 type="button"
-                onClick={() => {
-                  setConfirming(false);
-                  onDelete?.();
+                disabled={deleting}
+                onClick={async () => {
+                  if (!onDelete) return;
+                  setDeleting(true);
+                  setDeleteError(null);
+                  try {
+                    await onDelete();
+                    setConfirming(false);
+                  } catch (error) {
+                    setDeleteError(
+                      error instanceof Error
+                        ? error.message
+                        : "Data belum dapat dihapus. Coba lagi.",
+                    );
+                  } finally {
+                    setDeleting(false);
+                  }
                 }}
               >
-                Hapus
+                {deleting ? "Menghapus..." : "Hapus"}
               </button>
             </div>
           </div>
