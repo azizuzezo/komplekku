@@ -1,5 +1,5 @@
 /* genre: quiet premium civic · macrostructure: resident noticeboard · design-system: design.md · designed-as-app
- * theme: Komplekku green prototype (owner override 2026-08-19, supersedes the purple system)
+ * theme: Komplekku purple/cyan brand palette (owner override 2026-08-19)
  * display: Plus Jakarta Sans · body: Plus Jakarta Sans
  */
 
@@ -8,19 +8,20 @@
 
   /* Hallmark tokens — literal values from design.md, the locked design system. */
   --color-paper: #ffffff;
-  --color-paper-2: #f7faf8;
-  --color-paper-3: #eff5f1;
-  --color-ink: #101119;
-  --color-ink-2: #353842;
-  --color-rule: #e0e4e2;
-  --color-rule-2: #c9d2cd;
-  --color-muted: #666a73;
-  --color-neutral: #73777f;
-  --color-brand: #008a52;
-  --color-brand-deep: #006b3f;
-  --color-brand-wash: #eef8f2;
-  --color-accent: #0aa6a6;
-  --color-focus: #008a52;
+  --color-paper-2: #f6f6f8;
+  --color-paper-3: #eee9ff;
+  --color-ink: #25232b;
+  --color-ink-2: #3c3943;
+  --color-rule: #dedce4;
+  --color-rule-2: #c9c5d2;
+  --color-muted: #777480;
+  --color-neutral: #777480;
+  --color-brand: #4b2da1;
+  --color-brand-deep: #32178f;
+  --color-brand-wash: #eee9ff;
+  --color-accent: #32bce3;
+  --color-logo-accent: #ffeb22;
+  --color-focus: #4b2da1;
 
   /* App-facing names alias the hallmark tokens above. */
   --color-primary: var(--color-brand);
@@ -33,13 +34,13 @@
   --color-text-secondary: var(--color-muted);
   --color-border: var(--color-rule);
 
-  /* Status colors — warning kept from the prior system (no replacement given); danger/success are the owner's new values. */
+  /* Status colors are semantic and do not replace the brand palette. */
   --color-warning: #dd8214;
-  --color-danger: #e51d3f;
-  --color-success: #008a52;
+  --color-danger: #e5484d;
+  --color-success: #20a464;
   --color-warning-ink: #8a4d06;
-  --color-danger-ink: #b70f2d;
-  --color-success-ink: #006b3f;
+  --color-danger-ink: #ad2831;
+  --color-success-ink: #137a49;
 
   /* Supporting semantic colors. */
   --color-focus-guard: #ffffff;
@@ -142,7 +143,7 @@
 
 /* Tailwind v4 @theme — wires :root CSS vars to utility class generation.
    bg-surface → background: true white
-   text-text-primary → color: forest-green ink
+   text-text-primary → color: brand-neutral ink
    border-border → border-color: warm rule
    etc. */
 @theme {
@@ -155,14 +156,15 @@
   --color-text-primary: var(--color-ink);
   --color-text-secondary: var(--color-muted);
   --color-border: var(--color-rule);
-  --color-accent: #0aa6a6;
+  --color-accent: #32bce3;
+  --color-logo-accent: #ffeb22;
   --color-warning: #dd8214;
-  --color-danger: #e51d3f;
-  --color-success: #008a52;
+  --color-danger: #e5484d;
+  --color-success: #20a464;
   --color-warning-ink: #8a4d06;
-  --color-danger-ink: #b70f2d;
-  --color-success-ink: #006b3f;
-  --color-focus: #008a52;
+  --color-danger-ink: #ad2831;
+  --color-success-ink: #137a49;
+  --color-focus: #4b2da1;
   --color-on-primary: #ffffff;
   --color-on-danger: #ffffff;
   --color-info: var(--color-brand);

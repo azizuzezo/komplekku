@@ -15,12 +15,12 @@ import 'package:komplekku/features/forum/domain/forum_post.dart';
 /// green chips map onto the purple/cyan tokens rather than introducing a new
 /// hue per category.
 Color forumCategoryColor(ForumPostCategory category) => switch (category) {
-      ForumPostCategory.question => KomplekkuColors.primary,
-      ForumPostCategory.suggestion => KomplekkuColors.accent,
-      ForumPostCategory.information => KomplekkuColors.textSecondary,
-      ForumPostCategory.environment => KomplekkuColors.success,
-      ForumPostCategory.activity => KomplekkuColors.primaryDark,
-    };
+  ForumPostCategory.question => KomplekkuColors.primary,
+  ForumPostCategory.suggestion => KomplekkuColors.accent,
+  ForumPostCategory.information => KomplekkuColors.textSecondary,
+  ForumPostCategory.environment => KomplekkuColors.success,
+  ForumPostCategory.activity => KomplekkuColors.primaryDark,
+};
 
 /// The threaded "Forum Warga" board. Lives beside the chat channels rather
 /// than replacing them — see [ForumScreen]'s Diskusi/Obrolan switch.
@@ -51,22 +51,42 @@ class _ForumBoardViewState extends ConsumerState<ForumBoardView> {
       'forum.post',
     );
 
-    return Scaffold(
-      backgroundColor: KomplekkuColors.background,
-      floatingActionButton: canPost
-          ? FloatingActionButton.extended(
-              onPressed: _createPost,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Buat Post'),
-              backgroundColor: KomplekkuColors.primary,
-              foregroundColor: Colors.white,
-            )
-          : null,
-      body: Column(
+    return ColoredBox(
+      color: KomplekkuColors.background,
+      child: Column(
         children: [
+          if (canPost)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Diskusi warga',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _createPost,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Buat Post'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _SortSwitcher(
             sort: _query.sort,
-            onChanged: (sort) => setState(() => _query = _query.copyWith(sort: sort)),
+            onChanged: (sort) =>
+                setState(() => _query = _query.copyWith(sort: sort)),
           ),
           _CategoryChips(
             category: _query.category,
@@ -83,8 +103,9 @@ class _ForumBoardViewState extends ConsumerState<ForumBoardView> {
     return board.when(
       loading: () => const _BoardSkeleton(),
       error: (error, _) {
-        final failure =
-            error is ApiException ? error : ApiException.malformedResponse();
+        final failure = error is ApiException
+            ? error
+            : ApiException.malformedResponse();
         if (failure.isUnauthorized) {
           return StatePanel(
             icon: Icons.lock_outline,
@@ -320,10 +341,9 @@ class ForumPostCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 post.title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
               Text(
@@ -331,9 +351,9 @@ class ForumPostCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: KomplekkuColors.textSecondary,
-                      height: 1.45,
-                    ),
+                  color: KomplekkuColors.textSecondary,
+                  height: 1.45,
+                ),
               ),
               if (post.imageUrls.isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -490,8 +510,9 @@ class _ForumLikeButtonState extends State<ForumLikeButton>
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        widget.likedByMe ? KomplekkuColors.danger : KomplekkuColors.textSecondary;
+    final color = widget.likedByMe
+        ? KomplekkuColors.danger
+        : KomplekkuColors.textSecondary;
 
     return InkWell(
       onTap: _handleTap,
@@ -516,10 +537,10 @@ class _ForumLikeButtonState extends State<ForumLikeButton>
               widget.label == null
                   ? '${widget.likeCount}'
                   : '${widget.likeCount} ${widget.label}',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: color, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -554,7 +575,9 @@ class _CreateForumPostSheetState extends ConsumerState<CreateForumPostSheet> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.existing?.title ?? '');
+    _titleController = TextEditingController(
+      text: widget.existing?.title ?? '',
+    );
     _bodyController = TextEditingController();
     _category = widget.existing?.category ?? ForumPostCategory.information;
   }
@@ -642,7 +665,9 @@ class _CreateForumPostSheetState extends ConsumerState<CreateForumPostSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -655,10 +680,9 @@ class _CreateForumPostSheetState extends ConsumerState<CreateForumPostSheet> {
                   Expanded(
                     child: Text(
                       _isEditing ? 'Edit diskusi' : 'Buat diskusi baru',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -743,8 +767,8 @@ class _CreateForumPostSheetState extends ConsumerState<CreateForumPostSheet> {
                     _submitting
                         ? 'Menyimpan…'
                         : _isEditing
-                            ? 'Simpan perubahan'
-                            : 'Terbitkan',
+                        ? 'Simpan perubahan'
+                        : 'Terbitkan',
                   ),
                 ),
               ),

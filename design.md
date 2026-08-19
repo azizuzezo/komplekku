@@ -36,28 +36,29 @@ A locked product design system for Komplekku. Every web and Flutter surface must
 
 ## Theme
 
-The five owner-supplied mobile prototypes are the current visual source of truth (owner direction, 2026-08-19). Web and Flutter use the same crisp green/white civic system: saturated green marks the current action, deep green carries hierarchy, pale green indicates emphasis, and neutral white cards preserve dense readability. This explicitly supersedes the purple/cyan override from 2026-08-17.
+The five owner-supplied mobile prototypes remain the structural source of truth (owner direction, 2026-08-19): their hierarchy, spacing, navigation, cards, and interaction placement apply to Web and Flutter. The owner subsequently restored Komplekku's purple/cyan/yellow brand palette on 2026-08-19, so prototype green must not be used for primary navigation or actions. Green is reserved for semantic success/availability states.
 
 - `--color-paper`: `#FFFFFF`
-- `--color-paper-2`: `#F7FAF8`
-- `--color-paper-3`: `#EFF5F1`
-- `--color-ink`: `#101119`
-- `--color-ink-2`: `#353842`
-- `--color-rule`: `#E0E4E2`
-- `--color-rule-2`: `#C9D2CD`
-- `--color-muted`: `#666A73`
-- `--color-neutral`: `#73777F`
-- `--color-brand`: `#008A52`
-- `--color-brand-deep`: `#006B3F`
-- `--color-brand-wash`: `#EEF8F2`
-- `--color-accent`: `#0AA6A6`
-- `--color-focus`: `#008A52`
-- Status colors: `--color-danger` `oklch(62.6% 0.1933 23)` (`#E5484D`), `--color-success` `oklch(63.6% 0.1453 155.9)` (`#20A464`), `--color-warning` unchanged from the prior system (`oklch(62.64% 0.1248 70.45)`, no replacement given).
-- `#FFEB22` (logo yellow) is not a UI token — it appears only inside the logo raster, per the owner's palette table ("logo/accent" role), not as a text/fill/background color in the product UI.
+- `--color-paper-2`: `#F6F6F8`
+- `--color-paper-3`: `#EEE9FF`
+- `--color-ink`: `#25232B`
+- `--color-ink-2`: `#3C3943`
+- `--color-rule`: `#DEDCE4`
+- `--color-rule-2`: `#C9C5D2`
+- `--color-muted`: `#777480`
+- `--color-neutral`: `#777480`
+- `--color-brand`: `#4B2DA1`
+- `--color-brand-deep`: `#32178F`
+- `--color-brand-wash`: `#EEE9FF`
+- `--color-accent`: `#32BCE3`
+- `--color-logo-accent`: `#FFEB22`
+- `--color-focus`: `#4B2DA1`
+- Status colors: `--color-danger` `#E5484D`, `--color-success` `#20A464`, and `--color-warning` `#DD8214`.
+- Yellow `#FFEB22` and cyan `#32BCE3` are supporting logo/accent colors. They must not replace purple as the primary action color or reduce text contrast.
 
 ### Prior themes (superseded 2026-08-19)
 
-The purple/cyan/yellow system (`#4B2DA1`, `#32178F`, `#EEE9FF`, `#32BCE3`) was the owner override from 2026-08-17 until the five green prototypes were approved as the exact cross-platform target on 2026-08-19.
+The green prototype palette (`#008A52`, `#006B3F`, `#EEF8F2`, `#0AA6A6`) was briefly used as a cross-platform color target on 2026-08-19. It remains relevant only as historical prototype artwork; its layout remains authoritative, but its palette no longer is.
 
 The forest green system below was the locked theme from 2026-08-11 until the owner supplied the purple/cyan/yellow palette above. Kept here for history only — do not use these values.
 

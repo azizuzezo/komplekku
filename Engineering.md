@@ -30,11 +30,12 @@ This file is the durable engineering memory for Komplekku. Read it at the start 
 
 ## Current project state
 
-Last updated: 2026-08-19 02:44:02 WIB (UTC+07:00).
+Last updated: 2026-08-19 07:34:41 WIB (UTC+07:00).
 
 - The five owner-supplied green mobile prototypes dated 2026-08-19 are the current visual source of truth for Web and Flutter. Both clients use the same five primary destinations (Beranda, Shalat, Pengumuman, Forum, Profil), Plus Jakarta Sans, white surfaces, `#008A52` green, `#006B3F` deep green, and `#EEF8F2` wash; this supersedes the older purple/cyan and `#28594A` presentation notes below.
 - Flutter adzan/iqomah is now OS-scheduled for seven days and has been verified on `emulator-5554`: 70 distinct `ScheduledNotificationReceiver` alarms (10 per day) were present with no `invalid_icon` or `invalid_sound` errors. Android notification resources must remain in `res/drawable`/`res/raw`, with the raw audio protected from release resource shrinking.
 - Delete/archive actions for agenda, announcements, forum posts/replies/messages now have confirmation, pending feedback, cache/provider refresh, and visible success/failure handling on both clients. Web mutations use `mutateAsync` so request errors reach the shared confirmation dialog; Flutter no longer swallows forum-message delete failures.
+- Flutter Profil now uses the green prototype hierarchy with a resident avatar/identity hero and bounded household controls. Forum creation actions live in top content toolbars rather than floating over the message composer; the composer exposes a visible send control and handles the keyboard send action.
 
 - Status: **Phases 0 through 6 are now complete** — web, API, and Flutter mobile applications are fully built and verified end-to-end. Phase 6 quality, accessibility, security, permission, performance, offline, responsive, and documentation audits have passed 100% locally. See ENG-020 below for the full record of this audit session.
 - The owner's standing "APK last" preference was explicitly and knowingly overridden this session by a direct instruction ("continue to phase 5") once all web/API phases were confirmed complete — it should still govern future sessions by default unless the owner again asks to proceed into mobile work.
@@ -1420,4 +1421,37 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
   - API delete coverage: focused agenda, announcement, forum board, and realtime forum suites passed 29/29. API TypeScript passed. Full API lint still reports six unrelated existing findings in updater/repository/push/announcement-test files; none is in this task's mutation or UI changes.
   - `git diff --check` passed, and production strings no longer contain “Putar Adzan” or the removed in-process audio source.
 - Follow-ups: rendered Web browser QA remains the only blocked visual check; repeat at 360/393/471 px once a browser backend is available. A physical Android device should still confirm OEM-specific exact-alarm and volume behavior, although emulator OS scheduling is now proven.
+
+---
+
+### 2026-08-19 07:34:41 WIB — Flutter Profil Redesign and Forum Composer Layout Repair
+
+- Status: Completed locally; no deploy, push, or production mutation performed.
+- Objective: Address the owner's report that Flutter Profil had not materially changed and that the Forum Obrolan create action covered the composer/send control.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Work performed:
+  - Replaced the legacy `Akun warga` app bar and dark credential strip with the shared prototype header plus a resident-first identity hero: initial avatar, name, masked phone, status, community, house, household, and inline name editing. Existing permission-gated administration, service, activity, household, and logout behavior remains available below it.
+  - Removed the nested Forum board/chat floating action buttons. `Buat Post` and `Buat Forum` now sit in compact top content toolbars, so neither can cover lists or the bottom composer.
+  - Kept the message image picker, text field, and send control as three separate constrained row children; added an explicit `Kirim pesan` tooltip and retained `TextInputAction.send`/`onSubmitted` so the keyboard Enter/send action invokes the same real repository mutation as the visible arrow.
+  - Emulator inspection exposed a separate 360 px `RenderFlex` risk in the Profil household heading. Bounded the title/subtitle column with `Expanded`, ellipsis, and a fixed gap before `Tambah`.
+- Files touched: `apps/mobile/lib/features/account/presentation/account_screen.dart`, `apps/mobile/lib/features/forum/presentation/forum_screen.dart`, `apps/mobile/lib/features/forum/presentation/forum_board_screen.dart`, `apps/mobile/test/forum_profile_layout_test.dart`, and `Engineering.md`.
+- Decisions and assumptions:
+  - The five supplied prototypes remain the visual source of truth; because no standalone Profil prototype was supplied, Profil reuses their header, spacing, surface, icon, typography, and green hierarchy while preserving real account content.
+  - “Buat Forum” refers to creating an Obrolan channel, while “Buat Post” remains the Diskusi action. Both were moved to the top for consistent placement.
+- Verification and results:
+  - TDD red/green confirmed the old Profil lacked the prototype hierarchy, the old Forum FAB did not sit above the composer, and the household header overflowed by 188 px at 360 px before the fixes.
+  - Fresh `flutter analyze`: no issues. Fresh full `flutter test`: 109/109 passed. `git diff --check`: passed (one line-ending warning only).
+  - Fresh release build succeeded: `apps/mobile/build/app/outputs/flutter-apk/app-release.apk` (61.4 MB). Installed with `adb install -r` on `emulator-5554` and visually inspected final Profil and Forum Obrolan screenshots; the identity layout is visibly restructured, household action no longer overlaps, `Buat Forum` is above the channel tabs, and the send arrow is fully visible beside the composer.
+- Follow-ups: none for this bounded correction. Physical-device keyboard behavior may still vary by OEM keyboard, but the Flutter send action is covered by a widget test and the visible control is independently available.
+
+---
+
+### 2026-08-19 07:35:16 WIB — Flutter Palette Clarification Required
+
+- Status: Awaiting owner direction; no source change made.
+- Objective: Resolve the owner's question about why the corrected Flutter screens remain green.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Findings: the active green palette (`#008A52`) was intentionally retained because all five owner-supplied prototype screenshots use green and the previous explicit instruction required Web and Flutter to match those prototypes. The newest message indicates that green may no longer be desired, which conflicts with that visual reference.
+- Verification: inspected the latest owner request against the recorded prototype decision and current rendered emulator screenshots; no build or test was needed because no code changed.
+- Blocker/follow-up: owner must identify the intended replacement palette (for example the earlier purple brand palette or a new color reference) before another global color change is made.
 

@@ -272,7 +272,7 @@ class _NextPrayerHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FBF2),
+        color: KomplekkuColors.surfaceMuted,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: KomplekkuColors.primary.withValues(alpha: 0.3),
@@ -286,7 +286,7 @@ class _NextPrayerHero extends StatelessWidget {
             height: 64,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF8BC7A3),
+              color: KomplekkuColors.primary,
             ),
             child: Icon(_prayerIcons[prayer], color: Colors.white, size: 30),
           ),

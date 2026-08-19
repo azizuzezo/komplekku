@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/auth/permissions_provider.dart';
 import 'package:komplekku/core/errors/api_exception.dart';
-import 'package:komplekku/core/widgets/komplekku_logo.dart';
+import 'package:komplekku/core/widgets/prototype_header.dart';
 import 'package:komplekku/core/widgets/state_panel.dart';
 import 'package:komplekku/features/account/data/account_repository.dart';
 import 'package:komplekku/features/account/domain/account_snapshot.dart';
@@ -40,9 +40,22 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final account = ref.watch(accountSnapshotProvider);
+    final snapshot = account.value;
+    final profileContext = snapshot?.context;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Akun warga')),
+      backgroundColor: KomplekkuColors.background,
+      appBar: AppBar(
+        toolbarHeight: 92,
+        titleSpacing: 20,
+        title: PrototypeHeader(
+          title: 'Profil',
+          subtitle: profileContext == null
+              ? 'Akun warga Komplekku'
+              : '${profileContext.communityName} • ${profileContext.house.code}',
+          showSearch: false,
+        ),
+      ),
       body: SafeArea(
         child: account.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -68,7 +81,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             );
           },
           data: (snapshot) => SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -113,14 +126,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 // Keamanan and Layanan lost their bottom-bar tabs when the
                 // nav shrank to five slots, so this is now the way in to every
                 // operational feature the account has access to.
-                const _MenuGroup(
-                  title: 'Keamanan',
-                  entries: _keamananEntries,
-                ),
-                const _MenuGroup(
-                  title: 'Layanan',
-                  entries: _layananEntries,
-                ),
+                const _MenuGroup(title: 'Keamanan', entries: _keamananEntries),
+                const _MenuGroup(title: 'Layanan', entries: _layananEntries),
                 const _MenuGroup(
                   title: 'Aktivitas',
                   entries: _aktivitasEntries,
@@ -226,17 +233,16 @@ class _MenuGroup extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: KomplekkuColors.surface,
+        Material(
+          color: KomplekkuColors.surface,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: KomplekkuColors.border),
+            side: const BorderSide(color: KomplekkuColors.border),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -303,9 +309,7 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
       _error = null;
     });
     try {
-      await ref
-          .read(accountRepositoryProvider)
-          .updateDisplayName(name);
+      await ref.read(accountRepositoryProvider).updateDisplayName(name);
       ref.invalidate(accountSnapshotProvider);
       if (mounted) setState(() => _isEditing = false);
     } on ApiException catch (error) {
@@ -325,222 +329,189 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
         ? residentStatusLabel(snapshot.residentStatus!)
         : null;
 
+    final initial = displayName.trim().isEmpty
+        ? '?'
+        : displayName.trim()[0].toUpperCase();
+
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: KomplekkuColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: KomplekkuColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A101119),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            color: KomplekkuColors.textPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Row(
-              children: [
-                const KomplekkuLogo(width: 34),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: statusLabel == null
-                      ? const SizedBox.shrink()
-                      : Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: KomplekkuColors.surfaceMuted,
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: KomplekkuColors.primaryDark,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      snapshot.phoneMasked,
+                      style: const TextStyle(
+                        color: KomplekkuColors.textSecondary,
+                        fontSize: 13,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    if (statusLabel != null) ...[
+                      const SizedBox(height: 9),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tone.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.verified_outlined,
+                              size: 15,
+                              color: tone,
                             ),
-                            decoration: BoxDecoration(
-                              color: tone.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: tone.withValues(alpha: 0.4)),
-                            ),
-                            child: Text(
-                              statusLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: tone,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                statusLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: tone,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'NAMA WARGA',
-                      style: TextStyle(
-                        color: KomplekkuColors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    if (!_isEditing)
-                      TextButton.icon(
-                        onPressed: () => setState(() {
-                          _controller.text = displayName;
-                          _isEditing = true;
-                          _error = null;
-                        }),
-                        icon: const Icon(Icons.edit_outlined, size: 14),
-                        label: const Text('Ubah nama'),
-                        style: TextButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          backgroundColor: KomplekkuColors.surfaceSoft,
-                          foregroundColor: KomplekkuColors.primary,
-                          textStyle: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: const BorderSide(
-                              color: KomplekkuColors.border,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                if (_isEditing) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          autofocus: true,
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            hintText: 'Nama baru',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        onPressed: _isSaving ? null : _save,
-                        icon: const Icon(Icons.check, size: 18),
-                      ),
-                      const SizedBox(width: 4),
-                      IconButton.outlined(
-                        onPressed: () => setState(() => _isEditing = false),
-                        icon: const Icon(Icons.close, size: 18),
                       ),
                     ],
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: KomplekkuColors.danger,
-                        fontSize: 12,
-                      ),
-                    ),
                   ],
-                ] else ...[
-                  Text(
-                    displayName,
-                    style: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(fontSize: 26),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  snapshot.phoneMasked,
-                  style: const TextStyle(
-                    color: KomplekkuColors.textSecondary,
-                    fontFamily: 'monospace',
+                ),
+              ),
+              if (!_isEditing)
+                IconButton(
+                  tooltip: 'Ubah nama',
+                  onPressed: () => setState(() {
+                    _controller.text = displayName;
+                    _isEditing = true;
+                    _error = null;
+                  }),
+                  icon: const Icon(Icons.edit_outlined),
+                  style: IconButton.styleFrom(
+                    backgroundColor: KomplekkuColors.surfaceSoft,
+                    foregroundColor: KomplekkuColors.primary,
                   ),
                 ),
-                if (!snapshot.hasActiveResidency &&
-                    snapshot.residentStatus != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _statusDescription(snapshot.residentStatus!),
-                    style: const TextStyle(color: KomplekkuColors.textSecondary),
+            ],
+          ),
+          if (_isEditing) ...[
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _save(),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      labelText: 'Nama warga',
+                    ),
                   ),
-                ],
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: 'Simpan nama',
+                  onPressed: _isSaving ? null : _save,
+                  icon: const Icon(Icons.check, size: 18),
+                ),
+                const SizedBox(width: 4),
+                IconButton.outlined(
+                  tooltip: 'Batal',
+                  onPressed: () => setState(() => _isEditing = false),
+                  icon: const Icon(Icons.close, size: 18),
+                ),
               ],
             ),
-          ),
-          if (snapshot.hasActiveResidency && context_ != null) ...[
-            Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: KomplekkuColors.border),
+            if (_error != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: KomplekkuColors.danger,
+                  fontSize: 12,
                 ),
               ),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _InfoCell(
-                      label: 'Lingkungan',
-                      value: context_.communityName,
-                    ),
-                  ),
-                  const VerticalDivider(width: 1, color: KomplekkuColors.border),
-                  Expanded(
-                    child: _InfoCell(
-                      label: 'Rumah',
-                      value: context_.house.addressLabel,
-                    ),
-                  ),
-                  const VerticalDivider(width: 1, color: KomplekkuColors.border),
-                  Expanded(
-                    child: _InfoCell(
-                      label: 'Rumah tangga',
-                      value: context_.householdDisplayName,
-                    ),
-                  ),
-                ],
-              ),
+            ],
+          ],
+          if (!snapshot.hasActiveResidency &&
+              snapshot.residentStatus != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              _statusDescription(snapshot.residentStatus!),
+              style: const TextStyle(color: KomplekkuColors.textSecondary),
             ),
+          ],
+          if (snapshot.hasActiveResidency && context_ != null) ...[
             const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              color: KomplekkuColors.textPrimary,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    context_.communityName,
-                    style: const TextStyle(
-                      color: KomplekkuColors.borderStrong,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    context_.house.code,
-                    style: const TextStyle(
-                      color: KomplekkuColors.borderStrong,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
+            const Divider(),
+            const SizedBox(height: 14),
+            _ProfileLocationRow(
+              icon: Icons.location_on_outlined,
+              label: 'Lingkungan',
+              value: context_.communityName,
+            ),
+            const SizedBox(height: 12),
+            _ProfileLocationRow(
+              icon: Icons.home_outlined,
+              label: context_.house.code,
+              value: context_.house.addressLabel,
+            ),
+            const SizedBox(height: 12),
+            _ProfileLocationRow(
+              icon: Icons.groups_outlined,
+              label: 'Rumah tangga',
+              value: context_.householdDisplayName,
             ),
           ],
         ],
@@ -564,41 +535,58 @@ class _CredentialCardState extends ConsumerState<_CredentialCard> {
   }
 }
 
-class _InfoCell extends StatelessWidget {
-  const _InfoCell({required this.label, required this.value});
+class _ProfileLocationRow extends StatelessWidget {
+  const _ProfileLocationRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
+  final IconData icon;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: KomplekkuColors.textSecondary,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: KomplekkuColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: KomplekkuColors.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
+          child: Icon(icon, size: 19, color: KomplekkuColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: KomplekkuColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: KomplekkuColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -646,9 +634,9 @@ class _AdminTaskCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontSize: 15,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(fontSize: 15),
                   ),
                   Text(
                     description,
@@ -660,7 +648,10 @@ class _AdminTaskCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: KomplekkuColors.textSecondary),
+            const Icon(
+              Icons.chevron_right,
+              color: KomplekkuColors.textSecondary,
+            ),
           ],
         ),
       ),
@@ -737,11 +728,9 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
       _error = null;
     });
     try {
-      await ref.read(householdRepositoryProvider).addMember(
-            fullName: name,
-            phone: phone,
-            relationship: _relationship,
-          );
+      await ref
+          .read(householdRepositoryProvider)
+          .addMember(fullName: name, phone: phone, relationship: _relationship);
       ref.invalidate(currentHouseholdProvider);
       if (mounted) {
         setState(() {
@@ -792,43 +781,52 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: KomplekkuColors.surfaceSoft,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.groups_outlined,
-                      color: KomplekkuColors.primary,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Anggota Keluarga',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontSize: 15,
-                        ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: KomplekkuColors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const Text(
-                        'Penghuni rumah tangga ini',
-                        style: TextStyle(
-                          color: KomplekkuColors.textSecondary,
-                          fontSize: 12,
-                        ),
+                      child: const Icon(
+                        Icons.groups_outlined,
+                        color: KomplekkuColors.primary,
+                        size: 18,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Anggota Keluarga',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(fontSize: 15),
+                          ),
+                          const Text(
+                            'Penghuni rumah tangga ini',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: KomplekkuColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              if (!_isAdding)
+              if (!_isAdding) ...[
+                const SizedBox(width: 10),
                 FilledButton.icon(
                   onPressed: () => setState(() => _isAdding = true),
                   icon: const Icon(Icons.add, size: 16),
@@ -842,6 +840,7 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
                     textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
+              ],
             ],
           ),
           if (_isAdding) ...[
@@ -898,10 +897,8 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
                     items: HouseholdRelationship.values
                         .where((r) => r != HouseholdRelationship.head)
                         .map(
-                          (r) => DropdownMenuItem(
-                            value: r,
-                            child: Text(r.label),
-                          ),
+                          (r) =>
+                              DropdownMenuItem(value: r, child: Text(r.label)),
                         )
                         .toList(),
                     onChanged: (value) {
@@ -1056,9 +1053,7 @@ class _HouseholdSectionState extends ConsumerState<_HouseholdSection> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: KomplekkuColors.textPrimary,
-                                        borderRadius: BorderRadius.circular(
-                                          20,
-                                        ),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: const Text(
                                         'Saya',

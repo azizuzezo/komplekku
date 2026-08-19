@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 
 abstract final class KomplekkuColors {
-  static const primary = Color(0xFF008A52);
-  static const primaryDark = Color(0xFF006B3F);
+  static const primary = Color(0xFF4B2DA1);
+  static const primaryDark = Color(0xFF32178F);
   static const background = Color(0xFFFFFFFF);
   static const brandCanvas = Color(0xFFFFFFFF);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceSoft = Color(0xFFF7FAF8);
-  static const surfaceMuted = Color(0xFFEEF8F2);
-  static const textPrimary = Color(0xFF101119);
-  static const textSecondary = Color(0xFF666A73);
-  static const border = Color(0xFFE0E4E2);
-  static const borderStrong = Color(0xFFC9D2CD);
-  static const accent = Color(0xFF0AA6A6);
-  static const danger = Color(0xFFE51D3F);
-  static const success = Color(0xFF008A52);
+  static const surfaceSoft = Color(0xFFF6F6F8);
+  static const surfaceMuted = Color(0xFFEEE9FF);
+  static const textPrimary = Color(0xFF25232B);
+  static const textSecondary = Color(0xFF777480);
+  static const border = Color(0xFFDEDCE4);
+  static const borderStrong = Color(0xFFC9C5D2);
+  static const accent = Color(0xFF32BCE3);
+  static const logoAccent = Color(0xFFFFEB22);
+  static const danger = Color(0xFFE5484D);
+  static const success = Color(0xFF20A464);
 }
 
 ThemeData buildKomplekkuTheme() {

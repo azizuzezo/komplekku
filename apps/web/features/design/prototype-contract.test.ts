@@ -10,14 +10,18 @@ function source(path: string) {
 }
 
 describe("owner prototype design contract", () => {
-  it("uses the approved green civic palette as the shared web source of truth", () => {
+  it("uses the approved Komplekku brand palette as the shared web source of truth", () => {
     const tokens = source("tokens.css");
 
-    expect(tokens).toContain("--color-brand: #008a52");
-    expect(tokens).toContain("--color-brand-deep: #006b3f");
-    expect(tokens).toContain("--color-brand-wash: #eef8f2");
+    expect(tokens).toContain("--color-brand: #4b2da1");
+    expect(tokens).toContain("--color-brand-deep: #32178f");
+    expect(tokens).toContain("--color-brand-wash: #eee9ff");
+    expect(tokens).toContain("--color-accent: #32bce3");
+    expect(tokens).toContain("--color-logo-accent: #ffeb22");
+    expect(tokens).toContain("--color-success: #20a464");
+    expect(tokens).toContain("--color-danger: #e5484d");
     expect(tokens).toContain("--color-paper: #ffffff");
-    expect(tokens).not.toContain("#4B2DA1");
+    expect(tokens).not.toContain("#008a52");
   });
 
   it("keeps exactly the five prototype bottom-navigation destinations", () => {

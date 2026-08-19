@@ -320,141 +320,176 @@ class _ForumScreenState extends ConsumerState<ForumChatView> {
         .watch(sessionControllerProvider)
         .maybeWhen(data: (session) => session?.userId, orElse: () => null);
 
-    return Scaffold(
-      backgroundColor: KomplekkuColors.background,
-      floatingActionButton: canPost
-          ? FloatingActionButton.extended(
-              onPressed: _createChannel,
-              icon: const Icon(Icons.add_comment_outlined),
-              label: const Text('Buat Forum'),
-              backgroundColor: KomplekkuColors.primary,
-              foregroundColor: Colors.white,
-            )
-          : null,
-      body: SafeArea(
-        child: channels.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) {
-            final failure = error is ApiException
-                ? error
-                : ApiException.malformedResponse();
-            return StatePanel(
-              icon: failure.isForbidden
-                  ? Icons.block_outlined
-                  : Icons.cloud_off_outlined,
-              title: failure.isForbidden
-                  ? 'Forum Warga belum dapat diakses'
-                  : 'Forum belum bisa dimuat',
-              message: failure.message,
-              actionLabel: failure.isForbidden ? null : 'Coba lagi',
-              onAction: failure.isForbidden
-                  ? null
-                  : () => ref.invalidate(forumChannelListProvider),
-            );
-          },
-          data: (items) {
-            // A pending invitation is not a room you can read yet — it is a
-            // decision to make, so those channels sit in their own banner
-            // above the thread instead of in the tab strip.
-            final invitations = items
-                .where((channel) => channel.isPendingInvitation)
-                .toList();
-            final openChannels = items
-                .where((channel) => !channel.isPendingInvitation)
-                .toList();
+    return ColoredBox(
+      color: KomplekkuColors.background,
+      child: SafeArea(
+        child: Column(
+          children: [
+            if (canPost) _ForumCreateBar(onCreate: _createChannel),
+            Expanded(
+              child: channels.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) {
+                  final failure = error is ApiException
+                      ? error
+                      : ApiException.malformedResponse();
+                  return StatePanel(
+                    icon: failure.isForbidden
+                        ? Icons.block_outlined
+                        : Icons.cloud_off_outlined,
+                    title: failure.isForbidden
+                        ? 'Forum Warga belum dapat diakses'
+                        : 'Forum belum bisa dimuat',
+                    message: failure.message,
+                    actionLabel: failure.isForbidden ? null : 'Coba lagi',
+                    onAction: failure.isForbidden
+                        ? null
+                        : () => ref.invalidate(forumChannelListProvider),
+                  );
+                },
+                data: (items) {
+                  // A pending invitation is not a room you can read yet — it is a
+                  // decision to make, so those channels sit in their own banner
+                  // above the thread instead of in the tab strip.
+                  final invitations = items
+                      .where((channel) => channel.isPendingInvitation)
+                      .toList();
+                  final openChannels = items
+                      .where((channel) => !channel.isPendingInvitation)
+                      .toList();
 
-            if (openChannels.isEmpty) {
-              return ListView(
-                padding: const EdgeInsets.only(bottom: 24),
-                children: [
-                  if (invitations.isNotEmpty)
-                    _InvitationBanner(
-                      invitations: invitations,
-                      onRespond: _respondToInvitation,
-                    ),
-                  StatePanel(
-                    icon: Icons.forum_outlined,
-                    title: 'Belum ada forum yang bisa dibuka',
-                    message: invitations.isNotEmpty
-                        ? 'Terima salah satu undangan di atas untuk mulai mengobrol.'
-                        : 'Buat forum sendiri lalu undang warga yang ingin kamu ajak.',
-                  ),
-                ],
-              );
-            }
+                  if (openChannels.isEmpty) {
+                    return ListView(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: [
+                        if (invitations.isNotEmpty)
+                          _InvitationBanner(
+                            invitations: invitations,
+                            onRespond: _respondToInvitation,
+                          ),
+                        StatePanel(
+                          icon: Icons.forum_outlined,
+                          title: 'Belum ada forum yang bisa dibuka',
+                          message: invitations.isNotEmpty
+                              ? 'Terima salah satu undangan di atas untuk mulai mengobrol.'
+                              : 'Buat forum sendiri lalu undang warga yang ingin kamu ajak.',
+                        ),
+                      ],
+                    );
+                  }
 
-            // Also re-anchors when the active forum disappears (invitation
-            // declined elsewhere, forum left) instead of polling a dead id.
-            if (_activeChannelId == null ||
-                !openChannels.any(
-                  (channel) => channel.id == _activeChannelId,
-                )) {
-              _activeChannelId = openChannels.first.id;
-            }
-            final activeChannelId = _activeChannelId!;
-            final activeChannel = openChannels.firstWhere(
-              (channel) => channel.id == activeChannelId,
-            );
-            _ensurePolling(activeChannelId);
+                  // Also re-anchors when the active forum disappears (invitation
+                  // declined elsewhere, forum left) instead of polling a dead id.
+                  if (_activeChannelId == null ||
+                      !openChannels.any(
+                        (channel) => channel.id == _activeChannelId,
+                      )) {
+                    _activeChannelId = openChannels.first.id;
+                  }
+                  final activeChannelId = _activeChannelId!;
+                  final activeChannel = openChannels.firstWhere(
+                    (channel) => channel.id == activeChannelId,
+                  );
+                  _ensurePolling(activeChannelId);
 
-            final isChannelModerator = activeChannel.isPrivate
-                ? activeChannel.isOwner
-                : canModerate;
+                  final isChannelModerator = activeChannel.isPrivate
+                      ? activeChannel.isOwner
+                      : canModerate;
 
-            return Column(
-              children: [
-                _ChannelTabs(
-                  channels: openChannels,
-                  activeChannelId: activeChannelId,
-                  onSelect: _selectChannel,
-                ),
-                if (invitations.isNotEmpty)
-                  _InvitationBanner(
-                    invitations: invitations,
-                    onRespond: _respondToInvitation,
-                  ),
-                if (activeChannel.isPrivate)
-                  _PrivateChannelHeader(channel: activeChannel),
-                Expanded(
-                  child: _MessageList(
-                    channelId: activeChannelId,
-                    myUserId: myUserId,
-                    canPost: canPost,
-                    isChannelModerator: isChannelModerator,
-                    onDelete: (messageId) =>
-                        _delete(activeChannelId, messageId),
-                    onReply: (message) => setState(() {
-                      _editing = null;
-                      _replyTo = message;
-                    }),
-                    onEdit: (message) {
-                      _bodyController.text = message.body;
-                      setState(() {
-                        _replyTo = null;
-                        _editing = message;
-                      });
-                    },
-                  ),
-                ),
-                if (canPost)
-                  _Composer(
-                    controller: _bodyController,
-                    sending: _sending,
-                    errorMessage: _sendError,
-                    imageUrls: _imageUrls,
-                    uploadingImage: _uploadingImage,
-                    replyTo: _replyTo,
-                    editing: _editing,
-                    onSend: () => _send(activeChannelId),
-                    onPickImage: _pickImage,
-                    onRemoveImage: (url) =>
-                        setState(() => _imageUrls.remove(url)),
-                    onCancelContext: _resetComposer,
-                  ),
-              ],
-            );
-          },
+                  return Column(
+                    children: [
+                      _ChannelTabs(
+                        channels: openChannels,
+                        activeChannelId: activeChannelId,
+                        onSelect: _selectChannel,
+                      ),
+                      if (invitations.isNotEmpty)
+                        _InvitationBanner(
+                          invitations: invitations,
+                          onRespond: _respondToInvitation,
+                        ),
+                      if (activeChannel.isPrivate)
+                        _PrivateChannelHeader(channel: activeChannel),
+                      Expanded(
+                        child: _MessageList(
+                          channelId: activeChannelId,
+                          myUserId: myUserId,
+                          canPost: canPost,
+                          isChannelModerator: isChannelModerator,
+                          onDelete: (messageId) =>
+                              _delete(activeChannelId, messageId),
+                          onReply: (message) => setState(() {
+                            _editing = null;
+                            _replyTo = message;
+                          }),
+                          onEdit: (message) {
+                            _bodyController.text = message.body;
+                            setState(() {
+                              _replyTo = null;
+                              _editing = message;
+                            });
+                          },
+                        ),
+                      ),
+                      if (canPost)
+                        _Composer(
+                          controller: _bodyController,
+                          sending: _sending,
+                          errorMessage: _sendError,
+                          imageUrls: _imageUrls,
+                          uploadingImage: _uploadingImage,
+                          replyTo: _replyTo,
+                          editing: _editing,
+                          onSend: () => _send(activeChannelId),
+                          onPickImage: _pickImage,
+                          onRemoveImage: (url) =>
+                              setState(() => _imageUrls.remove(url)),
+                          onCancelContext: _resetComposer,
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _ForumCreateBar extends StatelessWidget {
+  const _ForumCreateBar({required this.onCreate});
+
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Ruang obrolan',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: onCreate,
+            icon: const Icon(Icons.add_comment_outlined, size: 18),
+            label: const Text('Buat Forum'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1037,6 +1072,7 @@ class _Composer extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
+                  tooltip: editing != null ? 'Simpan perubahan' : 'Kirim pesan',
                   onPressed: sending ? null : onSend,
                   icon: sending
                       ? const SizedBox(
