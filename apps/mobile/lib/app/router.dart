@@ -145,34 +145,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Profil owns every operational menu that no longer fits the
-          // five-slot bottom bar: Keamanan and Layanan keep their existing
-          // paths so no deep link or notification payload breaks.
+          // Layanan owns every operational menu that no longer fits the
+          // five-slot bottom bar: Keamanan keeps its existing paths so no
+          // deep link or notification payload breaks. Profil (Akun) is not
+          // a bottom tab — it is reached from the account icon in every
+          // tab's header instead, so it lives as a standalone route below.
           StatefulShellBranch(
             routes: [
-              GoRoute(
-                path: '/akun',
-                builder: (context, state) => const AccountScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'permohonan-warga',
-                    builder: (context, state) =>
-                        const ResidencyRequestQueueScreen(),
-                  ),
-                  GoRoute(
-                    path: 'komunitas',
-                    builder: (context, state) => const CommunityAdminScreen(),
-                  ),
-                  GoRoute(
-                    path: 'rumah',
-                    builder: (context, state) => const HouseAdminScreen(),
-                  ),
-                  GoRoute(
-                    path: 'pengguna',
-                    builder: (context, state) => const AdminRoleScreen(),
-                  ),
-                ],
-              ),
               GoRoute(
                 path: '/keamanan',
                 builder: (context, state) => const KeamananHubScreen(),
@@ -263,11 +242,35 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'keuangan',
                     builder: (context, state) => const FinanceDashboardScreen(),
                   ),
+                  // Pengurus (admin) tools. These used to live under /akun —
+                  // moved here since Layanan is where every operational,
+                  // non-personal menu belongs now that Akun is identity-only.
+                  GoRoute(
+                    path: 'permohonan-warga',
+                    builder: (context, state) =>
+                        const ResidencyRequestQueueScreen(),
+                  ),
+                  GoRoute(
+                    path: 'komunitas',
+                    builder: (context, state) => const CommunityAdminScreen(),
+                  ),
+                  GoRoute(
+                    path: 'rumah',
+                    builder: (context, state) => const HouseAdminScreen(),
+                  ),
+                  GoRoute(
+                    path: 'pengguna',
+                    builder: (context, state) => const AdminRoleScreen(),
+                  ),
                 ],
               ),
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/akun',
+        builder: (context, state) => const AccountScreen(),
       ),
       GoRoute(
         path: '/mulai/komunitas',

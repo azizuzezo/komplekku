@@ -10,6 +10,7 @@ class PrototypeHeader extends StatelessWidget {
     this.showBack = false,
     this.showNotifications = true,
     this.showSearch = true,
+    this.showAccount = false,
     this.trailing,
   });
 
@@ -18,6 +19,7 @@ class PrototypeHeader extends StatelessWidget {
   final bool showBack;
   final bool showNotifications;
   final bool showSearch;
+  final bool showAccount;
   final Widget? trailing;
 
   @override
@@ -74,6 +76,14 @@ class PrototypeHeader extends StatelessWidget {
             tooltip: 'Cari',
             icon: Icons.search,
             onPressed: () => context.push('/pengumuman'),
+          ),
+        ],
+        if (showAccount) ...[
+          const SizedBox(width: 8),
+          _HeaderAction(
+            tooltip: 'Profil',
+            icon: Icons.person_outline,
+            onPressed: () => context.push('/akun'),
           ),
         ],
       ],

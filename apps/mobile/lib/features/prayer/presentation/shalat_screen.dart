@@ -7,6 +7,7 @@ import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/core/widgets/prototype_header.dart';
 import 'package:komplekku/features/prayer/data/prayer_scheduler_service.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
+import 'package:komplekku/features/prayer/data/prayer_settings_repository.dart';
 
 /// Icons that read at a glance in a list: dawn, midday, afternoon, sunset,
 /// night — the same order the prayer times run in.
@@ -138,6 +139,15 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
     final times = calculatePrayerTimes(date: _now);
     final next = _nextPrayer(_now);
     final secondsToNext = max(0, next.at.difference(_now).inSeconds);
+    final delayAsync = ref.watch(iqomahDelayMinutesProvider);
+    final iqomahDelayMinutes =
+        delayAsync.value ?? PrayerSettingsRepository.defaultIqomahDelayMinutes;
+    final adzanState = getAdzanState(
+      _now,
+      times,
+      iqomahDelayMinutes: iqomahDelayMinutes,
+    );
+    final health = ref.watch(prayerScheduleHealthProvider);
 
     return Scaffold(
       backgroundColor: KomplekkuColors.background,
@@ -147,17 +157,33 @@ class _ShalatScreenState extends ConsumerState<ShalatScreen> {
           children: [
             const _ScreenHeading(),
             const SizedBox(height: 16),
+            if (!health.exactAlarmAllowed || health.lastError != null)
+              PrayerScheduleHealthBanner(
+                exactAlarmAllowed: health.exactAlarmAllowed,
+                hasError: health.lastError != null,
+                onOpenSettings: () => ref
+                    .read(prayerSchedulerServiceProvider)
+                    .openExactAlarmSettings(),
+                onRetry: () => ref
+                    .read(prayerSchedulerServiceProvider)
+                    .rescheduleUpcomingPrayers(),
+              ),
+            if (!health.exactAlarmAllowed || health.lastError != null)
+              const SizedBox(height: 16),
             _ViewSwitcher(
               view: _view,
               onChanged: (view) => setState(() => _view = view),
             ),
             const SizedBox(height: 16),
             if (_view == _ShalatView.today) ...[
-              _NextPrayerHero(
-                prayer: next.name,
-                at: next.at,
-                secondsRemaining: secondsToNext,
-              ),
+              if (adzanState.kind == AdzanStateKind.iqomahCountdown)
+                IqomahCountdownCard(state: adzanState)
+              else
+                _NextPrayerHero(
+                  prayer: next.name,
+                  at: next.at,
+                  secondsRemaining: secondsToNext,
+                ),
               const SizedBox(height: 20),
               Text(
                 'Jadwal Shalat Hari Ini',
@@ -201,6 +227,7 @@ class _ScreenHeading extends StatelessWidget {
     return const PrototypeHeader(
       title: 'Jadwal Shalat',
       subtitle: 'RT 05 / RW 03 • Billabong',
+      showAccount: true,
     );
   }
 }
@@ -350,6 +377,181 @@ class _NextPrayerHero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// From the adzan timestamp until iqomah: a soft-purple card with the
+/// MM:SS countdown, the exact iqomah clock time, and a progress bar whose
+/// end lines up with the same timestamp Android schedules the iqomah alarm
+/// for, so the on-screen countdown and the native alarm never disagree.
+class IqomahCountdownCard extends StatelessWidget {
+  const IqomahCountdownCard({super.key, required this.state});
+
+  final AdzanState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final prayer = state.activePrayer!;
+    final adzanAt = DateTime.fromMillisecondsSinceEpoch(state.adzanTimeMs!);
+    final iqomahAt = DateTime.fromMillisecondsSinceEpoch(state.iqomahTimeMs!);
+    final totalSeconds = max(
+      1,
+      iqomahAt.difference(adzanAt).inSeconds,
+    );
+    final progress =
+        (totalSeconds - state.iqomahSecondsRemaining) / totalSeconds;
+
+    return Semantics(
+      liveRegion: true,
+      label:
+          'Menuju iqomah ${prayerLabels[prayer]}, tersisa '
+          '${formatDurationMMSS(state.iqomahSecondsRemaining)}',
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: KomplekkuColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: KomplekkuColors.primary),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: KomplekkuColors.primary,
+                  ),
+                  child: const Icon(
+                    Icons.mosque,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Menuju Iqomah ${prayerLabels[prayer]}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: KomplekkuColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                formatDurationMMSS(state.iqomahSecondsRemaining),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: KomplekkuColors.primary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                minHeight: 8,
+                backgroundColor: KomplekkuColors.primary.withValues(
+                  alpha: 0.15,
+                ),
+                valueColor: const AlwaysStoppedAnimation(
+                  KomplekkuColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Iqomah pukul ${formatTime24(iqomahAt)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: KomplekkuColors.textSecondary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Persistent — never a transient snackbar — because a missed adzan is not
+/// something a resident should have to notice was silently skipped.
+class PrayerScheduleHealthBanner extends StatelessWidget {
+  const PrayerScheduleHealthBanner({
+    super.key,
+    required this.exactAlarmAllowed,
+    required this.hasError,
+    required this.onOpenSettings,
+    required this.onRetry,
+  });
+
+  final bool exactAlarmAllowed;
+  final bool hasError;
+  final VoidCallback onOpenSettings;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = !exactAlarmAllowed
+        ? 'Alarm mungkin terlambat. Izinkan alarm & pengingat tepat waktu agar adzan berbunyi otomatis.'
+        : 'Adzan otomatis gagal dijadwalkan. Periksa izin notifikasi dan alarm, lalu coba lagi.';
+    final actionLabel = !exactAlarmAllowed ? 'Buka Pengaturan' : 'Coba Lagi';
+    final onAction = !exactAlarmAllowed ? onOpenSettings : onRetry;
+
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: KomplekkuColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.amber.shade700),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 40,
+                    child: OutlinedButton(
+                      onPressed: onAction,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: KomplekkuColors.primary,
+                        side: const BorderSide(
+                          color: KomplekkuColors.primary,
+                        ),
+                      ),
+                      child: Text(actionLabel),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

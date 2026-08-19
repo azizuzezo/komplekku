@@ -49,6 +49,7 @@ class _ForumTabsState extends State<ForumScreen> {
         title: const PrototypeHeader(
           title: 'Forum Warga',
           showNotifications: false,
+          showAccount: true,
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
@@ -532,6 +533,7 @@ class _ChannelTabs extends StatelessWidget {
             selected: isActive,
             onSelected: (_) => onSelect(channel.id),
             selectedColor: KomplekkuColors.primary,
+            checkmarkColor: Colors.white,
             labelStyle: TextStyle(
               color: isActive ? Colors.white : KomplekkuColors.textPrimary,
               fontWeight: FontWeight.w600,

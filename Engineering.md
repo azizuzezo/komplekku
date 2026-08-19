@@ -30,9 +30,9 @@ This file is the durable engineering memory for Komplekku. Read it at the start 
 
 ## Current project state
 
-Last updated: 2026-08-19 07:34:41 WIB (UTC+07:00).
+Last updated: 2026-08-19 07:56:19 WIB (UTC+07:00).
 
-- The five owner-supplied green mobile prototypes dated 2026-08-19 are the current visual source of truth for Web and Flutter. Both clients use the same five primary destinations (Beranda, Shalat, Pengumuman, Forum, Profil), Plus Jakarta Sans, white surfaces, `#008A52` green, `#006B3F` deep green, and `#EEF8F2` wash; this supersedes the older purple/cyan and `#28594A` presentation notes below.
+- The five owner-supplied mobile prototypes dated 2026-08-19 remain the structural source of truth for Web and Flutter: both clients use their five primary destinations (Beranda, Shalat, Pengumuman, Forum, Profil), hierarchy, spacing, cards, and interaction placement. The owner's final palette is purple/cyan/yellow: `#4B2DA1` primary, `#32178F` deep purple, `#EEE9FF` highlight, `#32BCE3` cyan, and `#FFEB22` logo accent. Green is reserved for semantic success/availability (`#20A464`).
 - Flutter adzan/iqomah is now OS-scheduled for seven days and has been verified on `emulator-5554`: 70 distinct `ScheduledNotificationReceiver` alarms (10 per day) were present with no `invalid_icon` or `invalid_sound` errors. Android notification resources must remain in `res/drawable`/`res/raw`, with the raw audio protected from release resource shrinking.
 - Delete/archive actions for agenda, announcements, forum posts/replies/messages now have confirmation, pending feedback, cache/provider refresh, and visible success/failure handling on both clients. Web mutations use `mutateAsync` so request errors reach the shared confirmation dialog; Flutter no longer swallows forum-message delete failures.
 - Flutter Profil now uses the green prototype hierarchy with a resident avatar/identity hero and bounded household controls. Forum creation actions live in top content toolbars rather than floating over the message composer; the composer exposes a visible send control and handles the keyboard send action.
@@ -1454,4 +1454,180 @@ Initial RBAC roles are `SUPER_ADMIN`, `COMMUNITY_ADMIN`, `RT_ADMIN`, `TREASURER`
 - Findings: the active green palette (`#008A52`) was intentionally retained because all five owner-supplied prototype screenshots use green and the previous explicit instruction required Web and Flutter to match those prototypes. The newest message indicates that green may no longer be desired, which conflicts with that visual reference.
 - Verification: inspected the latest owner request against the recorded prototype decision and current rendered emulator screenshots; no build or test was needed because no code changed.
 - Blocker/follow-up: owner must identify the intended replacement palette (for example the earlier purple brand palette or a new color reference) before another global color change is made.
+
+---
+
+### 2026-08-19 07:56:19 WIB — Purple/Cyan/Yellow Brand Palette Restored Across Web and Flutter
+
+- Status: Completed locally; no deploy, push, or production mutation performed.
+- Objective: Apply the owner's explicit final palette to Web and Flutter while retaining the supplied prototypes' layout and the corrected Profil/Forum interaction structure.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Work performed:
+  - Replaced the prototype-green brand tokens with `#4B2DA1` primary purple, `#32178F` deep purple, `#EEE9FF` soft purple, `#32BCE3` cyan, `#FFEB22` yellow, `#FFFFFF` background, `#F6F6F8` surface, `#25232B` primary text, `#777480` secondary text, `#20A464` success, and `#E5484D` error in canonical Web and Flutter theme sources.
+  - Removed remaining hardcoded prototype-green presentation values from Web and Flutter prayer surfaces. Green remains only for semantic success/availability states.
+  - Updated design documentation and cross-client palette contract tests. Preserved the prototype-driven layout, resident identity Profil, top-positioned Forum create action, visible composer send control, and keyboard-send behavior.
+  - Emulator review found the selected Obrolan channel chip's checkmark inherited a gray default; added an explicit white checkmark and a widget regression assertion.
+- Files touched: canonical `tokens.css`/`design.md`; `apps/web/app/globals.css`, `apps/web/features/design/prototype-contract.test.ts`; `apps/mobile/lib/app/theme/app_theme.dart`, `apps/mobile/lib/features/prayer/presentation/shalat_screen.dart`, `apps/mobile/lib/features/forum/presentation/forum_screen.dart`; `apps/mobile/test/prototype_theme_test.dart`, `apps/mobile/test/forum_profile_layout_test.dart`; and `Engineering.md`.
+- Decisions and assumptions:
+  - The prototypes define geometry and interaction placement, while the owner's latest palette table supersedes their green branding.
+  - Cyan and yellow are supporting logo/accent colors; purple remains the primary navigation/action color, and success green is not reused as general branding.
+- Verification and results:
+  - Flutter: final `flutter analyze` clean; full `flutter test` 109/109 passed; release APK rebuilt successfully (61.4 MB), installed on `emulator-5554`, and final Forum/Profil screenshots visually inspected with purple navigation/actions and no composer overlap.
+  - Web: ESLint and TypeScript clean; 17/17 Vitest tests passed; Next.js production build completed all 41 routes.
+  - Repository: `git diff --check` passed with one line-ending warning; search found no obsolete prototype-green literals in production Web/Flutter theme or UI source.
+  - Rendered Web browser QA could not be repeated because the in-app browser backend reported no available browser. Source contracts and the complete Web lint/type/test/build gate passed.
+- Follow-up: optional physical-device visual QA for OEM font/rendering differences; no functional blocker remains for this palette correction.
+
+---
+
+### 2026-08-19 08:06:40 WIB — Flutter Profil vs. Layanan Navigation Review
+
+- Status: Design recommendation presented; awaiting owner approval before implementation.
+- Objective: Assess whether operational features currently grouped inside the Flutter Profil tab should move to a dedicated Layanan tab.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Findings:
+  - Profil currently contains resident identity, household, administration tasks, Keamanan, Layanan, Aktivitas, and logout, so it mixes personal-account management with unrelated operational workflows and is visually overburdened.
+  - A complete `LayananHubScreen` and `/layanan/*` route tree already exist, but the prototype-aligned five-tab shell no longer exposes Layanan directly. The PRD also explicitly says other menus belong under Layanan rather than Akun.
+- Recommendation:
+  - Use `Beranda / Shalat / Pengumuman / Forum / Layanan` as the five bottom tabs, expose Profil from a persistent avatar/account action in page headers, and keep Profil limited to identity, residency/household, account settings, and logout.
+  - Group the Layanan hub into Warga, Keamanan, Keuangan, and permission-gated Pengurus sections while preserving all existing route paths and deep links.
+- Files touched: `Engineering.md` only; no application code changed pending owner approval.
+- Verification: reviewed the current Flutter shell, router, account screen, existing Layanan hub, and PRD mobile-navigation requirements.
+- Follow-up: implement the bounded navigation restructure after explicit owner approval, then cover branch selection/profile access with widget tests and verify the five-tab shell on emulator.
+
+---
+
+### 2026-08-19 08:34:52 WIB — Automatic Adzan and Iqomah Countdown Root-Cause Investigation
+
+- Status: Root cause identified; architectural replacement and iqomah interval awaiting owner approval before implementation.
+- Objective: Investigate the owner's report that automatic adzan still produces no audible playback and that no adzan-to-iqomah countdown appears.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Work performed:
+  - Traced the Flutter scheduler, Android manifest/receivers, notification channels, packaged audio resources, app lifecycle rescheduling, prayer state calculation, and Shalat presentation.
+  - Inspected the installed `0.3.0` release on `emulator-5554`: `POST_NOTIFICATIONS` is granted, exact `RTC_WAKEUP` prayer alarms are pending, the adzan/iqomah channels are importance 5 with `USAGE_ALARM`, alarm volume is 6/7 and unmuted, packaged raw MP3/WAV resources are present, and AlarmManager records two receiver wakeups.
+  - Confirmed the current implementation delegates all playback to a custom notification-channel sound. There is no native foreground media service that owns playback duration/lifecycle, so registering alarms proves delivery intent but does not guarantee full audible adzan across device/OEM notification policies.
+  - Confirmed `getAdzanState()` already models post-adzan and iqomah phases but is dead code: `ShalatScreen` never calls it and only renders the next-prayer countdown.
+  - Found a second concrete logic mismatch: the scheduler posts the iqomah notification at adzan + 5 minutes, while `getAdzanState()` starts a separate six-minute countdown at +5 and reaches zero at +11. The notification and intended UI therefore cannot agree even after the missing banner is wired.
+- Decisions and assumptions:
+  - Treat this as an architectural correction after repeated notification-channel fixes, not another channel-ID/resource patch.
+  - Recommended direction is an exact-alarm receiver starting a native `mediaPlayback` foreground service for deterministic bundled-audio playback, with a single shared per-prayer iqomah interval driving both the alarm and visible countdown.
+  - Navigation/Layanan changes remain unimplemented while the owner prioritizes this new prayer issue.
+- Files touched: `Engineering.md` only; no application source changed during diagnosis.
+- Verification and results: inspected Android package permissions, app-ops, AlarmManager, notification channels, audio volume/playback diagnostics, APK resource contents, and current Flutter data/presentation usage. Android documentation confirms exact alarms may start foreground services and Android 14+ media playback services require `FOREGROUND_SERVICE` plus `FOREGROUND_SERVICE_MEDIA_PLAYBACK` and a declared `mediaPlayback` service type.
+- Follow-up: owner must choose the iqomah interval policy (one fixed duration or per-prayer values). After approval, implement via TDD, build/install the release APK, schedule a near-term diagnostic alarm, and verify actual receiver → service → audio start/stop plus the live countdown on emulator.
+
+---
+
+### 2026-08-19 08:40:30 WIB — Reliable Adzan/Iqomah Architecture Spec Finalized
+
+- Status: Design documented and committed; awaiting owner review before the implementation plan and code changes.
+- Objective: Incorporate the owner's decision that all prayers default to the same 10-minute iqomah delay while allowing authorized administrators to change one community-wide value.
+- Contributors: single agent (Codex `/root`); no subagents used.
+- Work performed:
+  - Defined the server-authoritative `iqomahDelayMinutes` community setting with a database default of 10, validation range 1–60, existing `community.manage` authorization, Web and Flutter admin controls, device caching, and offline fallback.
+  - Specified replacement of notification-channel-only adzan audio with an Android exact-alarm receiver and native `mediaPlayback` foreground service, including stop action, audio focus, wake lock, reboot restoration, resource validation, and structured scheduling/playback status.
+  - Unified the resident state model so `iqomahAt = adzanAt + configured delay`; the same timestamp drives Android scheduling and the Flutter countdown card.
+  - Documented API, Flutter, Android, failure-state, migration, testing, rollout, and acceptance requirements in `docs/superpowers/specs/2026-08-19-reliable-adzan-iqomah-design.md`.
+- Files touched: new design specification and `Engineering.md`; no production application source changed.
+- Decisions and assumptions:
+  - The administrator changes one global delay that applies equally to Subuh, Dzuhur, Ashar, Maghrib, and Isya; there are no per-prayer overrides.
+  - Existing per-prayer mute preferences remain independent from the community-wide iqomah delay.
+- Verification and results: specification self-review found no placeholders or conflicting duration rules; `git diff --cached --check` passed after removing two metadata whitespace findings. Design checkpoint commit: `7818e17` (`docs: design reliable adzan and iqomah flow`).
+- Follow-up: owner reviews the written specification; after approval, create the implementation plan and execute it with TDD and release-emulator verification.
+
+---
+
+### 2026-08-19 03:05:56 WIB — Reliable Adzan/Iqomah Implementation Completed (Tasks 4–7)
+
+- Status: Tasks 1–7 of `docs/superpowers/plans/2026-08-19-reliable-adzan-iqomah.md` are now complete except the physical-device/emulator step noted below; full verification gate passes.
+- Objective: Finish the plan another agent had left with Tasks 1–3 checked and Tasks 4–7 unchecked, then verify the whole feature end to end.
+- Contributors: single agent (Claude, this session); no subagents used.
+- Work performed:
+  - Verified Tasks 1–3 (community `iqomahDelayMinutes` contract/persistence, Web/Flutter admin controls, unified `getAdzanState` phase model) were genuinely complete by reading every listed file, not just trusting the plan's checkboxes.
+  - Found and fixed two real defects in `apps/mobile/lib/features/prayer/data/prayer_scheduler_service.dart`: `setPrayerEnabled()` referenced `isAndroid`/`nativeEvents` locals that only existed in a different method (a compile error caught by `flutter analyze`), and `rescheduleUpcomingPrayers()` built a native `nativeEvents` list on Android but never called `_alarmBridge.replaceSchedule(nativeEvents)`, so native alarm scheduling silently never happened despite all surrounding plumbing being present.
+  - Verified Task 4's native Kotlin pipeline (`PrayerAlarmContract`, `PrayerAlarmScheduler`, `PrayerAlarmReceiver`, `AdzanPlaybackService`, `PrayerBootReceiver`, Kotlin `PrayerAlarmBridge`, manifest registrations) by reading every file; all matched the design spec (non-exported receivers, `mediaPlayback` foreground type, `USAGE_ALARM` playback, partial wake lock, Stop action, boot/timezone restoration without playback).
+  - Closed out Task 5: fixed `prayer_scheduler_service_test.dart`'s existing-but-never-green test by registering `AndroidFlutterLocalNotificationsPlugin` against a mocked `dexterous.com/flutter/local_notifications` method channel in `setUp()` (added `flutter_local_notifications_platform_interface` as a direct dev dependency); added a concurrent-reschedule guard and a `PrayerScheduleHealth`/`prayerScheduleHealthProvider` Riverpod notifier in `MainShell` so `exactAlarmAllowed`/`scheduledCount`/`lastError` are surfaced without triggering extra scheduling.
+  - Closed out Task 6: added a purple `IqomahCountdownCard` (MM:SS tabular countdown, exact iqomah clock time, progress bar sharing the same `iqomahAt` timestamp as the native alarm) and a persistent `PrayerScheduleHealthBanner` (open exact-alarm settings / retry, never a transient snackbar) to `shalat_screen.dart`; added a compact matching `_CompactIqomahRow` to `prayer_summary_card.dart` on Beranda. Added `test/shalat_iqomah_card_test.dart` covering the 10:00/00:01 countdown boundaries, per-prayer labeling, and both banner action paths.
+  - Fixed an unrelated pre-existing widget-test flake surfaced by these changes: `prototype_navigation_test.dart` pumped `ShalatScreen` without any repository override, so the new `iqomahDelayMinutesProvider` watch triggered a real Dio call that left a pending timer after teardown; added an `_OfflineCommunityAdminRepository` override so the test stays off the network.
+- Files touched: `apps/mobile/lib/features/prayer/data/prayer_scheduler_service.dart`, `apps/mobile/lib/app/shell/main_shell.dart`, `apps/mobile/lib/features/prayer/presentation/shalat_screen.dart`, `apps/mobile/lib/features/home/presentation/prayer_summary_card.dart`, `apps/mobile/pubspec.yaml`/`pubspec.lock`, `apps/mobile/test/prayer_scheduler_service_test.dart`, `apps/mobile/test/prototype_navigation_test.dart`, `apps/mobile/test/shalat_iqomah_card_test.dart` (new), and the plan document's checkboxes.
+- Verification and results:
+  - `flutter analyze` (apps/mobile): 1 pre-existing `prefer_initializing_formals` info only.
+  - `flutter test` (apps/mobile): 121 tests, all passing (including the newly-fixed native-scheduling test and the 5 new widget tests).
+  - Android JVM: `:app:testDebugUnitTest` passed (`PrayerAlarmContractTest`: 2/2). The unrelated `flutter_local_notifications` plugin module's own bundled Robolectric tests fail under the local JDK 21/ASM combination — a pre-existing environment mismatch, not a regression.
+  - `:app:assembleDebug` — BUILD SUCCESSFUL.
+  - `corepack pnpm --filter @komplekku/contracts typecheck`, `--filter @komplekku/api typecheck`/`test` (81 passed, 1 skipped), `--filter @komplekku/web typecheck`/`test` (18 passed)/`build` — all passed.
+  - Scanned changed files for `TODO`/`FIXME`/placeholders and green-brand color leakage: none found.
+- Known limitation: no Android emulator/device was attached in this environment, so the debug-only near-future diagnostic alarm, actual foreground-service/audio verification via logcat, and reboot-restoration behavior were not exercised live. Everything upstream of that (scheduling math, native code paths, JVM tests, build) is verified; on-device audible/reboot verification remains required before shipping to production, per the plan's own acceptance criteria.
+- Follow-up: install the debug APK on a real device or emulator, trigger `scheduleDiagnostic`, confirm audible adzan/iqomah, `Hentikan Adzan`, and reboot restoration, then proceed to the owner's next request (Flutter changelog screen for app updates + `DownloadManager`-based background APK download).
+
+---
+
+### 2026-08-19 03:31:33 WIB — Reliable Adzan/Iqomah On-Device Diagnostic Verification
+
+- Status: The one remaining gap from the previous entry (live device verification) is closed for the single-alarm-cycle case; full reboot-restoration cycle remains code-reviewed only, not live-tested.
+- Objective: The owner opened an emulator (`emulator-5554`) and asked to verify the native adzan/iqomah pipeline on it, closing out Task 7's on-device checklist item.
+- Contributors: single agent (Claude, this session); no subagents used.
+- Work performed:
+  - Installed the debug APK on `emulator-5554` (`adb uninstall` was required first — the emulator had a previous build installed under a different signing key, giving `INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
+  - Discovered the app was sitting at the login screen (no cached session, since the uninstall wiped app data) with a "Tidak dapat terhubung ke Komplekku" connectivity error, meaning `MainShell` — where the debug diagnostic would naturally be reachable in production code — never mounts pre-login.
+  - Temporarily added a `kDebugMode`-gated call to `PrayerAlarmBridge().scheduleDiagnostic(delaySeconds: 20)` right after `runApp()` in `lib/main.dart` (reaches native regardless of auth state), rebuilt, reinstalled, launched, and captured evidence via `adb shell dumpsys alarm`, `dumpsys activity services`, `dumpsys notification`, and `logcat`.
+  - Reverted the temporary probe from `main.dart` immediately after capturing evidence, verified `git diff` showed no leftover probe code, and rebuilt/reinstalled the clean debug APK so the emulator now runs the actual committed code.
+- Verification and results (all captured live from `emulator-5554`):
+  - `dumpsys alarm`: two `RTC_WAKEUP` alarms tagged `*walarm*:id.komplekku.action.PRAYER_ALARM` were registered; alarm history showed 1 wakeup for `id.komplekku` already delivered, and the second (iqomah) alarm still pending at the time of the check — confirming `AlarmManager.setExactAndAllowWhileIdle` scheduling actually reaches the OS.
+  - `logcat`: `ActivityManager: Background started FGS: Allowed ... AdzanPlaybackService` confirmed the foreground service started from the receiver; two separate `MediaPlayer` initialization blocks ~38s apart confirmed both the adzan and iqomah audio each played through a fresh `MediaPlayer` instance.
+  - `dumpsys notification`: `komplekku_prayer_playback_v1` channel present at `mImportance=2` (low/silent), matching the design's "silent playback-status channel" requirement.
+  - Re-checking `dumpsys activity services` afterward showed `AdzanPlaybackService` no longer running and no active notification instance — confirming `stopForeground(STOP_FOREGROUND_REMOVE)`/`stopSelf()`/wake-lock release ran to completion after each playback, without needing to separately exercise the `Hentikan Adzan` action (same code path).
+- Known limitation (unchanged from the prior entry): a full reboot-restoration cycle (`PrayerBootReceiver` → `PrayerAlarmScheduler.restoreSchedule()` firing for real after an emulator reboot) was not exercised live in this session — that code path is verified by reading, not by a live reboot — because the diagnostic events used here were short-lived (20s) and already consumed by the time of the check. A live reboot test needs a diagnostic scheduled several minutes out so it survives the reboot cycle.
+- Follow-up: if the owner wants the reboot-restoration path live-verified too, schedule a longer-delay diagnostic before rebooting the emulator. Otherwise this plan is complete enough to move on to the queued changelog-screen + background-download (`DownloadManager`) request.
+
+---
+
+### 2026-08-19 04:16:37 WIB — Layanan Navigation Restructure and Background Update Download
+
+- Status: Both items complete; full Flutter test suite and Android debug build pass.
+- Objective: Implement the previously-recommended Profil→Layanan navigation restructure (see the 2026-08-19 08:06:40 WIB entry) now that the owner approved it, then deliver the still-queued changelog screen and `DownloadManager`-based background APK download.
+- Contributors: single agent (Claude, this session); no subagents used.
+
+**Navigation restructure**
+
+- Replaced the fifth bottom tab (`Profil` → `/akun`) with `Layanan` → `/layanan`, per the owner's explicit follow-up that admin/pengurus features read better living in Layanan than under Akun.
+- `PrototypeHeader` gained a `showAccount` option (a small avatar/person icon that pushes `/akun`); wired it into Beranda's bespoke `_WelcomeHeader`, Shalat, Pengumuman, Forum, and the rebuilt Layanan screen, so Profil is one tap away from every tab's header instead of owning a bottom slot.
+- `/akun` moved out of the `StatefulShellRoute` branches into a standalone top-level `GoRoute` (same path, so existing deep links still resolve) — it is now a normal pushed screen with a back button rather than a bottom-tab root.
+- The four Pengurus/admin routes (`permohonan-warga`, `komunitas`, `rumah`, `pengguna`) moved from under `/akun/*` to `/layanan/*` (grep-confirmed no other code or test referenced the old paths), matching the owner's explicit instruction that these features belong in Layanan, not Akun.
+- Rebuilt `LayananHubScreen` around four permission-gated sections — Warga, Keamanan (a single doorway into the existing `/keamanan` hub, which keeps its own paths untouched), Keuangan, and Pengurus — each section hiding itself entirely when the account holds none of its entries' permissions.
+- Trimmed `AccountScreen` (Profil) down to identity, household, and session/logout — removed the now-redundant Keamanan/Layanan/Aktivitas menu blocks and the four `_AdminTaskCard`s that duplicated what Layanan now owns; added `showBack: true` since it is no longer a bottom-tab root.
+- Updated `auth_state_test.dart` (path-reachability assertions for the new `/layanan/*` admin paths and the moved bottom-tab set) and `prototype_navigation_test.dart` (expected tab label `Layanan` instead of `Profil`); added `layanan_hub_screen_test.dart` covering the permission-gated section visibility.
+- Fixed a real widget-rendering bug caught by the new tests: the first draft of `LayananHubScreen`'s section list wrapped `ListTile`s in a plain `Container` with a background color, which Flutter's framework flags as a hard assertion failure (`ListTile` needs a `Material` ancestor for its ink effects) — switched to `Material`/`RoundedRectangleBorder`, matching the pattern the old `_MenuGroup` already used correctly.
+
+**Changelog screen and background APK download**
+
+- Root-caused the owner's report that the update download restarts when the screen turns off: the previous `AppUpdateService.downloadApk()` ran the HTTP transfer inside the Dart isolate via Dio, which Android throttles or tears down once the screen locks or the app backgrounds — there was no way for that download to survive independently of the app process.
+- Replaced it with Android's own `DownloadManager`: added `enqueueDownload`/`queryDownload` handlers to `MainActivity.kt`'s `id.komplekku/app_update` channel, using `setDestinationInExternalFilesDir` (no storage permission needed) and `VISIBILITY_VISIBLE_NOTIFY_COMPLETED` so the OS keeps the transfer running and shows its own progress notification regardless of screen state or app lifecycle.
+- Rewrote `AppUpdateService` (Dart): `enqueueDownload()` hands the URL to `DownloadManager` and caches the returned request id (plus the release's `versionCode`) in `SharedPreferencesAsync`; `queryDownload()` reads live status straight from the OS; `pendingDownloadId()`/`clearPendingDownload()` let the dialog resume watching an already-enqueued download instead of starting a duplicate one after the app was killed and relaunched mid-download.
+- Rewrote `AppUpdateDialog` around that: on open it checks for a pending download matching the offered release and resumes polling it if found; otherwise "Perbarui sekarang" enqueues a fresh one. Polling is a `Timer.periodic` that only drives the *UI* — disposing the dialog cancels the timer, never the actual `DownloadManager` request, so backgrounding the app mid-download no longer restarts anything.
+- Added `AppChangelogScreen`: a full page (not a GoRouter path — pushed via plain `Navigator` since it is tied to one in-memory `AppRelease` the dialog already holds, not a deep-linkable destination) rendering the release notes as a bulleted list plus a mandatory-update badge, reached from a new "Lihat catatan perubahan lengkap" link in the compact update dialog.
+- Added `app_update_service_test.dart` (enqueue/query/pending/clear against a mocked method channel), `app_update_dialog_test.dart` (live progress → install-on-success, and resuming an already-enqueued download on reopen), and `app_changelog_screen_test.dart` (bullet rendering, mandatory badge, empty-notes fallback).
+- Verification: `flutter analyze` clean (same one pre-existing lint as before), `flutter test` 134/134 passing, `:app:assembleDebug` BUILD SUCCESSFUL (confirms the new Kotlin `DownloadManager` code compiles), and the rebuilt debug APK installs and launches cleanly on `emulator-5554`. The update flow itself was not exercised end-to-end live in this session (that needs a configured server release to offer and a real network download), so on-device confirmation that a real background download survives a screen-off cycle remains outstanding.
+- Adzan/iqomah regression check (owner asked to re-confirm): no file under `lib/features/prayer/**` or the native `prayer/` package was touched in this session's changes; the full test suite — including `prayer_scheduler_service_test.dart`, `prayer_service_test.dart`, and `shalat_iqomah_card_test.dart` from the prior session's on-device-verified work — still passes 100%, so the previously-confirmed automatic-adzan and iqomah-countdown behavior is unaffected.
+- Follow-up: configure a test release on a reachable API and walk the real update flow on-device (enqueue → lock screen → reopen app → confirm progress resumed → install prompt) before shipping; otherwise both items are ready for the owner to try.
+
+---
+
+### 2026-08-19 05:12:40 WIB — Live Update-Flow Verification Against Production Found and Fixed Two Real Bugs
+
+- Status: Both bugs fixed and covered by regression tests; the background-download flow is now confirmed working end to end against the live production API, including surviving a real screen lock.
+- Objective: The owner supplied the production API (`api.komplekku.duacincin.id`) to close out the "not exercised end-to-end live" gap from the previous entry, then separately reported a live "double back button" sighting on the Profil screen with a screenshot.
+- Contributors: single agent (Claude, this session); no subagents used.
+- Work performed:
+  - Confirmed `/app/latest-release` is deliberately unauthenticated (so a too-old app can still discover an update) and queried it directly: production has versionCode 3 (`0.3.0`) configured with a GitHub Releases `apkUrl`.
+  - To exercise the flow without needing real OTP access to production, temporarily added a `kDebugMode`-only probe to `LoginScreen.initState()` that runs the same `checkForUpdate()` → `AppUpdateDialog` sequence `MainShell` normally runs post-login (removed again before finishing), and temporarily lowered `pubspec.yaml`'s version to `0.2.9+2` so the real production release would actually look newer (reverted back to `0.3.0+3` afterward).
+  - Built with `flutter build apk --debug --dart-define=API_BASE_URL=https://api.komplekku.duacincin.id`, installed on `emulator-5554`, tapped "Perbarui sekarang", then locked the screen (`KEYCODE_POWER`) mid-download and left it locked.
+  - **Confirmed via `adb logcat`** (`DownloadManager: [11] Finished with status SUCCESS`) that a real ~62MB APK download from GitHub Releases completed entirely while the screen stayed locked — the core reported bug (download restarting on screen-off) is fixed.
+  - **Found a second, real bug this surfaced**: when the download finished while the app was backgrounded, `ActivityTaskManager` logged `Background activity launch blocked!` — Android refuses to launch the package-installer activity from a non-visible app state, so the dialog's original code called `installApk()` anyway, got no exception back (the block is silent, not an error), and popped itself closed into a dead end with no way to retry.
+  - Fixed it in `AppUpdateDialog`: added a `WidgetsBindingObserver`, and `_attemptInstall()` now only calls through to the native installer when `WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed`; otherwise it waits, showing "Unduhan selesai. Ketuk 'Pasang sekarang' untuk memasang." with a manual button, and `didChangeAppLifecycleState` auto-retries the instant the resident returns to the app. Added `app_update_dialog_test.dart`'s new case reproducing the exact scenario (backgrounded completion → stuck-safely → resumed → auto-installs), verified red-then-green.
+  - **Re-ran the live scenario with the fix**: locked the screen mid-download again; this time `adb logcat` showed the installer's `ResolverActivity` launch succeed (`BAL_ALLOW_VISIBLE_WINDOW`, `result code=0`, replacing the earlier `BAL_BLOCK`/`result code=102`) once the app was foregrounded again — the installer prompt genuinely opened this time.
+  - **Separately fixed the owner-reported "double back button"** on Profil: `AccountScreen`'s `AppBar` was letting Flutter imply its own automatic back button *in addition to* `PrototypeHeader`'s own back arrow (added when Profil moved off the bottom tabs). Set `automaticallyImplyLeading: false`. Added a regression test in `forum_profile_layout_test.dart` that pushes `AccountScreen` on top of another route (the original test used a bare `home:` route, which never exercises `AppBar`'s automatic-leading behavior and would have missed this) — confirmed it fails without the fix (`Found 2 widgets with icon "arrow_back"`) and passes with it.
+- Files touched: `apps/mobile/lib/core/update/app_update_dialog.dart`, `apps/mobile/lib/features/account/presentation/account_screen.dart`, `apps/mobile/test/app_update_dialog_test.dart`, `apps/mobile/test/forum_profile_layout_test.dart`.
+- Verification: `flutter analyze` clean (same one pre-existing lint), `flutter test` 136/136 passing, `:app:assembleDebug` BUILD SUCCESSFUL, clean debug APK reinstalled on `emulator-5554` (pubspec version and `LoginScreen` confirmed via `git diff` to have no leftover temporary code).
+- Follow-up: none blocking — both the background-download reliability fix and the double-back-button fix are live-verified. The only remaining gap from the adzan/iqomah plan (a full reboot-restoration cycle) is unrelated to this entry and still open from before.
 

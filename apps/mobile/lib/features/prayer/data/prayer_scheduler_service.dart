@@ -6,10 +6,42 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
+import 'package:komplekku/features/prayer/data/prayer_alarm_bridge.dart';
+import 'package:komplekku/features/prayer/data/prayer_settings_repository.dart';
 
 final prayerSchedulerServiceProvider = Provider<PrayerSchedulerService>((ref) {
-  return PrayerSchedulerService();
+  return PrayerSchedulerService(
+    settingsRepository: ref.watch(prayerSettingsRepositoryProvider),
+  );
 });
+
+/// Native alarm health as of the last reschedule, so Shalat/Beranda can show a
+/// persistent warning instead of relying on a transient snackbar. Updated by
+/// whoever calls `rescheduleUpcomingPrayers` (see `MainShell`) — reading this
+/// provider never triggers scheduling on its own.
+class PrayerScheduleHealth {
+  const PrayerScheduleHealth({
+    this.exactAlarmAllowed = true,
+    this.scheduledCount = 0,
+    this.lastError,
+  });
+
+  final bool exactAlarmAllowed;
+  final int scheduledCount;
+  final String? lastError;
+}
+
+class PrayerScheduleHealthNotifier extends Notifier<PrayerScheduleHealth> {
+  @override
+  PrayerScheduleHealth build() => const PrayerScheduleHealth();
+
+  void update(PrayerScheduleHealth health) => state = health;
+}
+
+final prayerScheduleHealthProvider =
+    NotifierProvider<PrayerScheduleHealthNotifier, PrayerScheduleHealth>(
+  PrayerScheduleHealthNotifier.new,
+);
 
 /// Schedules adzan/iqomah local notifications ahead of time so they fire on
 /// their own via the OS alarm + notification-channel sound, whether the app is
@@ -23,11 +55,17 @@ class PrayerSchedulerService {
   PrayerSchedulerService({
     FlutterLocalNotificationsPlugin? plugin,
     SharedPreferencesAsync? preferences,
+    PrayerAlarmBridge? alarmBridge,
+    PrayerSettingsRepository? settingsRepository,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
-       _preferences = preferences ?? SharedPreferencesAsync();
+       _preferences = preferences ?? SharedPreferencesAsync(),
+       _alarmBridge = alarmBridge ?? PrayerAlarmBridge(),
+       _settingsRepository = settingsRepository;
 
   final FlutterLocalNotificationsPlugin _plugin;
   final SharedPreferencesAsync _preferences;
+  final PrayerAlarmBridge _alarmBridge;
+  final PrayerSettingsRepository? _settingsRepository;
 
   // Channel configuration is frozen by Android once a channel exists, so
   // changing the sound or its audio usage means publishing a new id. These
@@ -39,6 +77,8 @@ class PrayerSchedulerService {
   static const _legacyChannelIds = [
     'komplekku_adzan_channel',
     'komplekku_iqomah_channel',
+    _adzanChannelId,
+    _iqomahChannelId,
   ];
 
   /// flutter_local_notifications resolves small icons from `res/drawable`.
@@ -58,8 +98,6 @@ class PrayerSchedulerService {
   // Mirrors the gap prayer_service.dart's getAdzanState() uses between the
   // adzan and the iqomah countdown — kept as one source of truth so the
   // scheduled iqomah notification and the live countdown banner never drift.
-  static const postAdzanGap = Duration(minutes: 5);
-
   static const _adzanPrayers = [
     PrayerName.subuh,
     PrayerName.dzuhur,
@@ -75,9 +113,15 @@ class PrayerSchedulerService {
 
   int _scheduledNotificationCount = 0;
   String? _lastScheduleError;
+  bool _exactAlarmAllowed = true;
 
   int get scheduledNotificationCount => _scheduledNotificationCount;
   String? get lastScheduleError => _lastScheduleError;
+  bool get exactAlarmAllowed => _exactAlarmAllowed;
+
+  /// Opens the system screen for granting the exact-alarm permission. Only
+  /// meaningful on Android 12+; a no-op elsewhere.
+  Future<void> openExactAlarmSettings() => _alarmBridge.openExactAlarmSettings();
 
   /// The scheduled notification is posted by a broadcast receiver long after
   /// this Dart isolate is gone, so it reads the small icon from the value
@@ -125,30 +169,6 @@ class PrayerSchedulerService {
       await androidPlugin.deleteNotificationChannel(legacyId);
     }
 
-    await androidPlugin.createNotificationChannel(
-      const AndroidNotificationChannel(
-        _adzanChannelId,
-        'Adzan',
-        description: 'Suara adzan otomatis saat waktu sholat tiba.',
-        importance: Importance.max,
-        playSound: true,
-        sound: RawResourceAndroidNotificationSound('adzan'),
-        audioAttributesUsage: AudioAttributesUsage.alarm,
-        enableVibration: true,
-      ),
-    );
-    await androidPlugin.createNotificationChannel(
-      const AndroidNotificationChannel(
-        _iqomahChannelId,
-        'Iqomah',
-        description: 'Pengingat iqomah setelah jeda adzan.',
-        importance: Importance.max,
-        playSound: true,
-        sound: RawResourceAndroidNotificationSound('iqomah'),
-        audioAttributesUsage: AudioAttributesUsage.alarm,
-        enableVibration: true,
-      ),
-    );
     _channelsReady = true;
   }
 
@@ -242,7 +262,10 @@ class PrayerSchedulerService {
   /// also re-covers any schedule gap left by the device being off for a
   /// while. No-ops (after clearing any stale schedule) when the user has muted
   /// auto-adzan.
-  Future<void> rescheduleUpcomingPrayers({int days = _scheduleDays}) async {
+  Future<void> rescheduleUpcomingPrayers({
+    int days = _scheduleDays,
+    int? iqomahDelayMinutes,
+  }) async {
     _scheduledNotificationCount = 0;
     _lastScheduleError = null;
     await _ensureInitialized();
@@ -252,17 +275,19 @@ class PrayerSchedulerService {
 
     if (!await isAutoAdzanEnabled()) return;
 
+    final delayMinutes =
+        iqomahDelayMinutes ??
+        await _settingsRepository?.loadIqomahDelayMinutes() ??
+        PrayerSettingsRepository.defaultIqomahDelayMinutes;
+    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
     // Android 12+ can refuse exact alarms. Rather than let the first refusal
     // throw and abort the whole loop — leaving nothing scheduled at all — the
     // mode is resolved once up front and every prayer is scheduled with it.
-    final canScheduleExact = await _canScheduleExactAlarms();
-    final scheduleMode = canScheduleExact
-        ? AndroidScheduleMode.exactAllowWhileIdle
-        : AndroidScheduleMode.inexactAllowWhileIdle;
-
     final muted = await mutedPrayers();
     final now = DateTime.now();
     final scheduledIds = <int>[];
+    final nativeEvents = <PrayerAlarmEvent>[];
 
     for (var dayOffset = 0; dayOffset < days; dayOffset++) {
       final day = now.add(Duration(days: dayOffset));
@@ -275,62 +300,91 @@ class PrayerSchedulerService {
 
         if (adzanTime.isAfter(now)) {
           final id = _notificationId(day, prayer, isIqomah: false);
-          final scheduled = await _scheduleAt(
-            id: id,
-            time: adzanTime,
-            channelId: _adzanChannelId,
-            channelName: 'Adzan',
-            soundName: 'adzan',
-            scheduleMode: scheduleMode,
-            title: 'Waktu $label Tiba',
-            body: 'Adzan $label telah berkumandang.',
-          );
-          if (scheduled) scheduledIds.add(id);
+          if (isAndroid) {
+            nativeEvents.add(
+              PrayerAlarmEvent(
+                id: id,
+                epochMillis: adzanTime.millisecondsSinceEpoch,
+                kind: PrayerAlarmKind.adzan,
+                prayerLabel: label!,
+              ),
+            );
+          } else {
+            final scheduled = await _scheduleAt(
+              id: id,
+              time: adzanTime,
+              channelId: _adzanChannelId,
+              channelName: 'Adzan',
+              soundName: 'adzan',
+              scheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+              title: 'Waktu $label Tiba',
+              body: 'Adzan $label telah berkumandang.',
+            );
+            if (scheduled) scheduledIds.add(id);
+          }
         }
 
-        final iqomahTime = adzanTime.add(postAdzanGap);
+        final iqomahTime = adzanTime.add(Duration(minutes: delayMinutes));
         if (iqomahTime.isAfter(now)) {
           final id = _notificationId(day, prayer, isIqomah: true);
-          final scheduled = await _scheduleAt(
-            id: id,
-            time: iqomahTime,
-            channelId: _iqomahChannelId,
-            channelName: 'Iqomah',
-            soundName: 'iqomah',
-            scheduleMode: scheduleMode,
-            title: 'Iqomah $label',
-            body: 'Waktunya sholat $label berjamaah.',
-          );
-          if (scheduled) scheduledIds.add(id);
+          if (isAndroid) {
+            nativeEvents.add(
+              PrayerAlarmEvent(
+                id: id,
+                epochMillis: iqomahTime.millisecondsSinceEpoch,
+                kind: PrayerAlarmKind.iqomah,
+                prayerLabel: label!,
+              ),
+            );
+          } else {
+            final scheduled = await _scheduleAt(
+              id: id,
+              time: iqomahTime,
+              channelId: _iqomahChannelId,
+              channelName: 'Iqomah',
+              soundName: 'iqomah',
+              scheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+              title: 'Iqomah $label',
+              body: 'Waktunya sholat $label berjamaah.',
+            );
+            if (scheduled) scheduledIds.add(id);
+          }
         }
       }
     }
 
-    await _preferences.setStringList(
-      _scheduledIdsKey,
-      scheduledIds.map((id) => id.toString()).toList(),
-    );
-    _scheduledNotificationCount = scheduledIds.length;
+    if (isAndroid) {
+      try {
+        final status = await _alarmBridge.replaceSchedule(nativeEvents);
+        _scheduledNotificationCount = status.scheduledCount;
+        _lastScheduleError = status.lastError;
+        _exactAlarmAllowed = status.exactAlarmAllowed;
+      } catch (error, stackTrace) {
+        _lastScheduleError = error.toString();
+        debugPrint('Native prayer schedule failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    } else {
+      await _preferences.setStringList(
+        _scheduledIdsKey,
+        scheduledIds.map((id) => id.toString()).toList(),
+      );
+      _scheduledNotificationCount = scheduledIds.length;
+    }
   }
 
   Future<void> _cancelScheduled() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await _alarmBridge.cancelSchedule();
+      } catch (_) {
+        // Native channel can be unavailable in unit tests before attachment.
+      }
+    }
     for (final id in await _loadScheduledIds()) {
       await _plugin.cancel(id);
     }
     await _preferences.setStringList(_scheduledIdsKey, const []);
-  }
-
-  Future<bool> _canScheduleExactAlarms() async {
-    final androidPlugin = _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    if (androidPlugin == null) return true;
-    try {
-      return await androidPlugin.canScheduleExactNotifications() ?? true;
-    } catch (_) {
-      return false;
-    }
   }
 
   /// Returns whether the notification was accepted, so a single rejected

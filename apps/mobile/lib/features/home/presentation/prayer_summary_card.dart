@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
 import 'package:komplekku/features/prayer/data/prayer_service.dart';
+import 'package:komplekku/features/prayer/data/prayer_settings_repository.dart';
 
 const _monthNames = [
   'Januari',
@@ -55,14 +57,14 @@ String _formatCountdown(int totalSeconds) {
 ///
 /// This is a read-only summary — the adzan itself is fired by the OS-scheduled
 /// notification in `PrayerSchedulerService`, not by anything on this screen.
-class PrayerSummaryCard extends StatefulWidget {
+class PrayerSummaryCard extends ConsumerStatefulWidget {
   const PrayerSummaryCard({super.key});
 
   @override
-  State<PrayerSummaryCard> createState() => _PrayerSummaryCardState();
+  ConsumerState<PrayerSummaryCard> createState() => _PrayerSummaryCardState();
 }
 
-class _PrayerSummaryCardState extends State<PrayerSummaryCard> {
+class _PrayerSummaryCardState extends ConsumerState<PrayerSummaryCard> {
   late DateTime _now;
   Timer? _timer;
 
@@ -107,6 +109,14 @@ class _PrayerSummaryCardState extends State<PrayerSummaryCard> {
     }
 
     final secondsToNext = max(0, nextAt.difference(_now).inSeconds);
+    final delayAsync = ref.watch(iqomahDelayMinutesProvider);
+    final iqomahDelayMinutes =
+        delayAsync.value ?? PrayerSettingsRepository.defaultIqomahDelayMinutes;
+    final adzanState = getAdzanState(
+      _now,
+      times,
+      iqomahDelayMinutes: iqomahDelayMinutes,
+    );
 
     return Material(
       color: KomplekkuColors.surface,
@@ -165,24 +175,77 @@ class _PrayerSummaryCardState extends State<PrayerSummaryCard> {
                 ],
               ),
               const SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final prayer in _summaryPrayers)
-                    Expanded(
-                      child: _PrayerColumn(
-                        prayer: prayer,
-                        at: times[prayer]!,
-                        isNext: prayer == nextPrayer,
-                        countdown: prayer == nextPrayer
-                            ? _formatCountdown(secondsToNext)
-                            : null,
+              if (adzanState.kind == AdzanStateKind.iqomahCountdown)
+                _CompactIqomahRow(state: adzanState)
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final prayer in _summaryPrayers)
+                      Expanded(
+                        child: _PrayerColumn(
+                          prayer: prayer,
+                          at: times[prayer]!,
+                          isNext: prayer == nextPrayer,
+                          countdown: prayer == nextPrayer
+                              ? _formatCountdown(secondsToNext)
+                              : null,
+                        ),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The compact Beranda echo of Shalat's purple iqomah card — same countdown,
+/// same timestamp, just without the progress bar so it fits one row.
+class _CompactIqomahRow extends StatelessWidget {
+  const _CompactIqomahRow({required this.state});
+
+  final AdzanState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final prayer = state.activePrayer!;
+    return Semantics(
+      liveRegion: true,
+      label:
+          'Menuju iqomah ${prayerLabels[prayer]}, tersisa '
+          '${formatDurationMMSS(state.iqomahSecondsRemaining)}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: KomplekkuColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: KomplekkuColors.primary),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.mosque, color: KomplekkuColors.primary, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Menuju Iqomah ${prayerLabels[prayer]}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: KomplekkuColors.primary,
+                ),
+              ),
+            ),
+            Text(
+              formatDurationMMSS(state.iqomahSecondsRemaining),
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: KomplekkuColors.primary,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ),
       ),
     );

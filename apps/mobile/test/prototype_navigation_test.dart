@@ -1,12 +1,27 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komplekku/app/theme/app_theme.dart';
+import 'package:komplekku/features/community_admin/data/community_admin_repository.dart';
+import 'package:komplekku/features/community_admin/domain/community_detail.dart';
 import 'package:komplekku/features/prayer/presentation/shalat_screen.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+
+class _OfflineCommunityAdminRepository extends CommunityAdminRepository {
+  _OfflineCommunityAdminRepository() : super(Dio());
+
+  @override
+  Future<CommunityDetail> getCurrentCommunity() {
+    // ShalatScreen's iqomah countdown falls back to its cached/default delay
+    // when the community fetch fails — this keeps the widget test off the
+    // network instead of leaving a Dio timer pending after tester teardown.
+    throw Exception('offline in test');
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +36,11 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          communityAdminRepositoryProvider.overrideWithValue(
+            _OfflineCommunityAdminRepository(),
+          ),
+        ],
         child: MaterialApp(
           theme: buildKomplekkuTheme(),
           home: const ShalatScreen(),
@@ -48,7 +68,7 @@ void main() {
       'Shalat',
       'Pengumuman',
       'Forum',
-      'Profil',
+      'Layanan',
     ]) {
       expect(shell, contains("label: '$label'"));
     }

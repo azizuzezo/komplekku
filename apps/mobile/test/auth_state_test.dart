@@ -39,17 +39,20 @@ void main() {
     expect(AuthState.ready.allowsPath('/pengumuman'), isTrue);
     expect(AuthState.ready.allowsPath('/pengumuman/abc-123'), isTrue);
     expect(AuthState.ready.allowsPath('/forum'), isTrue);
-    expect(AuthState.ready.allowsPath('/akun'), isTrue);
+    expect(AuthState.ready.allowsPath('/layanan'), isTrue);
     expect(AuthState.pendingApproval.allowsPath('/pengumuman'), isFalse);
   });
 
-  test('Keamanan and Layanan stay reachable from the Profil tab', () {
-    // These lost their own bottom-bar tab but kept their paths, so existing
-    // deep links and notification payloads must still resolve.
+  test('Profil and Keamanan stay reachable even without a bottom tab', () {
+    // Profil moved from the fifth bottom tab to the header account icon, and
+    // Keamanan never had its own tab — both must keep their existing paths so
+    // deep links and notification payloads still resolve.
+    expect(AuthState.ready.allowsPath('/akun'), isTrue);
     expect(AuthState.ready.allowsPath('/keamanan'), isTrue);
     expect(AuthState.ready.allowsPath('/keamanan/cctv'), isTrue);
-    expect(AuthState.ready.allowsPath('/layanan'), isTrue);
     expect(AuthState.ready.allowsPath('/layanan/iuran'), isTrue);
+    expect(AuthState.ready.allowsPath('/layanan/komunitas'), isTrue);
+    expect(AuthState.ready.allowsPath('/layanan/pengguna'), isTrue);
     expect(AuthState.ready.allowsPath('/agenda'), isTrue);
     expect(AuthState.ready.allowsPath('/agenda/abc-123'), isTrue);
     expect(AuthState.ready.allowsPath('/kalender'), isTrue);

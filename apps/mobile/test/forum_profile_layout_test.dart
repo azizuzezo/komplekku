@@ -49,6 +49,53 @@ void main() {
     expect(find.text('Aktif'), findsOneWidget);
   });
 
+  testWidgets('Profil shows exactly one back button when pushed on top of another screen', (
+    tester,
+  ) async {
+    // AccountScreen is reached via context.push('/akun') from every tab's
+    // header, so it always sits on top of something to pop back to — unlike
+    // the previous test's bare `home:`, which never exercises AppBar's own
+    // automatic back button and would miss it duplicating PrototypeHeader's.
+    const snapshot = AccountSnapshot(
+      id: 'resident-1',
+      displayName: 'Aziz',
+      phoneMasked: '0812••••1234',
+      residentStatus: AccountResidentStatus.active,
+      context: null,
+      permissions: <String>[],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountSnapshotProvider.overrideWith((ref) async => snapshot),
+        ],
+        child: MaterialApp(
+          theme: buildKomplekkuTheme(),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const AccountScreen(),
+                    ),
+                  ),
+                  child: const Text('Buka Profil'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Buka Profil'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+  });
+
   testWidgets('Buat Forum stays above the composer and Enter sends a message', (
     tester,
   ) async {
@@ -91,6 +138,10 @@ void main() {
     final composerRect = tester.getRect(find.byType(TextField));
     expect(createRect.bottom, lessThan(composerRect.top));
     expect(find.byTooltip('Kirim pesan'), findsOneWidget);
+    final activeChannel = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'RT 03'),
+    );
+    expect(activeChannel.checkmarkColor, Colors.white);
 
     await tester.enterText(find.byType(TextField), 'Halo warga');
     await tester.testTextInput.receiveAction(TextInputAction.send);

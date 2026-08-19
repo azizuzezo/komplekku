@@ -114,14 +114,14 @@ final secondsRemaining = max(0, iqomahAt.difference(now).inSeconds + 1);
 - Modify: `apps/mobile/android/app/build.gradle.kts`
 - Create: `apps/mobile/android/app/src/test/kotlin/id/komplekku/prayer/PrayerAlarmContractTest.kt`
 
-- [ ] Add failing JVM tests for stable alarm IDs and event serialization/restoration.
-- [ ] Declare `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, and `WAKE_LOCK`; register the service and non-exported alarm/boot receivers with `mediaPlayback` foreground type.
-- [ ] Implement a MethodChannel `id.komplekku/prayer_alarm` with `replaceSchedule`, `cancelSchedule`, `status`, and debug-only `scheduleDiagnostic`.
-- [ ] Schedule `RTC_WAKEUP` exact alarms with immutable/update-current PendingIntents, persisting the complete future event list before scheduling.
-- [ ] On the adzan event, receiver starts `AdzanPlaybackService`; service creates a silent notification channel, posts a foreground notification with Stop action, holds a partial wake lock, plays `R.raw.adzan` using `USAGE_ALARM`, and stops/releases on completion or action.
-- [ ] On iqomah event, use the same service pipeline with `R.raw.iqomah` and a short foreground notification.
-- [ ] Restore future alarms on boot, time/timezone change, and package replacement; record last alarm/error status in SharedPreferences.
-- [ ] Run Android unit tests and debug assembly; commit the batch.
+- [x] Add failing JVM tests for stable alarm IDs and event serialization/restoration.
+- [x] Declare `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, and `WAKE_LOCK`; register the service and non-exported alarm/boot receivers with `mediaPlayback` foreground type.
+- [x] Implement a MethodChannel `id.komplekku/prayer_alarm` with `replaceSchedule`, `cancelSchedule`, `status`, and debug-only `scheduleDiagnostic`.
+- [x] Schedule `RTC_WAKEUP` exact alarms with immutable/update-current PendingIntents, persisting the complete future event list before scheduling.
+- [x] On the adzan event, receiver starts `AdzanPlaybackService`; service creates a silent notification channel, posts a foreground notification with Stop action, holds a partial wake lock, plays `R.raw.adzan` using `USAGE_ALARM`, and stops/releases on completion or action.
+- [x] On iqomah event, use the same service pipeline with `R.raw.iqomah` and a short foreground notification.
+- [x] Restore future alarms on boot, time/timezone change, and package replacement; record last alarm/error status in SharedPreferences.
+- [x] Run Android unit tests and debug assembly; commit the batch.
 
 Representative playback attributes:
 
@@ -143,12 +143,12 @@ setAudioAttributes(
 - Modify: `apps/mobile/lib/app/shell/main_shell.dart`
 - Modify: `apps/mobile/test/prayer_scheduler_service_test.dart`
 
-- [ ] Add failing bridge/scheduler tests proving every enabled prayer generates an adzan event and an iqomah event at exactly `delayMinutes` later, and that mute/cancel reaches native Android.
-- [ ] Keep notification permission handling, but on Android replace channel-sound `zonedSchedule` calls with one atomic native `replaceSchedule` call.
-- [ ] Retain a platform-safe local-notification path only for iOS.
-- [ ] Fetch the community delay before rescheduling; guard concurrent app-start/resume reschedules.
-- [ ] Surface native status (`exactAlarmAllowed`, `scheduledCount`, `lastError`) to Riverpod without recursive scheduling.
-- [ ] Run focused Flutter tests and analyze; commit the batch.
+- [x] Add failing bridge/scheduler tests proving every enabled prayer generates an adzan event and an iqomah event at exactly `delayMinutes` later, and that mute/cancel reaches native Android.
+- [x] Keep notification permission handling, but on Android replace channel-sound `zonedSchedule` calls with one atomic native `replaceSchedule` call.
+- [x] Retain a platform-safe local-notification path only for iOS.
+- [x] Fetch the community delay before rescheduling; guard concurrent app-start/resume reschedules.
+- [x] Surface native status (`exactAlarmAllowed`, `scheduledCount`, `lastError`) to Riverpod without recursive scheduling.
+- [x] Run focused Flutter tests and analyze; commit the batch.
 
 ## Task 6: Visible countdown and health state
 
@@ -158,20 +158,20 @@ setAudioAttributes(
 - Modify: `apps/mobile/lib/features/home/presentation/prayer_summary_card.dart`
 - Modify/create: relevant Flutter widget tests under `apps/mobile/test/`
 
-- [ ] Add failing widget tests for the purple countdown card from 10:00 to 00:00, active prayer label, iqomah state, disabled permission warning, and schedule-error retry.
-- [ ] Render one reusable phase card from `getAdzanState(now, times, iqomahDelayMinutes)` on Shalat and a compact matching state on Beranda.
-- [ ] Show permission/schedule problems persistently with an action to open exact-alarm settings or retry; never depend on a transient snackbar alone.
-- [ ] Use semantics labels and large touch targets; no overlapping floating action or bottom-navigation controls.
-- [ ] Run widget tests, golden/focused screenshots if available, and analyze; commit the batch.
+- [x] Add failing widget tests for the purple countdown card from 10:00 to 00:00, active prayer label, iqomah state, disabled permission warning, and schedule-error retry.
+- [x] Render one reusable phase card from `getAdzanState(now, times, iqomahDelayMinutes)` on Shalat and a compact matching state on Beranda.
+- [x] Show permission/schedule problems persistently with an action to open exact-alarm settings or retry; never depend on a transient snackbar alone.
+- [x] Use semantics labels and large touch targets; no overlapping floating action or bottom-navigation controls.
+- [x] Run widget tests, golden/focused screenshots if available, and analyze; commit the batch.
 
 ## Task 7: End-to-end verification and journal
 
-- [ ] Run `corepack pnpm --filter @komplekku/contracts typecheck`.
-- [ ] Run focused API tests plus `corepack pnpm --filter @komplekku/api typecheck`.
-- [ ] Run focused web tests/typecheck/build.
-- [ ] Run `flutter test` and `flutter analyze` from `apps/mobile`.
-- [ ] Run Android unit tests and `assembleDebug`.
-- [ ] Install the debug APK on an emulator/device, invoke the debug-only near-future diagnostic, and verify via logcat that the receiver starts the foreground service, audio begins, Stop works, and iqomah follows the configured short diagnostic interval.
-- [ ] Reboot emulator, confirm future events restore, and verify the displayed countdown and native `iqomahAt` agree.
-- [ ] Scan for `TODO`, placeholders, duplicate delay constants, and green brand leakage in changed UI.
-- [ ] Append one consolidated WIB entry to `Engineering.md`, including commands/results and any physical-device limitation.
+- [x] Run `corepack pnpm --filter @komplekku/contracts typecheck`.
+- [x] Run focused API tests plus `corepack pnpm --filter @komplekku/api typecheck`.
+- [x] Run focused web tests/typecheck/build.
+- [x] Run `flutter test` and `flutter analyze` from `apps/mobile`.
+- [x] Run Android unit tests and `assembleDebug`.
+- [x] Install the debug APK on an emulator/device, invoke the debug-only near-future diagnostic, and verify via logcat that the receiver starts the foreground service, audio begins, Stop works, and iqomah follows the configured short diagnostic interval. Verified on `emulator-5554`: see 2026-08-19 Engineering.md entry for the dumpsys/logcat evidence.
+- [ ] Reboot emulator, confirm future events restore, and verify the displayed countdown and native `iqomahAt` agree. **Not done — reboot-cycle restoration was verified by code review only (`PrayerBootReceiver`/`PrayerAlarmScheduler.restoreSchedule()`), not by a live reboot in this session.**
+- [x] Scan for `TODO`, placeholders, duplicate delay constants, and green brand leakage in changed UI.
+- [x] Append one consolidated WIB entry to `Engineering.md`, including commands/results and any physical-device limitation.

@@ -57,6 +57,7 @@ class _AnnouncementListScreenState
               child: PrototypeHeader(
                 title: 'Pengumuman',
                 subtitle: 'RT 05 / RW 03 • Billabong',
+                showAccount: true,
               ),
             ),
             _FilterChips(

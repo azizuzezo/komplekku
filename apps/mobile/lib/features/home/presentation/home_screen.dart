@@ -165,6 +165,15 @@ class _WelcomeHeader extends StatelessWidget {
             backgroundColor: KomplekkuColors.surfaceSoft,
           ),
         ),
+        const SizedBox(width: 6),
+        IconButton(
+          tooltip: 'Profil',
+          onPressed: () => context.push('/akun'),
+          icon: const Icon(Icons.person_outline),
+          style: IconButton.styleFrom(
+            backgroundColor: KomplekkuColors.surfaceSoft,
+          ),
+        ),
       ],
     );
   }

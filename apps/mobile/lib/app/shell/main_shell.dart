@@ -22,6 +22,7 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell>
     with WidgetsBindingObserver {
   bool _updateChecked = false;
+  bool _reschedulingPrayers = false;
 
   @override
   void initState() {
@@ -70,14 +71,25 @@ class _MainShellState extends ConsumerState<MainShell>
   }
 
   Future<void> _reschedulePrayers() async {
+    // App-start and app-resume can both fire in quick succession (e.g.
+    // resuming right after launch); without this guard the two calls would
+    // race to cancel/recreate the same native schedule.
+    if (_reschedulingPrayers) return;
+    _reschedulingPrayers = true;
     final scheduler = ref.read(prayerSchedulerServiceProvider);
     try {
       await scheduler.requestPermissions();
       await scheduler.rescheduleUpcomingPrayers();
       final autoAdzanEnabled = await scheduler.isAutoAdzanEnabled();
-      if (!mounted ||
-          scheduler.scheduledNotificationCount > 0 ||
-          !autoAdzanEnabled) {
+      if (!mounted) return;
+      ref.read(prayerScheduleHealthProvider.notifier).update(
+            PrayerScheduleHealth(
+              exactAlarmAllowed: scheduler.exactAlarmAllowed,
+              scheduledCount: scheduler.scheduledNotificationCount,
+              lastError: scheduler.lastScheduleError,
+            ),
+          );
+      if (scheduler.scheduledNotificationCount > 0 || !autoAdzanEnabled) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -92,6 +104,13 @@ class _MainShellState extends ConsumerState<MainShell>
     } catch (error) {
       debugPrint('Prayer scheduler initialization failed: $error');
       if (!mounted) return;
+      ref.read(prayerScheduleHealthProvider.notifier).update(
+            PrayerScheduleHealth(
+              exactAlarmAllowed: scheduler.exactAlarmAllowed,
+              scheduledCount: scheduler.scheduledNotificationCount,
+              lastError: scheduler.lastScheduleError ?? error.toString(),
+            ),
+          );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -99,6 +118,8 @@ class _MainShellState extends ConsumerState<MainShell>
           ),
         ),
       );
+    } finally {
+      _reschedulingPrayers = false;
     }
   }
 
@@ -172,9 +193,9 @@ class _MainShellState extends ConsumerState<MainShell>
                 ),
                 Expanded(
                   child: _NavTab(
-                    icon: Icons.person_outline,
-                    selectedIcon: Icons.person,
-                    label: 'Profil',
+                    icon: Icons.grid_view_outlined,
+                    selectedIcon: Icons.grid_view,
+                    label: 'Layanan',
                     selected: currentIndex == 4,
                     onTap: () => goBranch(4),
                   ),
