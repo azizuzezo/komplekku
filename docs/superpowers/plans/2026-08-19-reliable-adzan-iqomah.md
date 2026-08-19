@@ -63,11 +63,11 @@ export const updateCommunityInputSchema = z.object({
 - Modify: `apps/mobile/lib/features/community_admin/presentation/community_admin_screen.dart`
 - Modify/create: `apps/mobile/test/community_admin_screen_test.dart`
 
-- [ ] Add failing web and Flutter tests for rendering 10 minutes, saving a valid integer, and blocking invalid input.
-- [ ] Add a dedicated “Jeda adzan ke iqomah” settings card; do not hide it inside profile identity fields.
-- [ ] Submit through the existing `PATCH /admin/community` mutation and invalidate/refetch current-community state.
-- [ ] Show concise save/error feedback and preserve the existing responsive card hierarchy.
-- [ ] Run focused web tests/typecheck and Flutter widget tests/analyze; commit the batch.
+- [x] Add failing web and Flutter tests for rendering 10 minutes, saving a valid integer, and blocking invalid input.
+- [x] Add a dedicated “Jeda adzan ke iqomah” settings card; do not hide it inside profile identity fields.
+- [x] Submit through the existing `PATCH /admin/community` mutation and invalidate/refetch current-community state.
+- [x] Show concise save/error feedback and preserve the existing responsive card hierarchy.
+- [x] Run focused web tests/typecheck and Flutter widget tests/analyze; commit the batch.
 
 Representative payload:
 

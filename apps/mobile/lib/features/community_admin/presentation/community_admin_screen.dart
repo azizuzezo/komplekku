@@ -19,6 +19,8 @@ class CommunityAdminScreen extends ConsumerWidget {
           children: const [
             _CommunityIdentityCard(),
             SizedBox(height: 16),
+            _PrayerSettingsCard(),
+            SizedBox(height: 16),
             _RtManagementCard(),
           ],
         ),
@@ -157,6 +159,106 @@ class _CommunityIdentityCardState extends ConsumerState<_CommunityIdentityCard> 
               FilledButton(
                 onPressed: _saving ? null : _save,
                 child: Text(_saving ? 'Menyimpan…' : 'Simpan identitas'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PrayerSettingsCard extends ConsumerStatefulWidget {
+  const _PrayerSettingsCard();
+
+  @override
+  ConsumerState<_PrayerSettingsCard> createState() => _PrayerSettingsCardState();
+}
+
+class _PrayerSettingsCardState extends ConsumerState<_PrayerSettingsCard> {
+  final _delayController = TextEditingController();
+  bool _hydrated = false;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _delayController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final delay = int.tryParse(_delayController.text.trim());
+    if (delay == null || delay < 1 || delay > 60) {
+      setState(() => _error = 'Masukkan angka bulat dari 1 sampai 60 menit.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(communityAdminRepositoryProvider)
+          .updateCommunity(iqomahDelayMinutes: delay);
+      ref.invalidate(currentCommunityProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Jeda iqomah tersimpan untuk semua waktu shalat.')),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final community = ref.watch(currentCommunityProvider);
+    return _SectionCard(
+      title: 'Pengaturan shalat',
+      description:
+          'Satu jeda berlaku untuk Subuh, Dzuhur, Ashar, Maghrib, dan Isya di seluruh komunitas.',
+      child: community.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => StatePanel(
+          icon: Icons.cloud_off_outlined,
+          title: 'Pengaturan belum bisa dimuat',
+          message: error is ApiException ? error.message : 'Terjadi kendala.',
+          actionLabel: 'Coba lagi',
+          onAction: () => ref.invalidate(currentCommunityProvider),
+        ),
+        data: (data) {
+          if (!_hydrated) {
+            _delayController.text = data.iqomahDelayMinutes.toString();
+            _hydrated = true;
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _delayController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Jeda adzan ke iqomah',
+                  suffixText: 'menit',
+                  helperText: 'Masukkan 1 sampai 60 menit. Nilai awal 10 menit.',
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: KomplekkuColors.danger, fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text(_saving ? 'Menyimpan…' : 'Simpan pengaturan shalat'),
               ),
             ],
           );

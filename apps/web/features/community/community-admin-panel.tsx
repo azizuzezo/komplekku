@@ -122,6 +122,96 @@ function CommunityIdentityForm() {
   );
 }
 
+function PrayerSettingsForm() {
+  const queryClient = useQueryClient();
+  const communityQuery = useQuery({
+    queryKey: communityAdminKeys.current,
+    queryFn: getCurrentCommunity,
+  });
+  const community = communityQuery.data?.data.community;
+  const form = useForm<UpdateCommunityInput>({
+    resolver: zodResolver(updateCommunityInputSchema),
+    values: community ? { iqomahDelayMinutes: community.iqomahDelayMinutes } : undefined,
+  });
+  const mutation = useMutation({
+    mutationFn: updateCommunity,
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: communityAdminKeys.current });
+    },
+  });
+
+  if (communityQuery.isPending) return <AdminQueueSkeleton />;
+  if (communityQuery.isError || !community) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Pengaturan shalat belum bisa dimuat"
+        description="Terjadi kendala saat mengambil jeda iqomah komunitas."
+        onRetry={() => void communityQuery.refetch()}
+      />
+    );
+  }
+
+  return (
+    <section>
+      <h2>Pengaturan shalat</h2>
+      <p className="field-hint">
+        Satu jeda berlaku untuk Subuh, Dzuhur, Ashar, Maghrib, dan Isya di seluruh komunitas.
+      </p>
+      <form
+        className="form-stack"
+        onSubmit={form.handleSubmit((values) =>
+          mutation.mutate({ iqomahDelayMinutes: values.iqomahDelayMinutes }),
+        )}
+        noValidate
+      >
+        <div className="field">
+          <label htmlFor="iqomah-delay">Jeda adzan ke iqomah</label>
+          <input
+            className="input"
+            id="iqomah-delay"
+            type="number"
+            min="1"
+            max="60"
+            step="1"
+            inputMode="numeric"
+            aria-describedby="iqomah-delay-hint iqomah-delay-error"
+            {...form.register("iqomahDelayMinutes", { valueAsNumber: true })}
+          />
+          <p className="field-hint" id="iqomah-delay-hint">
+            Dalam menit. Nilai awal 10 menit dan dapat diatur antara 1–60 menit.
+          </p>
+          {form.formState.errors.iqomahDelayMinutes && (
+            <p className="form-message" id="iqomah-delay-error" role="alert">
+              Masukkan angka bulat antara 1 dan 60 menit.
+            </p>
+          )}
+        </div>
+        {mutation.isError && (
+          <p className="form-message" role="alert">
+            {readableError(mutation.error, "Pengaturan belum dapat disimpan. Silakan coba lagi.")}
+          </p>
+        )}
+        {mutation.isSuccess && (
+          <p className="form-message" role="status">
+            Jeda iqomah tersimpan untuk seluruh jadwal shalat.
+          </p>
+        )}
+        <button className="button button--primary" type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? (
+            <>
+              <LoaderCircle className="loading-icon" size={17} aria-hidden="true" />
+              Menyimpan…
+            </>
+          ) : (
+            "Simpan pengaturan shalat"
+          )}
+        </button>
+      </form>
+    </section>
+  );
+}
+
 function RtManagementSection() {
   const queryClient = useQueryClient();
   const rtsQuery = useQuery({ queryKey: communityAdminKeys.rts, queryFn: listRts });
@@ -328,6 +418,7 @@ export function CommunityAdminPanel() {
   return (
     <div className="house-admin-panel">
       <CommunityIdentityForm />
+      <PrayerSettingsForm />
       <RtManagementSection />
     </div>
   );

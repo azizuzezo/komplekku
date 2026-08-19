@@ -43,6 +43,7 @@ class CommunityAdminRepository {
     String? name,
     String? address,
     String? rwLabel,
+    int? iqomahDelayMinutes,
   }) async {
     try {
       final response = await _client.patch<Map<String, dynamic>>(
@@ -51,6 +52,7 @@ class CommunityAdminRepository {
           'name': ?name,
           'address': ?address,
           'rwLabel': ?rwLabel,
+          'iqomahDelayMinutes': ?iqomahDelayMinutes,
         },
       );
       final community = response.data?['data']?['community'];
